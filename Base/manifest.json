@@ -1,0 +1,27 @@
+{
+    "manifest_version": 2,
+
+    "name": "AphonicAdvert",
+    "description": "This extension censors a website",
+    "version": "0.01",
+
+    "permissions": [
+        "webRequest",
+        "webRequestBlocking",
+        "storage",
+        "tabs"
+    ],
+
+    "browser_action": {
+        "default_icon": "icon.png"
+    },
+
+    "background": {
+        "scripts": ["background.js"]
+    },
+
+    "web_accessible_resources": [
+        "along.html"
+    ]
+
+}
