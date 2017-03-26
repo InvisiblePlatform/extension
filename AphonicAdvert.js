@@ -1,28 +1,13 @@
-// var tongueTaker{};
+// Simple code that gets the job done by Orange
 
-// var isThisThingEvenOn = 'nope not yet';
-
-// window.addEventListener("DOMContentLoaded", deVoice, false);
-
+// You got your naming of the window href
 var aSiteYouVisit = window.location.href;
 
-//function moveAlongFriend(){
-//    window.location.replace({url: "./along.html"});
-//}
+// Then you got your top site of the week declaration thats the one to look out for
+var topSiteOfTheWeek = "dalailama.com";
 
-//function deVoice(){
-    var topSiteOfTheWeek = "dalailama.com";
-    if (aSiteYouVisit.indexOf(topSiteOfTheWeek) >= 0){
-//	moveAlongFriend();	
-    window.location.replace(chrome.extension.getURL('along.html'));
-    }
-
-    isThistThingEvenOn = "yes";
-//}
-
-//function reVoice(){
-    // haha nah, you have to remove the extension friend
-//}
-
-//deVoice();
-
+// Then you check to see if when you visit a site it might be a top site
+if (aSiteYouVisit.indexOf(topSiteOfTheWeek) >= 0){
+    // Ooooh watch out, that site was sighted, set sites to the replacement!
+    window.location.replace(chrome.extension.getURL('MoveAlong.html'));
+}

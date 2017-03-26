@@ -10,13 +10,9 @@
     ],
 
     "web_accessible_resources": [
-        "along.html"
+        "MoveAlong.html"
     ],
     
-    "icons": {
-    	"48": "icons/border-48.png"
-    },
-
     "content_scripts": [{
 	"matches": ["<all_urls>"],
         "js": ["AphonicAdvert.js"],
