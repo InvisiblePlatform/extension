@@ -1,8 +1,8 @@
 {
     "manifest_version": 2,
 
-    "version": "1.1",
-    "name": "AphonicAdvert",
+    "version": "1.26.1",
+    "name": "Invisible Voice",
     "description": "This extension censors a website",
 
     "permissions": [
@@ -15,7 +15,7 @@
     
     "content_scripts": [{
 	"matches": ["<all_urls>"],
-        "js": ["AphonicAdvert.js"],
+        "js": ["InvisibleVoice.js"],
 	"run_at": "document_start"
     }]
 

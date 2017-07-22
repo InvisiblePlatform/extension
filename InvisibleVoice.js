@@ -4,7 +4,7 @@
 var aSiteYouVisit = window.location.href;
 
 // Then you got your top site of the week declaration thats the one to look out for
-var topSiteOfTheWeek = "dalailama.com";
+var topSiteOfTheWeek = "bbc.co.uk";
 
 // Then you check to see if when you visit a site it might be a top site
 if (aSiteYouVisit.indexOf(topSiteOfTheWeek) >= 0){
