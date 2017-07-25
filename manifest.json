@@ -6,7 +6,8 @@
     "description": "This extension censors a website",
 
     "permissions": [
-        "tabs"
+        "tabs",
+        "alarms"
     ],
 
     "web_accessible_resources": [
