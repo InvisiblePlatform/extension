@@ -19,6 +19,10 @@ function getData() {
 		var newTime = topSiteOfTheWeek.time + waitingTime;
 		if ( newTime < now ){
 			console.log("[ Invisible Voice ]: Update needed, so updating");
+            fetch('https://antisocial.club/invisibletest.json')
+                .then(response => response.json())
+                .then(data => chrome.storage.local.set(data))
+                .catch(error => console.log(" [ Invisible Voice ]: Fetch Error", error.message ));
 		}
 
 		// Then you check to see if when you visit a site it might be a top site
