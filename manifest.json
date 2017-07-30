@@ -7,15 +7,10 @@
 
     "permissions": [
         "tabs",
-        "alarms",
         "storage",
         "unlimitedStorage"
     ],
 
-    "web_accessible_resources": [
-        "MoveAlong.html"
-    ],
-    
     "content_scripts": [{
 	"matches": ["<all_urls>"],
         "js": ["InvisibleVoice.js"],
