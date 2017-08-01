@@ -6,7 +6,7 @@ var headers = new Headers();
 
 var init = { method: 'GET',
 	         headers: headers,
-	         mode: 'no-cors',
+	         mode: 'cors',
 	         cache: 'default' };
 
 var updateJSON = new Request('https://antisocial.club/invisibletest.json', init);
@@ -15,7 +15,6 @@ var defaultObj = {
 	url: "bbc.co.uk",
 	time: "1500000000"
 };
-
 
 function getData() {
 	var timeNow = new Date;

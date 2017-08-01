@@ -8,6 +8,8 @@
     "permissions": [
         "tabs",
         "storage",
+        "webRequest",
+        "https://antisocial.club/*",
         "unlimitedStorage"
     ],
 
