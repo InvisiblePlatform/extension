@@ -1,7 +1,7 @@
 {
     "manifest_version": 2,
 
-    "version": "1.26.1",
+    "version": "2.26.1",
     "name": "Invisible Voice",
     "description": "This extension censors a website",
 
@@ -9,7 +9,7 @@
         "tabs",
         "storage",
         "webRequest",
-        "https://antisocial.club/*",
+        "https://invisible-voice.com/*",
         "unlimitedStorage"
     ],
 
