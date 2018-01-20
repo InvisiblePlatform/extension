@@ -11,9 +11,9 @@ var init = { method: 'GET',
 
 var updateJSON = new Request('https://invisible-voice.com/data.json', init);
 var defaultObj = {
-    time: "1516492799", 
-    url: "www.foxnews.com", 
-    site: "https://invisible-voice.com/gary-dejean/foxnews.html"
+    time: "1517097599",
+    url: "www.amazon",
+    site: "https://invisible-voice.com/sarah-divall/amazon.html"
 };
 
 function getData() {
