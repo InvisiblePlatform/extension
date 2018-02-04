@@ -11,9 +11,9 @@ var init = { method: 'GET',
 
 var updateJSON = new Request('https://invisible-voice.com/data.json', init);
 var defaultObj = {
-    time: "1517702399", 
-    url: "www.theguardian.com", 
-    site: "https://invisible-voice.com/simon-stevens/the-guardian.html"
+    time: "1518307199", 
+    url: "facebook.com",
+    site: "https://invisible-voice.com/barbara-speed/facebook.html"
 };
 
 function getData() {
