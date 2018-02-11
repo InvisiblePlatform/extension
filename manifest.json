@@ -1,9 +1,9 @@
 {
     "manifest_version": 2,
 
-    "version": "6.26.1",
+    "version": "7.26.1",
     "name": "Invisible Voice",
-    "description": "This extension censors a website",
+    "description": "This extension boycotts a website",
 
     "permissions": [
         "tabs",
