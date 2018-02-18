@@ -11,9 +11,9 @@ var init = { method: 'GET',
 
 var updateJSON = new Request('https://invisible-voice.com/data.json', init);
 var defaultObj = {
-    time: "1518911999", 
-    url: "wikileaks.org", 
-    site: "https://invisible-voice.com/camille-baker/wikileaks.html"
+    time: "1519516799", 
+    url: "www.google", 
+    site: "https://invisible-voice.com/natasha-chuk/google.html"
 };
 
 function getData() {
