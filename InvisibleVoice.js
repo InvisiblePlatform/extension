@@ -9,11 +9,11 @@ var init = { method: 'GET',
 	         mode: 'cors',
 	         cache: 'default' };
 
-var updateJSON = new Request('https://invisible-voice.com/data.json', init);
+var updateJSON = new Request('https://test.reveb.la/index.json', init);
 var defaultObj = {
-    time: "1519516799", 
+    time: Date.now(), 
     url: "www.google", 
-    site: "https://invisible-voice.com/natasha-chuk/google.html"
+    q95: "00000",
 };
 
 var sites = {
@@ -1188,7 +1188,7 @@ function getData() {
 		}
 
 		// Find the time to keep it updated
-		var newTime = topSiteOfTheWeek.time + waitingTime;
+		var newTime = topSiteOfTheWeek.time - waitingTime;
 		if ( newTime < now ){
 			console.log("[ Invisible Voice ]: Update needed, so updating");
             fetch(updateJSON)
@@ -1197,6 +1197,11 @@ function getData() {
                 .catch(error => console.log("[ Invisible Voice ]: Fetch Error", error.message ));
 		}
 
+		chrome.storage.local.get(null, function(items) {
+			var allKeys = Object.keys(items);
+			console.log(allKeys);
+		});
+
         var possibleSite;
         for (possibleSite of sites.sites){
 		// Then you check to see if when you visit a site it might be a top site
@@ -1204,7 +1209,6 @@ function getData() {
 		        // Ooooh watch out, that site was sighted, set sites to the replacement!
                 document.documentElement.appendChild(iframe);
                 document.documentElement.appendChild(close);
-                document.head.prepend(changeMeta);
                 inject(possibleSite[0]);
 		    	console.log("[ Invisible Voice ]: Page Replaced");
 		    }
@@ -1214,14 +1218,8 @@ function getData() {
 
 function inject(code) {
     console.log("injecting" + code);
-    iframe.src =  "https://test.reveb.la/posts/" + code; 
-   $(iframe).load(function () {
-    var message = {
-        command: "render-frame",
-        frameUrl: chrome.runtime.getURL("https://test.reveb.la/posts/" + code )
-    };
-    iframe.contentWindow.postMessage(message, '*');
-}); 
+	document.head.prepend(changeMeta);
+	iframe.src =  "https://test.reveb.la/posts/" + code + "/index.html"; 
 }
 
 document.addEventListener('click', function (event) {
@@ -1243,13 +1241,14 @@ var changeMeta = document.createElement("meta");
 changeMeta.httpEquiv = "Content-Security-Policy";
 changeMeta.content = "upgrade-insecure-requests";
 
+
 var close = document.createElement("div");
 close.id = "invisible-voice-button";
-close.innerHTML = "X ";
-close.style.cssText = "border: 0px; overflow: visible; padding: 0px; right: 6.54vw; width: 3em; height: 3em; top: 6.54vh; left: auto; z-index: 2147483647; position: fixed;";
+close.innerHTML = "Close";
+close.style.cssText = "border: 0px; overflow: visible; padding: 0px; right: 6.54vw; top: 6.54vh; left: auto; z-index: 2147483647; position: fixed; color: #DDD; background-color: #444; font-family: 'Unica Reg', sans-serif; font-size: 24px;";
 
 var iframe = document.createElement("iframe");
-iframe.style.cssText = "border: 0px; overflow: visible; padding: 0px; right: auto; width: 86.1vw; height: 86.1vh; top: 6.54vh; left: 6.545vw; z-index: 2147483646; box-shadow: rgba(0, 0, 0, 0.498039) 0px 3px 10px; position: fixed;";
+iframe.style.cssText = "border: 0px; overflow: hidden; padding: 0px; right: auto; width: 86.1vw; height: 86.1vh; top: 6.54vh; left: 6.545vw; z-index: 2147483646; box-shadow: rgba(0, 0, 0, 0.498039) 0px 3px 10px; position: fixed; background-color: #fff;";
 iframe.id = "Invisible";
 iframe.onkeypress = "deject();"
 

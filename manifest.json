@@ -10,6 +10,7 @@
         "storage",
         "webRequest",
         "https://invisible-voice.com/*",
+        "https://test.reveb.la/*",
         "unlimitedStorage"
     ],
 
