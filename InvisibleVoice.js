@@ -63,10 +63,22 @@ function getData() {
 								if ( timeSince < now && timeSince > globalSince){
 								    iframe.remove();
 									close.remove();
-									console.log("[ Invisible Voice ]: Page Not Replaced" + link);
+									document.documentElement.appendChild(open);
+									dragElement(document.getElementById("invisible-voice-floating"));
+									chrome.storage.local.get('place', function(position){
+										var pos = Object.values(position)[0].split(',');
+										console.log("[ Invisible Voice ]: loading loc" + pos)
+										open.style.top = pos[0] + "px";
+										open.style.left = pos[1] + "px";
+										open.style.visibility = 'visible';
+									})
+									open.style.visibility = 'visible';
+									console.log("[ Invisible Voice ]: Page Not Replaced " + link);
 								} else {
 									inject(globalCode);
-									console.log("[ Invisible Voice ]: Page Replaced" + link);
+									iframe.style.visibility = 'visible';
+									close.style.visibility = 'visible';
+									console.log("[ Invisible Voice ]: Page Replaced " + link);
 								}
 								});
 							} catch(error) {
@@ -79,6 +91,8 @@ function getData() {
 									console.log("catch", timeSince);
 								});
 								inject(globalCode);
+								iframe.style.visibility = 'visible';
+								close.style.visibility = 'visible';
 								console.log("[ Invisible Voice ]: Page Replaced");
 							}
 
@@ -97,6 +111,18 @@ function inject(code) {
 }
 
 document.addEventListener('click', function (event) {
+	// This is to open reopen the box if it needs to be
+	if (event.target.matches('#invisible-voice-float')){
+		var dismissData = {};
+		dismissData[globalCode] = 0;
+		chrome.storage.local.set(dismissData);
+        document.documentElement.appendChild(iframe);
+		document.documentElement.appendChild(close);
+		inject(globalCode);
+		iframe.style.visibility = 'visible';
+		close.style.visibility = 'visible';
+		open.remove();
+	};
 	// If the clicked element doesn't have the right selector, bail
 	if (!event.target.matches('#invisible-voice-button')) return;
 
@@ -113,6 +139,15 @@ document.addEventListener('click', function (event) {
 	console.log("[ Invisible Voice ]: Dismiss id ", globalCode);
     iframe.remove();
     close.remove();
+    document.documentElement.appendChild(open);
+	chrome.storage.local.get('place', function(position){
+		var pos = Object.values(position)[0].split(',');
+		console.log("[ Invisible Voice ]: loading loc" + pos)
+		open.style.top = pos[0] + "px";
+		open.style.left = pos[1] + "px";
+		open.style.visibility = 'visible';
+	})
+	dragElement(document.getElementById("invisible-voice-floating"));
 }, false);
 
 
@@ -124,13 +159,64 @@ changeMeta.content = "upgrade-insecure-requests";
 var close = document.createElement("div");
 close.id = "invisible-voice-button";
 close.innerHTML = "Close";
-close.style.cssText = "border: 0px; overflow: visible; padding: 0px; right: 6.54vw; top: 6.54vh; left: auto; z-index: 2147483647; position: fixed; color: #DDD; background-color: #444; font-family: 'Unica Reg', sans-serif; font-size: 24px;";
+close.style.cssText = "border: 0px; overflow: visible; padding: 0px; right: 6.54vw; top: 6.54vh; left: auto; z-index: 2147483647; position: fixed; color: #DDD; background-color: #444; font-family: 'Unica Reg', sans-serif; font-size: 24px; visibility: hidden;";
 
 var iframe = document.createElement("iframe");
-iframe.style.cssText = "border: 0px; overflow: hidden; padding: 0px; right: auto; width: 86.1vw; height: 86.1vh; top: 6.54vh; left: 6.545vw; z-index: 2147483646; box-shadow: rgba(0, 0, 0, 0.498039) 0px 3px 10px; position: fixed; background-color: #fff;";
+iframe.style.cssText = "border: 0px; overflow: hidden; padding: 0px; right: auto; width: 86.1vw; height: 86.1vh; top: 6.54vh; left: 6.545vw; z-index: 2147483646; box-shadow: rgba(0, 0, 0, 0.498039) 0px 3px 10px; position: fixed; background-color: #fff; visibility: hidden;";
 iframe.id = "Invisible";
 iframe.onkeypress = "deject();"
 
+
+var open = document.createElement("div");
+open.id = "invisible-voice-floating";
+open.innerHTML = "<div id='invisible-voice-float'>IV</div>";
+open.style.cssText = "border: 0px; overflow: visible; padding: 1em; right: 10px; bottom: 10px; z-index: 2147483647; position: fixed; color: #DDD;  background-color: #444; font-family: 'Unica Reg', sans-serif; font-size: 24px; visibility: hidden; border-radius: 50%; filter: drop-shadow(.5rem .5rem 1rem #afa); width: 1em; height: 1em;";
+
+// Make the DIV element draggable:
+
+function dragElement(elmnt) {
+  var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+  if (document.getElementById(elmnt)) {
+    // if present, the header is where you move the DIV from:
+    document.getElementById(elmnt).onmousedown = dragMouseDown;
+  } else {
+    // otherwise, move the DIV from anywhere inside the DIV:
+    elmnt.onmousedown = dragMouseDown;
+  }
+
+  function dragMouseDown(e) {
+    e = e || window.event;
+    e.preventDefault();
+    // get the mouse cursor position at startup:
+    pos3 = e.clientX;
+    pos4 = e.clientY;
+    document.onmouseup = closeDragElement;
+    // call a function whenever the cursor moves:
+    document.onmousemove = elementDrag;
+  }
+
+  function elementDrag(e) {
+    e = e || window.event;
+    e.preventDefault();
+    // calculate the new cursor position:
+    pos1 = pos3 - e.clientX;
+    pos2 = pos4 - e.clientY;
+    pos3 = e.clientX;
+    pos4 = e.clientY;
+    // set the element's new position:
+    elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+    elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+  }
+
+  function closeDragElement() {
+    // stop moving when mouse button is released:
+    document.onmouseup = null;
+    document.onmousemove = null;
+	var placestore = {};
+	placestore['place'] = elmnt.offsetTop + "," + elmnt.offsetLeft;
+	chrome.storage.local.set(placestore);
+  }
+}
 
 
 getData();
