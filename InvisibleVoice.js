@@ -9,7 +9,7 @@ var init = { method: 'GET',
 	         mode: 'cors',
 	         cache: 'default' };
 
-var updateJSON = new Request('https://test.reveb.la/index.json', init);
+var updateJSON = new Request('https://invisible-voice.com/index.json', init);
 var defaultObj = {
     time: 0,
     url: "www.google", 
@@ -60,16 +60,17 @@ function getData() {
 								chrome.storage.local.get(globalCode, function(id){
 									timeSince = Object.values(id)[0];
 									console.log("try", timeSince);
-								if ( timeSince < now && timeSince > globalSince){
+								if ( (timeSince < now && timeSince > globalSince) || timeSince < (now - waitingTime)){
 								    iframe.remove();
 									close.remove();
 									document.documentElement.appendChild(open);
 									dragElement(document.getElementById("invisible-voice-floating"));
-									chrome.storage.local.get('place', function(position){
+									chrome.storage.local.get('newplace', function(position){
 										var pos = Object.values(position)[0].split(',');
 										console.log("[ Invisible Voice ]: loading loc" + pos)
-										open.style.top = pos[0] + "px";
-										open.style.left = pos[1] + "px";
+										console.log("[ Invisible Voice ]: loading loc" + (window.innerWidth * pos[1]) + "," + (window.innerHeight * pos[0]))
+										open.style.top = (window.innerHeight * pos[0]) + "px";
+										open.style.left = (window.innerWidth * pos[1]) + "px";
 										open.style.visibility = 'visible';
 									})
 									open.style.visibility = 'visible';
@@ -107,7 +108,7 @@ function getData() {
 function inject(code) {
     console.log("injecting " + code);
 	document.head.prepend(changeMeta);
-	iframe.src =  "https://test.reveb.la/posts/" + code + "/index.html"; 
+	iframe.src =  "https://invisible-voice.com/posts/" + code + "/index.html"; 
 }
 
 document.addEventListener('click', function (event) {
@@ -140,11 +141,11 @@ document.addEventListener('click', function (event) {
     iframe.remove();
     close.remove();
     document.documentElement.appendChild(open);
-	chrome.storage.local.get('place', function(position){
+	chrome.storage.local.get('newplace', function(position){
 		var pos = Object.values(position)[0].split(',');
 		console.log("[ Invisible Voice ]: loading loc" + pos)
-		open.style.top = pos[0] + "px";
-		open.style.left = pos[1] + "px";
+		open.style.top = (window.innerHeight * pos[0]) + "px";
+		open.style.left = (window.innerWidth * pos[1]) + "px";
 		open.style.visibility = 'visible';
 	})
 	dragElement(document.getElementById("invisible-voice-floating"));
@@ -159,18 +160,19 @@ changeMeta.content = "upgrade-insecure-requests";
 var close = document.createElement("div");
 close.id = "invisible-voice-button";
 close.innerHTML = "Close";
-close.style.cssText = "border: 0px; overflow: visible; padding: 0px; right: 6.54vw; top: 6.54vh; left: auto; z-index: 2147483647; position: fixed; color: #DDD; background-color: #444; font-family: 'Unica Reg', sans-serif; font-size: 24px; visibility: hidden;";
+close.style.cssText = "border: 0px; overflow: visible; padding: 0px; right: calc(6.54vw + 19px); top: calc(6.54vh + 10px); left: auto; z-index: 2147483647; position: fixed; color: #DDD; background-color: #444; font-family: 'Unica Reg', sans-serif; font-size: 24px; visibility: hidden;";
 
 var iframe = document.createElement("iframe");
-iframe.style.cssText = "border: 0px; overflow: hidden; padding: 0px; right: auto; width: 86.1vw; height: 86.1vh; top: 6.54vh; left: 6.545vw; z-index: 2147483646; box-shadow: rgba(0, 0, 0, 0.498039) 0px 3px 10px; position: fixed; background-color: #fff; visibility: hidden;";
+iframe.style.cssText = "border: 0px; overflow: hidden; padding: 0px; right: auto; width: 86.1vw; height: 86.1vh; top: 6.54vh; left: 6.545vw; z-index: 2147483646; box-shadow: rgba(0, 0, 0, 1) 0 0 4000px; position: fixed; background-color: #fff; visibility: hidden;";
 iframe.id = "Invisible";
 iframe.onkeypress = "deject();"
 
 
+var svgloc = chrome.extension.getURL('logo.svg');
 var open = document.createElement("div");
 open.id = "invisible-voice-floating";
-open.innerHTML = "<div id='invisible-voice-float'>IV</div>";
-open.style.cssText = "border: 0px; overflow: visible; padding: 1em; right: 10px; bottom: 10px; z-index: 2147483647; position: fixed; color: #DDD;  background-color: #444; font-family: 'Unica Reg', sans-serif; font-size: 24px; visibility: hidden; border-radius: 50%; filter: drop-shadow(.5rem .5rem 1rem #afa); width: 1em; height: 1em;";
+open.innerHTML = "<img id='invisible-voice-float' style='position: absolute;' width='68px' src=" + svgloc + ">";
+open.style.cssText = "border: 0px; overflow: visible; left: 20px; bottom: 10px; z-index: 2147483647; position: fixed; color: #DDD;  background-color: rgba(0,0,0,0); font-family: 'Unica Reg', sans-serif; font-size: 24px; visibility: hidden; border-radius: 50%; filter: drop-shadow(.5rem .5rem 1rem #afa); width: 1em; height: 1em; text-align:center;";
 
 // Make the DIV element draggable:
 
@@ -213,7 +215,9 @@ function dragElement(elmnt) {
     document.onmouseup = null;
     document.onmousemove = null;
 	var placestore = {};
-	placestore['place'] = elmnt.offsetTop + "," + elmnt.offsetLeft;
+	var topOffset = elmnt.offsetTop / window.innerHeight;
+	var leftOffset = elmnt.offsetLeft / window.innerWidth;
+	placestore['newplace'] = topOffset + "," + leftOffset;
 	chrome.storage.local.set(placestore);
   }
 }
