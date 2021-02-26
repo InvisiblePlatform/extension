@@ -9,7 +9,7 @@ var init = { method: 'GET',
 	         mode: 'cors',
 	         cache: 'default' };
 
-var updateJSON = new Request('https://invisible-voice.com/index.json', init);
+var updateJSON = new Request('https://test.reveb.la/index.json', init);
 var defaultObj = {
     time: 0,
     url: "www.google", 
