@@ -1,4 +1,15 @@
 // Simple code that gets the job done by Orange
+//
+
+var aSiteWePullAndPushTo = "https://invisible-voice.com/"
+chrome.storage.local.get(function(localdata){
+		if (!localdata.domainToPull){
+			chrome.storage.local.set({"domainToPull": "https://invisible-voice.com/"})
+		} else {
+			 aSiteWePullAndPushTo = localdata.domainToPull;
+		};
+});
+
 // Set up environment 
 var aSiteYouVisit = window.location.href;
 var waitingTime = 480000;
@@ -9,7 +20,7 @@ var init = { method: 'GET',
 	         mode: 'cors',
 	         cache: 'default' };
 
-var updateJSON = new Request('https://test.reveb.la/index.json', init);
+var updateJSON = new Request(aSiteWePullAndPushTo + 'index.json', init);
 var defaultObj = {
     time: 0,
     url: "www.google", 
@@ -108,7 +119,7 @@ function getData() {
 function inject(code) {
     console.log("injecting " + code);
 	document.head.prepend(changeMeta);
-	iframe.src =  "https://invisible-voice.com/posts/" + code + "/index.html"; 
+	iframe.src =  aSiteWePullAndPushTo + "posts/" + code + "/index.html"; 
 }
 
 document.addEventListener('click', function (event) {

@@ -1,7 +1,7 @@
 {
     "manifest_version": 2,
 
-    "version": "20.12.21",
+    "version": "21.02.27",
     "name": "Invisible Voice",
     "description": "This extension boycotts a website",
 
@@ -22,6 +22,10 @@
     },
 
 	"web_accessible_resources": ["logo.svg"],
+
+	"options_ui": {
+		"page": "options.html"
+	},
 
     "content_scripts": [{
 	"matches": ["<all_urls>"],
