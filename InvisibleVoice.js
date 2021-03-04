@@ -20,9 +20,10 @@ var init = { method: 'GET',
 	         mode: 'cors',
 	         cache: 'default' };
 
-var updateJSON = new Request(aSiteWePullAndPushTo + 'index.json', init);
+var updateJSON = new Request("https://invisible-voice.com/index.json", init);
 var defaultObj = {
     time: 0,
+	newplace: "0.8,0.8",
     url: "www.google", 
 	data: [],
 };
@@ -46,11 +47,14 @@ function getData() {
 		var newTime = topSiteOfTheWeek.time + waitingTime;
 		if ( newTime < now ){
 			console.log("[ Invisible Voice ]: Update needed, so updating");
-            fetch(updateJSON)
-                .then(response => response.json())
-				.then(data => chrome.storage.local.set({"data": data}))
-                .catch(error => console.log("[ Invisible Voice ]: Fetch Error", error.message ));
-			chrome.storage.local.set({"time": now });
+			try {
+				fetch(updateJSON)
+            	    .then(response => response.json())
+					.then(data => chrome.storage.local.set({"data": data}))
+					.then(chrome.storage.local.set({"time": now }));
+			} catch (error) {
+				error => console.log("[ Invisible Voice ]: Fetch Error", error.message)
+			}
 		}
 
 		chrome.storage.local.get(null, function(items) {
@@ -72,8 +76,8 @@ function getData() {
 									timeSince = Object.values(id)[0];
 									console.log("try", timeSince);
 								if ( (timeSince < now && timeSince > globalSince) || timeSince < (now - waitingTime)){
-								    iframe.remove();
-									close.remove();
+									iframe.style.visibility = 'hidden';
+									close.style.visibility = 'hidden';
 									document.documentElement.appendChild(open);
 									dragElement(document.getElementById("invisible-voice-floating"));
 									chrome.storage.local.get('newplace', function(position){
@@ -128,12 +132,10 @@ document.addEventListener('click', function (event) {
 		var dismissData = {};
 		dismissData[globalCode] = 0;
 		chrome.storage.local.set(dismissData);
-        document.documentElement.appendChild(iframe);
-		document.documentElement.appendChild(close);
 		inject(globalCode);
 		iframe.style.visibility = 'visible';
 		close.style.visibility = 'visible';
-		open.remove();
+		open.style.visibility = 'hidden';
 	};
 	// If the clicked element doesn't have the right selector, bail
 	if (!event.target.matches('#invisible-voice-button')) return;
@@ -149,8 +151,8 @@ document.addEventListener('click', function (event) {
 	dismissData[globalCode] = now;
 	chrome.storage.local.set(dismissData);
 	console.log("[ Invisible Voice ]: Dismiss id ", globalCode);
-    iframe.remove();
-    close.remove();
+	iframe.style.visibility = 'hidden';
+	close.style.visibility = 'hidden';
     document.documentElement.appendChild(open);
 	chrome.storage.local.get('newplace', function(position){
 		var pos = Object.values(position)[0].split(',');
@@ -182,7 +184,7 @@ iframe.onkeypress = "deject();"
 var svgloc = chrome.extension.getURL('logo.svg');
 var open = document.createElement("div");
 open.id = "invisible-voice-floating";
-open.innerHTML = "<img id='invisible-voice-float' style='position: absolute;' width='68px' src=" + svgloc + ">";
+open.innerHTML = "<img id='invisible-voice-float' style='position: absolute; max-width: inherit; width:68px !important;' src=" + svgloc + ">";
 open.style.cssText = "border: 0px; overflow: visible; left: 20px; bottom: 10px; z-index: 2147483647; position: fixed; color: #DDD;  background-color: rgba(0,0,0,0); font-family: 'Unica Reg', sans-serif; font-size: 24px; visibility: hidden; border-radius: 50%; filter: drop-shadow(.5rem .5rem 1rem #afa); width: 1em; height: 1em; text-align:center;";
 
 // Make the DIV element draggable:
