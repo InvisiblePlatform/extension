@@ -142,7 +142,11 @@ if (isFullScreen) {
 };
 });
 
+var dontOpen = false;
+
 document.addEventListener('click', function (event) {
+    console.log(dontOpen)
+    if (dontOpen != true) {
 	// This is to open reopen the box if it needs to be
 	if (event.target.matches('#invisible-voice-float')){
 		var dismissData = {};
@@ -177,8 +181,11 @@ document.addEventListener('click', function (event) {
 		open.style.left = (window.innerWidth * pos[1]) + "px";
 		open.style.visibility = 'visible';
 	})
-	dragElement(document.getElementById("invisible-voice-floating"));
+    }
+    dontOpen = false;
 }, false);
+
+
 
 
 var changeMeta = document.createElement("meta");
@@ -227,6 +234,7 @@ function dragElement(elmnt) {
   }
 
   function elementDrag(e) {
+    dontOpen=true;
     e = e || window.event;
     e.preventDefault();
     // calculate the new cursor position:
