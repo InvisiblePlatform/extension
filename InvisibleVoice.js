@@ -126,6 +126,22 @@ function inject(code) {
 	iframe.src =  aSiteWePullAndPushTo + "posts/" + code + "/index.html"; 
 }
 
+document.addEventListener('fullscreenchange', function() {
+var isFullScreen = document.fullScreen ||
+    document.mozFullScreen ||
+    document.webkitIsFullScreen || (document.msFullscreenElement != null);
+if (isFullScreen) {
+	floating = document.getElementById("invisible-voice-floating");
+    floating.style.visibility = 'hidden';
+} else {
+	floating = document.getElementById("invisible-voice-floating");
+	frame = document.getElementById("Invisible");
+    if (frame.style.visibility == 'hidden') {
+        floating.style.visibility = 'visible';
+    }
+};
+});
+
 document.addEventListener('click', function (event) {
 	// This is to open reopen the box if it needs to be
 	if (event.target.matches('#invisible-voice-float')){
