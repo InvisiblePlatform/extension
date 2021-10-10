@@ -141,7 +141,7 @@ function inject(code) {
     console.log("injecting " + code);
 	document.head.prepend(changeMeta);
     if (isInjected == false){
-	iframe.src =  aSiteWePullAndPushTo + "posts/" + code + "/"; 
+	iframe.src =  aSiteWePullAndPushTo + "/" + code + "/"; 
     isInjected = true;
     }
 }
