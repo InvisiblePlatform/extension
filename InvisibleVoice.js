@@ -20,7 +20,7 @@ var init = { method: 'GET',
 	         mode: 'cors',
 	         cache: 'default' };
 
-var updateJSON = new Request("https://invisible-voice.com/index.json", init);
+var updateJSON = new Request(aSiteWePullAndPushTo + "/index.json", init);
 var defaultObj = {
     time: 0,
 	newplace: "0.8,0.8",
@@ -34,7 +34,7 @@ var sites = {
       "q364",
       "github.com"
     ],]};
-
+var found = false;
 function getData() {
 	var timeNow = new Date;
 	now = timeNow.getTime();
@@ -61,11 +61,13 @@ function getData() {
 			var allKeys = Object.keys(items);
 		});
 		chrome.storage.local.get("data", function(data) {
+			var sourceString = aSiteYouVisit.replace('http://','').replace('https://','').replace('www.','').split(/[/?#]/)[0];
+            console.log("[ Invisible Voice ]: Running - " + sourceString );
 			for (code of data.data){
+                if ( found == false ) {
 				for (link of code.websites){
 					// Then you check to see if when you visit a site it might be a top site
-						var sourceString = aSiteYouVisit.replace('http://','').replace('https://','').replace('www.','').split(/[/?#]/)[0];
-					    if (sourceString == link ){
+					    if (sourceString == link || sourceString == link.replace(/\/$/,"") ){
 							globalCode = code.id;
 							globalSince = code.lastupdated;
 					        // Ooooh watch out, that site was sighted, set sites to the replacement!
@@ -74,7 +76,6 @@ function getData() {
 							try{
 								chrome.storage.local.get(globalCode, function(id){
 									timeSince = Object.values(id)[0];
-									console.log("try", timeSince);
 								if ( (timeSince < now && timeSince > globalSince) || timeSince < (now - waitingTime)){
 									iframe.style.visibility = 'hidden';
 									close.style.visibility = 'hidden';
@@ -83,18 +84,32 @@ function getData() {
 									chrome.storage.local.get('newplace', function(position){
 										var pos = Object.values(position)[0].split(',');
 										console.log("[ Invisible Voice ]: loading loc" + pos)
+                                        if (pos[0] > 1){
+                                            pos[0] = 0.9;
+                                        }
+                                        if (pos[0] < 0){
+                                            pos[0] = 0.1;
+                                        }
+                                        if (pos[1] > 1){
+                                            pos[1] = 0.9;
+                                        }
+                                        if (pos[1] < 0){
+                                            pos[1] = 0.1;
+                                        }
 										console.log("[ Invisible Voice ]: loading loc" + (window.innerWidth * pos[1]) + "," + (window.innerHeight * pos[0]))
 										open.style.top = (window.innerHeight * pos[0]) + "px";
 										open.style.left = (window.innerWidth * pos[1]) + "px";
 										open.style.visibility = 'visible';
 									})
 									open.style.visibility = 'visible';
-									console.log("[ Invisible Voice ]: Page Not Replaced " + link);
+									console.log("[ Invisible Voice ]: Page Not Replaced " + globalCode);
+                                    found = true;
 								} else {
 									inject(globalCode);
 									iframe.style.visibility = 'visible';
 									close.style.visibility = 'visible';
-									console.log("[ Invisible Voice ]: Page Replaced " + link);
+									console.log("[ Invisible Voice ]: Page Replaced " + globalCode);
+                                    found = true;
 								}
 								});
 							} catch(error) {
@@ -115,15 +130,20 @@ function getData() {
 							break;
 					    }
 				}
-			}
+            }
+            }
 		});
 	});	
 }
 
+var isInjected = false;
 function inject(code) {
     console.log("injecting " + code);
 	document.head.prepend(changeMeta);
-	iframe.src =  aSiteWePullAndPushTo + "posts/" + code + "/index.html"; 
+    if (isInjected == false){
+	iframe.src =  aSiteWePullAndPushTo + "posts/" + code + "/"; 
+    isInjected = true;
+    }
 }
 
 document.addEventListener('fullscreenchange', function() {
@@ -177,6 +197,18 @@ document.addEventListener('click', function (event) {
 	chrome.storage.local.get('newplace', function(position){
 		var pos = Object.values(position)[0].split(',');
 		console.log("[ Invisible Voice ]: loading loc" + pos)
+        if (pos[0] > 1){
+            pos[0] = 0.9;
+        }
+        if (pos[0] < 0){
+            pos[0] = 0.1;
+        }
+        if (pos[1] > 1){
+            pos[1] = 0.9;
+        }
+        if (pos[1] < 0){
+            pos[1] = 0.1;
+        }
 		open.style.top = (window.innerHeight * pos[0]) + "px";
 		open.style.left = (window.innerWidth * pos[1]) + "px";
 		open.style.visibility = 'visible';
@@ -184,8 +216,6 @@ document.addEventListener('click', function (event) {
     }
     dontOpen = false;
 }, false);
-
-
 
 
 var changeMeta = document.createElement("meta");
@@ -199,9 +229,8 @@ close.innerHTML = "Close";
 close.style.cssText = "border: 0px; overflow: visible; padding: 0px; right: calc(6.54vw + 19px); top: calc(6.54vh + 10px); left: auto; z-index: 2147483647; position: fixed; color: #DDD; background-color: #444; font-family: 'Unica Reg', sans-serif; font-size: 24px; visibility: hidden;";
 
 var iframe = document.createElement("iframe");
-iframe.style.cssText = "border: 0px; overflow: hidden; padding: 0px; right: auto; width: 86.1vw; height: 86.1vh; top: 6.54vh; left: 6.545vw; z-index: 2147483646; box-shadow: rgba(0, 0, 0, 1) 0 0 4000px; position: fixed; background-color: #fff; visibility: hidden;";
+iframe.style.cssText = "border: 0px; overflow: hidden; padding: 0px; right: auto; width: 86.1vw; height: 86.1vh; top: 6.54vh; left: 6.545vw; z-index: 2147483646; box-shadow: rgba(0, 0, 0, 1) 0 0 4000px; position: fixed; background-color: rgba(255,255,255,0.95); visibility: hidden; border-radius: 25px;";
 iframe.id = "Invisible";
-iframe.onkeypress = "deject();"
 
 
 var svgloc = chrome.extension.getURL('logo.svg');
@@ -242,19 +271,53 @@ function dragElement(elmnt) {
     pos2 = pos4 - e.clientY;
     pos3 = e.clientX;
     pos4 = e.clientY;
+    console.log(pos1, pos2, pos3, pos4);
     // set the element's new position:
     elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
     elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
   }
 
+  var id = null;
   function closeDragElement() {
     // stop moving when mouse button is released:
     document.onmouseup = null;
     document.onmousemove = null;
+    clearInterval(id);
+    id = setInterval(frame,10);
+    function frame(){
+         if (pos1 == 0 && pos2 == 0){
+            clearInterval(id);
+         }
+         if (pos2 > 0){
+             pos2 -= 1;
+             elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+         }
+         if (pos2 < 0){
+             pos2 += 1;
+             elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+         }
+         if (pos1 > 0){
+             pos1 -= 1;
+             elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+         }
+         if (pos1 < 0) {
+             pos1 += 1;
+             elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+         }
+         if (elmnt.offsetTop > window.innerHeight || elmnt.offsetTop < 0 ){
+             console.log("TURN");
+            pos2 *= -1;
+         }
+         if (elmnt.offsetLeft > window.innerWidth || elmnt.offsetLeft < 0 ){
+             console.log("TURN");
+            pos1 *= -1;
+         }
+           console.log(pos1, pos2);  
+    }
 	var placestore = {};
 	var topOffset = elmnt.offsetTop / window.innerHeight;
 	var leftOffset = elmnt.offsetLeft / window.innerWidth;
-	placestore['newplace'] = topOffset + "," + leftOffset;
+	placestore['newplace'] = topOffset  + "," + leftOffset ;
 	chrome.storage.local.set(placestore);
   }
 }
