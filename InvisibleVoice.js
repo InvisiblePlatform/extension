@@ -1,10 +1,10 @@
 // Simple code that gets the job done by Orange
 //
 
-var aSiteWePullAndPushTo = "https://invisible-voice.com/"
+var aSiteWePullAndPushTo = "https://test.reveb.la/"
 chrome.storage.local.get(function(localdata){
 		if (!localdata.domainToPull){
-			chrome.storage.local.set({"domainToPull": "https://invisible-voice.com/"})
+			chrome.storage.local.set({"domainToPull": "https://test.reveb.la/"})
 		} else {
 			 aSiteWePullAndPushTo = localdata.domainToPull;
 		};
