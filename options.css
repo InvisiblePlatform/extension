@@ -23,3 +23,22 @@ html, body, .iv-modes {
   background-color: #fff;
   filter: drop-shadow(.16em .16em 0px #FB98FB);
 }
+
+#title {
+ font-size: 8px;
+ text-align: center;
+}
+#current {
+ font-family: sans-serif;
+ font-weight: bold;
+ font-size: 120px;
+ margin-top: -.2em;
+ margin-bottom: -.2em;
+ white-space: nowrap;
+ transform: scaleX(1);
+}
+
+.possibly-scaled {
+ display:block;
+ transform-origin: 0 0;
+}
