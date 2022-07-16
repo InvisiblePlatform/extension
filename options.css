@@ -1,0 +1,25 @@
+html, body, .iv-modes {
+  height: 100px;
+  width: 120px;
+  margin: 0;
+}
+
+.iv-modes {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+}
+
+.iv-mode {
+  margin: 0.2em;
+  padding: 0.2em;
+  cursor: pointer;
+  filter: drop-shadow(.16em .16em 0px #98FB98);
+  border: black solid 1px;
+  background-color: #eee;
+}
+
+.iv-mode:hover {
+  background-color: #fff;
+  filter: drop-shadow(.16em .16em 0px #FB98FB);
+}
