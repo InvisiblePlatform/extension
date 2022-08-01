@@ -74,9 +74,6 @@ function getData() {
                 }
             }
 
-            // chrome.storage.local.get(null, function(items) {
-            //     allKeys = Object.keys(items);
-            // });
 	    found = false;
             chrome.storage.local.get("data", function(data) {
                 var sourceString = aSiteYouVisit.replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0];
@@ -282,9 +279,17 @@ function dragElement(elmnt) {
 		elmnt.style.transition= "filter .1s";
             }
         }
-        var placestore = {};
         var topOffset = elmnt.offsetTop / window.innerHeight;
         var leftOffset = elmnt.offsetLeft / window.innerWidth;
+        var placestore = {};
+            // console.log("[ Invisible Voice ]: loading loc" + pos)
+            if (topOffset > 0.95) topOffset = 0.9;
+            if (topOffset < 0) topOffset = 0.1;
+            if (leftOffset > 0.95) leftOffset = 0.9;
+            if (leftOffset < 0) leftOffset = 0.1;
+            elmnt.style.top = (window.innerHeight * topOffset) + "px";
+            elmnt.style.left = (window.innerWidth * leftOffset) + "px";
+	
         placestore['newplace'] = topOffset + "," + leftOffset;
         chrome.storage.local.set(placestore);
     }
