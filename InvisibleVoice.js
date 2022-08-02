@@ -13,21 +13,6 @@ var init = {
     cache: 'default'
 };
 
-var defaultObj = {
-    time: 0,
-    newplace: "0.8,0.8",
-    url: "www.google",
-    data: [],
-};
-
-var sites = {
-    "sites": [
-        [
-            "q364",
-            "github.com"
-        ],
-    ]
-};
 var found = false;
 var isInjected = false;
 var dontOpen = false;
@@ -35,7 +20,8 @@ var svgloc = chrome.extension.getURL('logo.svg');
 
 var aSiteWePullAndPushTo;
 var showButton, allKeys;
-var IVEnabled;
+var IVEnabled, IVScoreEnabled;
+var IVAutoOpen;
 var updateJSON;
 
 var close, iframe, open;
@@ -43,6 +29,8 @@ var close, iframe, open;
 chrome.storage.local.get(function(localdata) {
     aSiteWePullAndPushTo = localdata.domainToPull || "https://test.reveb.la";
     IVEnabled = (localdata.domainToPull == "NONE") ? false : true;
+    IVScoreEnabled = localdata.scoreEnabled ? true : false;
+    IVAutoOpen = localdata.autoOpen ? true : false;
     console.log("[ Invisible Voice ]: Set to " + localdata.domainToPull);
     updateJSON = new Request(aSiteWePullAndPushTo + "/index.json", init);
     if (IVEnabled) getData();
@@ -64,7 +52,7 @@ function triggerUpdate(){
 function getData() {
     now = (new Date).getTime();
     chrome.storage.local.get(function(topSiteOfTheWeek) {
-        if (!topSiteOfTheWeek.time) chrome.storage.local.set(defaultObj);
+        if (!topSiteOfTheWeek.time) triggerUpdate();
         if ((topSiteOfTheWeek.time + waitingTime) < now) triggerUpdate();
 
         chrome.storage.local.get("data", function(data) {
@@ -78,34 +66,44 @@ function getData() {
 		triggerUpdate();
     	    }
         });
-        found = false;
         chrome.storage.local.get("data", function(data) {
-            var sourceString = aSiteYouVisit.replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0];
-            console.log("[ Invisible Voice ]: Running - " + sourceString);
+            var sourceString = aSiteYouVisit.replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0].replace(".","");
+            console.log("[ Invisible Voice ]: Running - " + sourceString, IVScoreEnabled);
             for (code of data.data) {
                 if (found == false) {
-                    for (link of code.websites) {
-                        // Then you check to see if when you visit a site it might be a top site
-                        if (link == null) continue;
-                        if (sourceString == link.replace(/\/$/, "")) {
-                            globalCode = code.id;
-                            globalSince = code.lastupdated;
-                            // Ooooh watch out, that site was sighted, set sites to the replacement!
-                            try {
-                                chrome.storage.local.get(globalCode, function(id) {
-                                    timeSince = Object.values(id)[0];
-                                    showButton = ((timeSince < now && timeSince > globalSince) || timeSince < (now - waitingTime)) ? false : true;
-                                    appendObjects();
-                                    inject(globalCode);
-                                    found = true;
-                                });
-                            } catch (error) {
-                                iframe.style.visibility = 'visible';
-                                close.style.visibility = 'visible';
-                                console.log("[ Invisible Voice ]:"+error);
-                            }
-                            break;
-                        }
+                    if (code.id == null) continue;
+                    if (sourceString == code.id.replace(/\//g, "")) {
+                        globalCode = code.id;
+                        globalSince = code.lastupdated;
+                        try {
+                            chrome.storage.local.get(globalCode, function(id) {
+                                timeSince = Object.values(id)[0];
+                                showButton = ((timeSince < now && timeSince > globalSince) || timeSince < (now - waitingTime)) ? false : true;
+				if (IVScoreEnabled){
+				   try {
+				     if (code.br == null) throw "no";
+		    	    	     createObjects(code.br,"bcorp");
+				   } catch {
+				   	try {
+				          if (code.gr == null) throw "no";
+		    	    	   	  createObjects(gr,"goodonyou");
+				   	} catch {
+			           		try {
+				                  if (code.gr == null) throw "no";
+		    	    	   		  createObjects(code.dr,"glassdoor");
+				   		} catch {
+				     		  createObjects(1,"noscores");
+				   		}
+					}
+				   }
+				} else {
+		    	    	   createObjects();
+				};
+                                appendObjects();
+                                inject(globalCode);
+                            });
+                        } catch (error) {console.log("[ Invisible Voice ]: "+ error);}
+                        break;
                     }
                 }
             }
@@ -120,13 +118,24 @@ changeMeta.content = "upgrade-insecure-requests";
 function inject(code) {
     document.head.prepend(changeMeta);
     if (isInjected == false) {
-        console.log("injecting " + code);
+        console.log("[ Invisible Voice ]: Injected - "+ code);
         iframe.src = aSiteWePullAndPushTo + "/" + code + "/";
         isInjected = true;
+        found = true;
     }
 }
 
-function createObjects() {
+var isCreated = false
+function createObjects(value, type) {
+    console.log("[ Invisible Voice ]: creating  - "+ IVScoreEnabled);
+
+    open = document.createElement("div");
+    open.id = "invisible-voice-floating";
+    if (value == null) open.innerHTML = "<img id='invisible-voice-float' style='position: absolute; max-width: inherit; width:68px !important;' src=" + svgloc + ">";
+    if (value != null) open.innerHTML = "<div id='invisible-voice-float' style='position:absolute;width:68px;height:68px;background:#ddd;border-radius:68px;color:#111;' ><div id='invisible-voice-float' style='font-size:2em;filter: drop-shadow(2px 2px 0 #aaa);'>" + value + "</div><div style='font-size:.5em;margin-top:-.5em;color:#aaa;filter:drop-shadow(-1px -1px 0 #ccc);' id='invisible-voice-float'>" + type + "</div></div>";
+    open.style.cssText = "border: 0px; overflow: visible; left: 20px; bottom: 10px; z-index: 2147483647; position: fixed; color: #DDD;  background-color: rgba(0,0,0,0); font-family: 'Unica Reg', sans-serif; font-size: 24px; visibility: hidden; border-radius: 50%; filter: drop-shadow(.5rem .5rem 1rem #afa); text-align:center; transition: filter .5s;";
+
+    if (isCreated) return;
     close = document.createElement("div");
     close.id = "invisible-voice-button";
     close.innerHTML = " ";
@@ -135,18 +144,14 @@ function createObjects() {
     iframe = document.createElement("iframe");
     iframe.style.cssText = "border: 0px; overflow: hidden; padding: 0px; right: auto; width: 86.1vw; height: 86.1vh; top: 6.54vh; left: 6.545vw; z-index: 2147483646; box-shadow: rgba(0, 0, 0, 1) 0 0 4000px; position: fixed; background-color: rgba(255,255,255,0.95); visibility: hidden; border-radius: 25px;";
     iframe.id = "Invisible";
-
-    open = document.createElement("div");
-    open.id = "invisible-voice-floating";
-    open.innerHTML = "<img id='invisible-voice-float' style='position: absolute; max-width: inherit; width:68px !important;' src=" + svgloc + ">";
-    open.style.cssText = "border: 0px; overflow: visible; left: 20px; bottom: 10px; z-index: 2147483647; position: fixed; color: #DDD;  background-color: rgba(0,0,0,0); font-family: 'Unica Reg', sans-serif; font-size: 24px; visibility: hidden; border-radius: 50%; filter: drop-shadow(.5rem .5rem 1rem #afa); text-align:center; transition: filter .5s;";
+    isCreated = true
 };
 
 function appendObjects() {
     document.documentElement.appendChild(iframe);
     document.documentElement.appendChild(close);
     document.documentElement.appendChild(open);
-    if (showButton) {
+    if (showButton || !IVAutoOpen ) {
         iframe.style.visibility = 'hidden';
         close.style.visibility = 'hidden';
         dragElement(document.getElementById("invisible-voice-floating"));
@@ -168,7 +173,6 @@ function appendObjects() {
     }
 };
 
-createObjects();
 
 // Make the DIV element draggable:
 
@@ -226,51 +230,46 @@ function dragElement(elmnt) {
         function frame() {
 	    var pos2dir = 0,
 	        pos1dir = 0;
+	    var shadowColor = "inherit";
             if (pos2 > 0) {
                 pos2 -= 1;
-                elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
-		elmnt.style.transition= "filter .1s";
 		pos2dir = 1;
             }
             if (pos2 < 0) {
                 pos2 += 1;
-                elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
-		elmnt.style.transition= "filter .1s";
 		pos2dir = -1
             }
+	    
             if (pos1 > 0) {
                 pos1 -= 1;
-                elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
-		elmnt.style.transition= "filter .1s";
 		pos1dir = 1;
             }
             if (pos1 < 0) {
                 pos1 += 1;
-                elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
-		elmnt.style.transition= "filter .1s";
 		pos1dir = -1;
             }
-	    elmnt.style.filter = "drop-shadow("+ pos1dir + "rem " + pos2dir + "rem 1rem inherit)";
+
+            if (pos1 > 0 || pos1 < 0) elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+            if (pos2 > 0 || pos2 < 0) elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+
 	    elmnt.children[0].style.transform = "scale(" + ( (pos1dir/4) + 1 ) + "," + ( (pos2dir/4) + 1 ) + ")";
+	    elmnt.style.filter = "drop-shadow("+ pos1dir + "rem " + pos2dir + "rem 1rem" + shadowColor + ")";
 
             if (pos1 == 0 && pos2 == 0) {
                 clearInterval(id);
 		elmnt.style.filter = "drop-shadow(.25rem .25rem 1rem #afa)";
-		elmnt.style.transition= "filter .1s";
 		elmnt.children[0].style.transform = "scale(1,1)";
             }
             if (elmnt.offsetTop > window.innerHeight || elmnt.offsetTop < 0) {
-                // console.log("TURN");
                 pos2 *= -1;
-		elmnt.style.filter = "drop-shadow(.5rem .5rem 1.5rem #faa)";
-		elmnt.style.transition= "filter .1s";
+	    	shadowColor = "#faa";
             }
             if (elmnt.offsetLeft > window.innerWidth || elmnt.offsetLeft < 0) {
-                // console.log("TURN");
                 pos1 *= -1;
-		elmnt.style.filter = "drop-shadow(-.5rem -.5rem 1.5rem #faa)";
-		elmnt.style.transition= "filter .1s";
+	    	shadowColor = "#faa";
             }
+
+	    elmnt.style.transition = "filter .1s";
         }
         var topOffset = elmnt.offsetTop / window.innerHeight;
         var leftOffset = elmnt.offsetLeft / window.innerWidth;
@@ -350,53 +349,36 @@ document.addEventListener('click', function(event) {
 }, false);
 
 chrome.runtime.onMessage.addListener(msgObj => {
+    console.log("[ Invisible Voice ]: onMessage " + msgObj);
     if (msgObj == "InvisibleVoiceRefresh") {
-        var inv = document.getElementById("Invisible");
-        var flt = document.getElementById("invisible-voice-floating");
-        var btn = document.getElementById("invisible-voice-button");
-        try {
-            inv.remove();
-        } catch (e) {
-            console.log(e);
-        };
-        try {
-            flt.remove();
-        } catch (e) {
-            console.log(e);
-        };
-        try {
-            btn.remove();
-        } catch (e) {
-            console.log(e);
-        };
+	if (IVEnabled){
+	["invisible-voice-floating"].forEach(function(id){
+	try{
+       	    document.getElementById(id).remove();
+        } catch (e) {console.log(e);};
+	});};
         isInjected = false;
-        createObjects();
+	found = false;
         chrome.storage.local.get(function(localdata) {
     	    aSiteWePullAndPushTo = localdata.domainToPull || "https://test.reveb.la";
             IVEnabled = (localdata.domainToPull == "NONE") ? false : true;
-            console.log("[ Invisible Voice ]: Set to " + localdata.domainToPull);
-            appendObjects();
-            getData();
+    	    IVScoreEnabled = localdata.scoreEnabled ? true : false;
+    	    IVAutoOpen = localdata.autoOpen ? true : false;
+            console.log("[ Invisible Voice ]: Set to " + localdata.domainToPull, IVEnabled, IVScoreEnabled);
         });
+        getData();
     }
     if (msgObj == "InvisibleVoiceOff") {
-        var inv = document.getElementById("Invisible");
-        var flt = document.getElementById("invisible-voice-floating");
-        var btn = document.getElementById("invisible-voice-button");
-        try {
-            inv.remove();
-        } catch (e) {
-            console.log(e);
-        };
-        try {
-            flt.remove();
-        } catch (e) {
-            console.log(e);
-        };
-        try {
-            btn.remove();
-        } catch (e) {
-            console.log(e);
-        };
+	if (IVEnabled){
+	["Invisible", "invisible-voice-floating", "invisible-voice-button"].forEach(function(id){
+	try{
+       	    document.getElementById(id).remove();
+        } catch (e) {console.log(e);};
+	});};
+	isCreated = false;
+        chrome.storage.local.get(function(localdata) {
+            IVEnabled = (localdata.domainToPull == "NONE") ? false : true;
+            console.log("[ Invisible Voice ]: Set to " + localdata.domainToPull);
+        });
     }
 });

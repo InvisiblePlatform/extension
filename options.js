@@ -8,69 +8,71 @@ var init = {
 };
 var timeNow = new Date;
 now = timeNow.getTime();
-var current = document.getElementById("current");
+var enable = document.getElementById("enable");
+var score = document.getElementById("score");
+var autoopen = document.getElementById("autoopen");
+var IVScoreEnabled = false;
 
 chrome.storage.local.get(function(localdata) {
-    if (localdata.domainToPull == "https://test.reveb.la") current.innerHTML = "ON";
-    if (localdata.domainToPull == "NONE") current.innerHTML = "OFF";
-    resize();
+    if (localdata.domainToPull == "https://test.reveb.la") enable.checked = true;
+    if (localdata.domainToPull == "NONE") enable.checked = false;
+    if (localdata.scoreEnabled) score.checked = true;
+    if (localdata.autoOpen) autoopen.checked = true;
 });
 
-function resize(){
-    var xScale = 120/current.scrollWidth;
-    if (xScale < 1) current.style.transform = "scaleX(" + xScale + ")";
+function update(){
+    console.log("[ Invisible Voice ]: Update needed, so updating");
+    var updateJSON = new Request("https://test.reveb.la/index.json", init);
+    try {
+        fetch(updateJSON)
+            .then(response => response.json())
+            .then(data => chrome.storage.local.set({
+                "data": data
+            }))
+            .then(chrome.storage.local.set({
+                "time": now
+            }))
+            .then(console.log("[ Invisible Voice ]: Updated"));
+    } catch (error) {
+        error => console.log("[ Invisible Voice ]: Fetch Error", error.message)
+    }
+    rerender();
+    setTimeout(function(){
+    	console.log('after');
+    },500);
+}
+
+function rerender(){
+    chrome.tabs.query({}, tabs => {
+        tabs.forEach(tab => {
+            chrome.tabs.sendMessage(tab.id, "InvisibleVoiceRefresh");
+        });
+    });
 }
 
 document.addEventListener("click", (e) => {
-    if (!e.target.classList.contains("iv-mode")) {
-        return;
-    }
-
-    var chosenmode = e.target.textContent;
-    update = false;
-    if (chosenmode == "IV OFF") {
-        // Turn it off
-        chrome.storage.local.set({
-            "domainToPull": "NONE"
-        });
-    	current.innerHTML = "OFF"; resize();
-    } else if (chosenmode == "IV ON") {
-        update = true;
-        chrome.storage.local.set({
-            "domainToPull": "https://test.reveb.la"
-        });
-        var updateJSON = new Request("https://test.reveb.la/index.json", init);
-    	current.innerHTML = "ON"; resize();
-    }
-    if (update) {
-        console.log("[ Invisible Voice ]: Update needed, so updating");
-        try {
-            fetch(updateJSON)
-                .then(response => response.json())
-                .then(data => chrome.storage.local.set({
-                    "data": data
-                }))
-                .then(chrome.storage.local.set({
-                    "time": now
-                }))
-                .then(console.log("[ Invisible Voice ]: Updated"));
-        } catch (error) {
-            error => console.log("[ Invisible Voice ]: Fetch Error", error.message)
-        }
-        chrome.tabs.query({}, tabs => {
-            tabs.forEach(tab => {
-                chrome.tabs.sendMessage(tab.id, "InvisibleVoiceRefresh");
+    if (e.target.type != 'checkbox') return;
+    document.querySelectorAll('input').forEach(function(tog){
+	if (tog.id == "enable" && tog.checked){
+            chrome.storage.local.set({
+                "domainToPull": "https://test.reveb.la"
             });
-        });
-	setTimeout(function(){
-    		console.log('after');
-	},500);
-    } else {
-        chrome.tabs.query({}, tabs => {
-            tabs.forEach(tab => {
-                chrome.tabs.sendMessage(tab.id, "InvisibleVoiceOff");
+	    update();
+	} 
+	if (tog.id == "enable" && !tog.checked){
+            chrome.storage.local.set({
+                "domainToPull": "NONE"
             });
-        });
-
-    }
+            chrome.tabs.query({}, tabs => {
+                tabs.forEach(tab => {
+                    chrome.tabs.sendMessage(tab.id, "InvisibleVoiceOff");
+                });
+            });
+	} 
+	if (tog.id == "score" && tog.checked) chrome.storage.local.set({"scoreEnabled": true });
+	if (tog.id == "score" && !tog.checked) chrome.storage.local.set({"scoreEnabled": false });
+	if (tog.id == "autoopen" && tog.checked) chrome.storage.local.set({"autoOpen": true });
+	if (tog.id == "autoopen" && !tog.checked) chrome.storage.local.set({"autoOpen": false });
+	console.log(tog.checked, tog.id);
+    })
 });
