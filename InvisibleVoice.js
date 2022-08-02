@@ -81,7 +81,7 @@ function getData() {
     	    }
         });
         chrome.storage.local.get("data", function(data) {
-            var sourceString = aSiteYouVisit.replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0].replace(".","");
+            var sourceString = aSiteYouVisit.replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0].replace(/\./g,"");
             console.log("[ Invisible Voice ]: Running - " + sourceString, IVScoreEnabled);
 	    code = data.data[sourceString];
 	    console.log(code);
