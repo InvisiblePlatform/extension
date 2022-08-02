@@ -1,0 +1,71 @@
+html, body, .iv-modes {
+  height: 100px;
+  width: 120px;
+}
+
+.title {
+  display: inline-block;
+}
+
+.row {
+  margin-top: .3em;
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-end;
+}
+
+
+:root {
+  --tog-width: 2em;
+  --tog-height: 1em;
+  --tog-c-offset: 4px;
+  --tog-c-dim: calc(var(--tog-height) - (var(--tog-c-offset) * 2));
+  --tog-off: #cacaca;
+  --tog-on: #afa;
+  --tog-c-back: #fff;
+  --tog-indicate: "\2758";
+}
+
+.tog {
+  position: relative;
+  display: inline-block;
+  float: right;
+  margin-right: 1.5em;
+  margin-left: .5em;
+  width: var(--tog-width);
+  height: var(--tog-height);
+}
+.tog, .tog * { box-sizing: border-box; }
+
+.tog i {
+  display: block; position: absolute;
+  top: 0; bottom: 0; left: 0; right: 0;
+  cursor: pointer;
+  background: var(--tog-off);
+}
+
+.tog input { display: none; }
+
+.tog i::before {
+  content: "";
+  position: absolute;
+  top: var(--tog-c-offset); left: var(--tog-c-offset);
+  width: var(--tog-c-dim); height: var(--tog-c-dim);
+  background: var(--tog-c-back);
+}
+.tog input:checked + i { background: var(--tog-on); }
+.tog input:checked + i::before {
+  left: auto;
+  right: var(--tog-c-offset);
+}
+.round i { border-radius: var(--tog-height); }
+.round i::before { border-radius: 50%; }
+
+.indicate input:checked + i::before {
+  content: var(--tog-indicate);
+  color: var(--tog-on);
+  font-style: normal;
+  text-decoration: none;
+  font-weight: 900;
+  text-align: center;
+}
