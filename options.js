@@ -11,8 +11,7 @@ now = timeNow.getTime();
 var current = document.getElementById("current");
 
 chrome.storage.local.get(function(localdata) {
-    if (localdata.domainToPull == "https://test.reveb.la") current.innerHTML = "TESTING";
-    if (localdata.domainToPull == "https://invisible-voice.com/") current.innerHTML = "PRODUCTION";
+    if (localdata.domainToPull == "https://test.reveb.la") current.innerHTML = "ON";
     if (localdata.domainToPull == "NONE") current.innerHTML = "OFF";
     resize();
 });
@@ -35,20 +34,13 @@ document.addEventListener("click", (e) => {
             "domainToPull": "NONE"
         });
     	current.innerHTML = "OFF"; resize();
-    } else if (chosenmode == "IV Dev") {
+    } else if (chosenmode == "IV ON") {
         update = true;
         chrome.storage.local.set({
             "domainToPull": "https://test.reveb.la"
         });
         var updateJSON = new Request("https://test.reveb.la/index.json", init);
-    	current.innerHTML = "TESTING"; resize();
-    } else if (chosenmode == "IV Production") {
-        update = true;
-        chrome.storage.local.set({
-            "domainToPull": "https://invisible-voice.com/"
-        });
-        var updateJSON = new Request("https://invisible-voice.com/index.json", init);
-    	current.innerHTML = "PRODUCTION"; resize();
+    	current.innerHTML = "ON"; resize();
     }
     if (update) {
         console.log("[ Invisible Voice ]: Update needed, so updating");

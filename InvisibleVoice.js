@@ -13,7 +13,6 @@ var init = {
     cache: 'default'
 };
 
-var updateJSON = new Request(aSiteWePullAndPushTo + "/index.json", init);
 var defaultObj = {
     time: 0,
     newplace: "0.8,0.8",
@@ -37,87 +36,81 @@ var svgloc = chrome.extension.getURL('logo.svg');
 var aSiteWePullAndPushTo;
 var showButton, allKeys;
 var IVEnabled;
+var updateJSON;
 
 var close, iframe, open;
 
 chrome.storage.local.get(function(localdata) {
-    aSiteWePullAndPushTo = localdata.domainToPull || "https://invisible-voice.com";
+    aSiteWePullAndPushTo = localdata.domainToPull || "https://test.reveb.la";
     IVEnabled = (localdata.domainToPull == "NONE") ? false : true;
     console.log("[ Invisible Voice ]: Set to " + localdata.domainToPull);
-    getData();
+    updateJSON = new Request(aSiteWePullAndPushTo + "/index.json", init);
+    if (IVEnabled) getData();
 });
+
+function triggerUpdate(){
+    console.log("[ Invisible Voice ]: Updating "+ aSiteWePullAndPushTo);
+    try {
+        fetch(updateJSON)
+            .then(response => response.json())
+            .then(data => chrome.storage.local.set({ "data": data }))
+            .then(chrome.storage.local.set({ "time": now }));
+    } catch (error) {
+        error => console.log("[ Invisible Voice ]: Fetch Error", error.message)
+    }
+}
 
 
 function getData() {
-    var timeNow = new Date;
-    now = timeNow.getTime();
-    if (IVEnabled == true) {
-        console.log("[ Invisible Voice ]: IV is set to " + aSiteWePullAndPushTo);
-        chrome.storage.local.get(function(topSiteOfTheWeek) {
-            if (!topSiteOfTheWeek.time) chrome.storage.local.set(defaultObj);
+    now = (new Date).getTime();
+    chrome.storage.local.get(function(topSiteOfTheWeek) {
+        if (!topSiteOfTheWeek.time) chrome.storage.local.set(defaultObj);
+        if ((topSiteOfTheWeek.time + waitingTime) < now) triggerUpdate();
 
-            // Find the time to keep it updated
-            var newTime = topSiteOfTheWeek.time + waitingTime;
-            if (newTime < now) {
-                console.log("[ Invisible Voice ]: Update needed, so updating");
-                try {
-                    fetch(updateJSON)
-                        .then(response => response.json())
-                        .then(data => chrome.storage.local.set({
-                            "data": data
-                        }))
-                        .then(chrome.storage.local.set({
-                            "time": now
-                        }));
-                } catch (error) {
-                    error => console.log("[ Invisible Voice ]: Fetch Error", error.message)
-                }
-            }
-
-	    found = false;
-            chrome.storage.local.get("data", function(data) {
-                var sourceString = aSiteYouVisit.replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0];
-                console.log("[ Invisible Voice ]: Running - " + sourceString);
-                for (code of data.data) {
-                    if (found == false) {
-                        for (link of code.websites) {
-                            // Then you check to see if when you visit a site it might be a top site
-                            if (link == null) continue;
-                            if (sourceString == link.replace(/\/$/, "")) {
-                                globalCode = code.id;
-                                globalSince = code.lastupdated;
-                                // Ooooh watch out, that site was sighted, set sites to the replacement!
-                                try {
-                                    chrome.storage.local.get(globalCode, function(id) {
-                                        timeSince = Object.values(id)[0];
-                                        showButton = ((timeSince < now && timeSince > globalSince) || timeSince < (now - waitingTime)) ? false : true;
-                                        appendObjects();
-                                    	inject(globalCode);
-                                        found = true;
-                                    });
-                                } catch (error) {
-                                    // console.log("[ Invisible Voice ]: Key Error", error);
-                                    var firstData = {};
-                                    firstData[globalCode] = code.lastupdated * 100;
-                                    chrome.storage.local.set(firstData);
-                                    chrome.storage.local.get(globalCode, function(id) {
-                                        timeSince = Object.values(id)[0];
-                                        // console.log("catch", timeSince);
-                                    });
-                                    iframe.style.visibility = 'visible';
-                                    close.style.visibility = 'visible';
-                                    // console.log("[ Invisible Voice ]: Page Replaced");
-                                }
-                                break;
+        chrome.storage.local.get("data", function(data) {
+    	    try{
+    		var test = data.data[100];
+    	    } catch (error) {
+    		console.log(error.message);
+    		console.log(data);
+    		console.log(aSiteWePullAndPushTo);
+    		updateJSON = new Request(aSiteWePullAndPushTo + "/index.json", init);
+		triggerUpdate();
+    	    }
+        });
+        found = false;
+        chrome.storage.local.get("data", function(data) {
+            var sourceString = aSiteYouVisit.replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0];
+            console.log("[ Invisible Voice ]: Running - " + sourceString);
+            for (code of data.data) {
+                if (found == false) {
+                    for (link of code.websites) {
+                        // Then you check to see if when you visit a site it might be a top site
+                        if (link == null) continue;
+                        if (sourceString == link.replace(/\/$/, "")) {
+                            globalCode = code.id;
+                            globalSince = code.lastupdated;
+                            // Ooooh watch out, that site was sighted, set sites to the replacement!
+                            try {
+                                chrome.storage.local.get(globalCode, function(id) {
+                                    timeSince = Object.values(id)[0];
+                                    showButton = ((timeSince < now && timeSince > globalSince) || timeSince < (now - waitingTime)) ? false : true;
+                                    appendObjects();
+                                    inject(globalCode);
+                                    found = true;
+                                });
+                            } catch (error) {
+                                iframe.style.visibility = 'visible';
+                                close.style.visibility = 'visible';
+                                console.log("[ Invisible Voice ]:"+error);
                             }
+                            break;
                         }
                     }
                 }
-            });
+            }
         });
-    } else {
-        console.log("[ Invisible Voice ]: IV is off");
-    }
+    });
 }
 
 var changeMeta = document.createElement("meta");
@@ -379,7 +372,7 @@ chrome.runtime.onMessage.addListener(msgObj => {
         isInjected = false;
         createObjects();
         chrome.storage.local.get(function(localdata) {
-    	    aSiteWePullAndPushTo = localdata.domainToPull || "https://invisible-voice.com";
+    	    aSiteWePullAndPushTo = localdata.domainToPull || "https://test.reveb.la";
             IVEnabled = (localdata.domainToPull == "NONE") ? false : true;
             console.log("[ Invisible Voice ]: Set to " + localdata.domainToPull);
             appendObjects();
