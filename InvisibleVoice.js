@@ -16,8 +16,8 @@ var init = {
 var found = false;
 var isInjected = false;
 var dontOpen = false;
-var svgloc = chrome.extension.getURL('logo.svg');
-var localIndex = chrome.extension.getURL('index.json');
+var svgloc = chrome.runtime.getURL('logo.svg');
+var localIndex = chrome.runtime.getURL('index.json');
 
 var aSiteWePullAndPushTo;
 var showButton, allKeys;
@@ -168,7 +168,11 @@ function appendObjects() {
         close.style.visibility = 'hidden';
         dragElement(document.getElementById("invisible-voice-floating"));
         chrome.storage.local.get('newplace', function(position) {
-            var pos = Object.values(position)[0].split(',');
+	    try{
+            	var pos = Object.values(position)[0].split(',');
+	    } catch {
+            	var pos = [0.2,0.2];
+	    }
             // console.log("[ Invisible Voice ]: loading loc" + pos)
             if (pos[0] > 1) pos[0] = 0.9;
             if (pos[0] < 0) pos[0] = 0.1;

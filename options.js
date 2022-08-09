@@ -8,7 +8,7 @@ var init = {
 };
 var timeNow = new Date;
 now = timeNow.getTime();
-var localIndex = chrome.extension.getURL('index.json');
+var localIndex = 'index.json';
 var enable = document.getElementById("enable");
 var score = document.getElementById("score");
 var autoopen = document.getElementById("autoopen");

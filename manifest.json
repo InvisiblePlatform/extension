@@ -1,7 +1,7 @@
 {
-    "manifest_version": 2,
+    "manifest_version": 3,
 
-    "version": "22.08.02.2",
+    "version": "22.08.09",
     "name": "Invisible Voice",
     "description": "This extension boycotts a website",
 
@@ -9,26 +9,41 @@
         "tabs",
         "storage",
         "webRequest",
-        "https://invisible-voice.com/*",
-        "https://test.reveb.la/*",
         "unlimitedStorage"
     ],
+    "host_permissions":[
+        "https://invisible-voice.com/*",
+        "https://test.reveb.la/*"
+    ],
+    "optional_host_permissions": [
+    	"*://*/*"
+    ],
 
-    "browser_action": {
+    "action": {
     	"default_icon": "icon48.png",
 	"default_title": "invisible voice",
 	"default_popup": "options.html",
+    	"default_icons": {
+    	    "16" : "icon16.png",
+    	    "24" : "icon24.png",
+    	    "48" : "icon48.png",
+    	    "96" : "icon96.png"
+    	},
 	"browser_style": true
     },
 
-    "icons": {
-        "16" : "icon16.png",
-        "24" : "icon24.png",
-        "48" : "icon48.png",
-        "96" : "icon96.png"
-    },
+    	"icons": {
+    	    "16" : "icon16.png",
+    	    "24" : "icon24.png",
+    	    "48" : "icon48.png",
+    	    "96" : "icon96.png"
+    	},
 
-    "web_accessible_resources": ["logo.svg", "index.json"],
+
+    "web_accessible_resources": [
+	    {"resources":["index.json"],"matches":["<all_urls>"]},
+	    {"resources":["logo.svg"],"matches":["<all_urls>"]}
+    ],
 
     "options_ui": {
         "page": "options.html"
