@@ -18,6 +18,7 @@ var isInjected = false;
 var dontOpen = false;
 var svgloc = chrome.runtime.getURL('logo.svg');
 var localIndex = chrome.runtime.getURL('index.json');
+var localReplace = chrome.runtime.getURL('replacements.json');
 
 var aSiteWePullAndPushTo;
 var showButton, allKeys;
@@ -26,6 +27,9 @@ var IVAutoOpen, IVLocalIndex;
 var updateJSON;
 
 var close, iframe, open;
+var sourceString = aSiteYouVisit.replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0].replace(/\./g,"");
+var globablCode, globalSince, code;
+fetchCodeForPattern(sourceString);
 
 chrome.storage.local.get(function(localdata) {
     aSiteWePullAndPushTo = localdata.domainToPull || "https://test.reveb.la";
@@ -62,64 +66,79 @@ function triggerUpdate(){
     }
 }
 
+var coded;
+
+function run(globalCoded){
+        try {
+            chrome.storage.local.get(globalCoded, function(id) {
+                timeSince = Object.values(id)[0];
+                showButton = ((timeSince < now) || timeSince < (now - waitingTime)) ? false : true;
+		chrome.storage.local.get("data", function(data){
+			coded = data.data[globalCoded];
+			console.log(coded);
+		});
+	    if (IVScoreEnabled){
+	       try {
+	         if (coded.bc == null) throw "no";
+	        	     createObjects(coded.bc,"bcorp");
+	       } catch {
+	       	try {
+	              if (coded.gr == null) throw "no";
+	        	   	  createObjects(coded.gr,"goodonyou");
+	       	} catch {
+	       		try {
+	                      if (coded.dr == null) throw "no";
+	        	   		  createObjects(coded.dr,"glassdoor");
+	       		} catch {
+	       		try {
+	                      if (coded.mr == null) throw "no";
+	        	   		  createObjects(coded.mr,"mbfc");
+	       		} catch {
+	         		  createObjects();
+	       		}
+	    	}
+	       }}
+	    } else {
+	        	   createObjects();
+	    };
+                appendObjects();
+                inject(globalCoded);
+            });
+        } catch (error) {console.log("[ Invisible Voice ]: "+ error);}
+}
+
+function fetchCodeForPattern(sourceString){
+        chrome.storage.local.get("data", function(data) {
+		pattern = "/" + sourceString + "/";
+		try {
+	    		coded = data.data[sourceString];
+			if(!coded) throw "no";
+	    		console.log(coded);
+            		globalCode = sourceString;
+			if(coded) run(globalCode);
+		} catch {
+			fetch(new Request(localReplace, init))
+			    .then(response => response.json())
+			    .then(data => data[pattern]["t"].replace(/\//g,''))
+		            .then(global => run(global));
+	    	}
+	});
+	return coded;
+}
 
 function getData() {
     now = (new Date).getTime();
     chrome.storage.local.get(function(topSiteOfTheWeek) {
         if (!topSiteOfTheWeek.time) triggerUpdate();
         if ((topSiteOfTheWeek.time + waitingTime) < now) triggerUpdate();
-
-        chrome.storage.local.get("data", function(data) {
-    	    try{
-    		var test = data.data[100];
-    	    } catch (error) {
-    		console.log(error.message);
-    		console.log(data);
-    		console.log(aSiteWePullAndPushTo);
-    		updateJSON = new Request(aSiteWePullAndPushTo + "/index.json", init);
-		triggerUpdate();
-    	    }
-        });
-        chrome.storage.local.get("data", function(data) {
-            var sourceString = aSiteYouVisit.replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0].replace(/\./g,"");
-            console.log("[ Invisible Voice ]: Running - " + sourceString, IVScoreEnabled);
-	    code = data.data[sourceString];
-	    console.log(code);
-            globalCode = sourceString;
-            globalSince = code.d;
-            try {
-                chrome.storage.local.get(globalCode, function(id) {
-                    timeSince = Object.values(id)[0];
-                    showButton = ((timeSince < now && timeSince > globalSince) || timeSince < (now - waitingTime)) ? false : true;
-	        if (IVScoreEnabled){
-	           try {
-	             if (code.bc == null) throw "no";
-	            	     createObjects(code.bc,"bcorp");
-	           } catch {
-	           	try {
-	                  if (code.gr == null) throw "no";
-	            	   	  createObjects(gr,"goodonyou");
-	           	} catch {
-	           		try {
-	                          if (code.dr == null) throw "no";
-	            	   		  createObjects(code.dr,"glassdoor");
-	           		} catch {
-	           		try {
-	                          if (code.mr == null) throw "no";
-	            	   		  createObjects(code.mr,"mbfc");
-	           		} catch {
-	             		  createObjects();
-	           		}
-	        	}
-	           }}
-	        } else {
-	            	   createObjects();
-	        };
-                    appendObjects();
-                    inject(globalCode);
-                });
-            } catch (error) {console.log("[ Invisible Voice ]: "+ error);}
-        });
+    });
+    chrome.storage.local.get("data", function(data) {
+        try{
+    	 var test = data.data[100];
+        } catch (error) {
+    	  triggerUpdate();
+        }
+        console.log("[ Invisible Voice ]: Running - " + sourceString, IVScoreEnabled);
     });
 }
 
@@ -384,6 +403,7 @@ chrome.runtime.onMessage.addListener(msgObj => {
             console.log("[ Invisible Voice ]: Set to " + localdata.domainToPull, IVEnabled, IVScoreEnabled);
         });
         getData();
+	fetchCodeForPattern(sourceString);
     }
     if (msgObj == "InvisibleVoiceOff") {
 	if (IVEnabled){
