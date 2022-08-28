@@ -19,6 +19,7 @@ var dontOpen = false;
 var svgloc = chrome.runtime.getURL('logo.svg');
 var localIndex = chrome.runtime.getURL('index.json');
 var localReplace = chrome.runtime.getURL('replacements.json');
+// var localHash = chrome.runtime.getURL('hashes.json');
 
 var aSiteWePullAndPushTo;
 var showButton, allKeys;
@@ -31,6 +32,7 @@ var sourceString = aSiteYouVisit.replace(/http[s]*:\/\/|www\./g, '').split(/[/?#
 var globablCode, globalSince, code;
 var propertyOrder;
 fetchCodeForPattern(sourceString);
+var IVBlock = false;
 
 chrome.storage.local.get(function(localdata) {
     aSiteWePullAndPushTo = localdata.domainToPull || "https://test.reveb.la";
@@ -44,6 +46,14 @@ chrome.storage.local.get(function(localdata) {
     if (IVLocalIndex) updateJSON = new Request(localIndex, init);
     if (!IVLocalIndex) updateJSON = new Request(aSiteWePullAndPushTo + "/index.json", init);
     if (IVEnabled) getData();
+    // Prevent page load
+    // fetch(new Request(localReplace, init))
+    //     .then(response => response.json())
+    //     .then(data => data[pattern]["t"].replace(/\//g,''))
+    //     .then(global => run(global));
+    if (IVBlock) {
+	window.location.replace(aSiteWePullAndPushTo);
+    };
 });
 
 function triggerUpdate(){

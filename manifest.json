@@ -43,6 +43,7 @@
     "web_accessible_resources": [
 	    {"resources":["index.json"],"matches":["<all_urls>"]},
 	    {"resources":["replacements.json"],"matches":["<all_urls>"]},
+	    {"resources":["hashes.json"],"matches":["<all_urls>"]},
 	    {"resources":["logo.svg"],"matches":["<all_urls>"]}
     ],
 
