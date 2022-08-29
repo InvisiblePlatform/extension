@@ -23,9 +23,10 @@ chrome.storage.local.get(function(localdata) {
     if (localdata.scoreEnabled) score.checked = true;
     if (localdata.autoOpen) autoopen.checked = true;
     if (localdata.packagedData) packaged.checked = true;
-    if (localdata.propertyOrder) propertyOrder = localdata.propertyOrder;
-    console.log(localdata.propertyOrder);
+    propertyOrder = localdata.propertyOrder ? localdata.propertyOrder : [ "bcorp", "goodonyou", "glassdoor", "mbfc" ];
+    console.log(propertyOrder);
     slist(document.getElementById("sortlist"));
+    document.getElementById("sortlist").style.visibility = "visible";
 });
 
 function update(){
