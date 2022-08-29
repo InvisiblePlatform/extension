@@ -53,6 +53,14 @@
         "page": "options.html"
     },
 
+    "background":{
+    	"service_worker":"background.js"
+    },
+
+    "externally_connectable" : {
+    	"matches": [ "<all_urls>" ]
+    },
+
     "content_scripts": [{
 	"matches": ["<all_urls>"],
         "js": ["InvisibleVoice.js"],

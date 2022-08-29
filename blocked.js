@@ -40,14 +40,29 @@ function isMatch(value){
 }
 
 function setPageValues(value){
-    	boycott = document.getElementById("Invisible-boycott");
-	boycott.innerHTML = "UNBOYCOTT THE FOLLOWING: <br/>" + value.toString().replace(/,/g,'<br/>');
+    	boycott = document.getElementById("Invisible-information");
+	boycott.innerHTML = value.toString().replace(/,/g,'<br/>');
 }
+
+var myid = chrome.i18n.getMessage("@@extension_id");
 
 document.addEventListener('click', function(event) {
         if (event.target.matches('#Invisible-boycott')) {
-		console.log("unboycott: " + hashforsite );
-		chrome.storage.local.set({"blockedHashes": blockedHashes.filter(isMatch)});
-		window.location.replace("https://" + domainString);
+	    console.log("unboycott: " + hashforsite );
+	    chrome.storage.local.set({"blockedHashes": blockedHashes.filter(isMatch)});
+	    if (returnString){
+		window.location.replace(returnString);
+	    } else {
+	   	window.location.replace("https://" + domainString);
+	    }
         };
+        if (event.target.matches('#Invisible-boycott-temp')) {
+	    chrome.runtime.sendMessage(myid,{"InvisibleVoiceReblock": hashforsite});
+	    chrome.storage.local.set({"blockedHashes": blockedHashes.filter(isMatch)});
+	    if (returnString){
+		window.location.replace(returnString);
+	    } else {
+	   	window.location.replace("https://" + domainString);
+	    }
+	}
 }, false);

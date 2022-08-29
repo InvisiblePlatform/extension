@@ -51,26 +51,16 @@ chrome.storage.local.get(function(localdata) {
     IVEnabled = (localdata.domainToPull == "NONE") ? false : true;
     IVScoreEnabled = localdata.scoreEnabled ? true : false;
     propertyOrder = localdata.propertyOrder ? localdata.propertyOrder : [ "bcorp", "goodonyou", "glassdoor", "mbfc" ];
-    console.log(propertyOrder);
     IVAutoOpen = localdata.autoOpen ? true : false;
     IVLocalIndex = localdata.packagedData ? true : false;
-    blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
     if (!IVLocalIndex) console.log("[ Invisible Voice ]: Set to " + localdata.domainToPull);
     if (IVLocalIndex) console.log("[ Invisible Voice ]: Set to LocalIndex");
     if (IVLocalIndex) updateJSON = new Request(localIndex, init);
     if (!IVLocalIndex) updateJSON = new Request(aSiteWePullAndPushTo + "/index.json", init);
     if (IVEnabled) getData();
     // Prevent page load
-    console.log("blocking: ", blockedHashes.toString());
-    if (blockedHashes.includes(hashforsite)){
-    // lookup hash
-    	fetch(new Request(localHash, init))
-        	.then(response => response.json())
-        	.then(data => data[hashforsite])
-        	.then(global => console.log(global));
-    	console.log(domainString);
-	window.location.replace(chrome.runtime.getURL('blocked.html') + "?site=" +domainString + "&return=" + aSiteYouVisit);
-    };
+    blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
+    blockCheck();
 });
 
 function triggerUpdate(){
@@ -395,7 +385,8 @@ document.addEventListener('click', function(event) {
 		console.log("boycott: " + hashforsite );
 		blockedHashes.push(hashforsite);
             	chrome.storage.local.set({ "blockedHashes": blockedHashes });
-		window.location.replace(chrome.runtime.getURL('blocked.html') + "?site=" +domainString);
+		aSiteYouVisit = window.location.href;
+		window.location.replace(chrome.runtime.getURL('blocked.html') + "?site=" +domainString + "&return=" + aSiteYouVisit);
         };
 
     if (dontOpen != true) {
@@ -444,7 +435,29 @@ document.addEventListener('click', function(event) {
     dontOpen = false;
 }, false);
 
+function blockCheck() {
+        chrome.storage.local.get(function(localdata) {
+    		blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
+	});
+    	console.log(domainString);
+    	if (blockedHashes.includes(hashforsite)){
+    	// lookup hash
+    		fetch(new Request(localHash, init))
+    	    	.then(response => response.json())
+    	    	.then(data => data[hashforsite])
+    	    	.then(global => console.log(global));
+    		console.log(domainString);
+    	    window.location.replace(chrome.runtime.getURL('blocked.html') + "?site=" +domainString + "&return=" + aSiteYouVisit);
+    	};
+}
+
 chrome.runtime.onMessage.addListener(msgObj => {
+    if (msgObj == "InvisibleVoiceBlockCheck") {
+	if (aSiteYouVisit != window.location.href){
+		blockCheck();
+		console.log("block check", aSiteYouVisit, window.location.href);
+	}
+    }
     console.log("[ Invisible Voice ]: onMessage " + msgObj);
     if (msgObj == "InvisibleVoiceRefresh") {
 	if (IVEnabled){
@@ -461,10 +474,26 @@ chrome.runtime.onMessage.addListener(msgObj => {
     	    IVScoreEnabled = localdata.scoreEnabled ? true : false;
     	    IVAutoOpen = localdata.autoOpen ? true : false;
     	    IVLocalIndex = localdata.packagedData ? true : false;
+    	    propertyOrder = localdata.propertyOrder ? localdata.propertyOrder : [ "bcorp", "goodonyou", "glassdoor", "mbfc" ];
+    	    blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
             console.log("[ Invisible Voice ]: Set to " + localdata.domainToPull, IVEnabled, IVScoreEnabled);
         });
+	blockCheck();
         getData();
 	fetchCodeForPattern(sourceString);
+    }
+    if (Object.keys(msgObj)[0] == "InvisibleVoiceReblock") {
+	objectkey = Object.keys(msgObj)[0];
+        setTimeout(function(){
+		hashtoadd = msgObj[objectkey];
+		chrome.storage.local.get(function(localdata) {
+    			blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
+		});
+		blockedHashes.push(hashtoadd);
+        	chrome.storage.local.set({ "blockedHashes": blockedHashes });
+		console.log("block: ", hashtoadd);
+		console.log("block: ", blockedHashes);
+	}, 1000);
     }
     if (msgObj == "InvisibleVoiceOff") {
 	if (IVEnabled){
@@ -480,3 +509,4 @@ chrome.runtime.onMessage.addListener(msgObj => {
         });
     }
 });
+

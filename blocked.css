@@ -1,0 +1,17 @@
+* {
+	font-size: 1.5em;
+	text-align: center;
+}
+#Invisible-information{
+	font-size: 1em;
+	color: #111;
+}
+
+#Invisible-boycott{
+	font-size: 0.5em;
+	background-color: red;
+}
+#Invisible-boycott-temp{
+	font-size: 2em;
+	background-color: orange;
+}
