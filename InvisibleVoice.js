@@ -211,6 +211,23 @@ function createObjects(value, type) {
     boycott.id = "Invisible-boycott";
     boycott.innerHTML = "BOYCOTT";
 
+    vote = document.createElement("div");
+    vote.style.cssText = "visibility:hidden;font-weight:800;position:absolute;z-index:2147483647;top:3em;display:flex;background-color:#afa;left:calc( 50vw - 2.5em );width:5em;justify-content:space-around;";
+    vote.id = "Invisible-vote";
+
+    voteup = document.createElement("div");
+    voteup.id = "Invisible-vote-up";
+    voteup.innerHTML = "▲";
+    voteup.style.cssText = "color:green;cursor: pointer;";
+    votedown = document.createElement("div");
+    votedown.id = "Invisible-vote-down";
+    votedown.style.cssText = "color:red;cursor: pointer;";
+    votedown.innerHTML = "▼";
+    votenum = document.createElement("div");
+    votenum.id = "Invisible-vote-num";
+    votenum.innerHTML = " N/A ";
+
+
     iframe = document.createElement("iframe");
     iframe.style.cssText = "border: 0px; overflow: hidden; padding: 0px; right: auto; width: 86.1vw; height: 86.1vh; top: 6.54vh; left: 6.545vw; z-index: 2147483646; box-shadow: rgba(0, 0, 0, 1) 0 0 4000px; position: fixed; background-color: rgba(255,255,255,0.95); visibility: hidden; border-radius: 25px;";
     iframe.id = "Invisible";
@@ -222,10 +239,15 @@ function appendObjects() {
     document.documentElement.appendChild(close);
     document.documentElement.appendChild(open);
     document.documentElement.appendChild(boycott);
+    document.documentElement.appendChild(vote);
+    vote.appendChild(voteup);
+    vote.appendChild(votenum);
+    vote.appendChild(votedown);
     if (showButton || !IVAutoOpen ) {
         iframe.style.visibility = 'hidden';
         close.style.visibility = 'hidden';
 	boycott.style.visibility = 'hidden';
+        vote.style.visibility = 'hidden';
         dragElement(document.getElementById("invisible-voice-floating"));
         chrome.storage.local.get('newplace', function(position) {
 	    try{
@@ -247,6 +269,7 @@ function appendObjects() {
         iframe.style.visibility = 'visible';
         close.style.visibility = 'visible';
         boycott.style.visibility = 'visible';
+        vote.style.visibility = 'visible';
     }
 };
 
@@ -388,6 +411,14 @@ document.addEventListener('click', function(event) {
 		aSiteYouVisit = window.location.href;
 		window.location.replace(chrome.runtime.getURL('blocked.html') + "?site=" +domainString + "&return=" + aSiteYouVisit);
         };
+        if (event.target.matches('#Invisible-vote-up')) {
+		console.log("vote up");
+		votenum.innerHTML = "+1"
+        };
+        if (event.target.matches('#Invisible-vote-down')) {
+		console.log("vote down");
+		votenum.innerHTML = "-1"
+        };
 
     if (dontOpen != true) {
         // This is to open reopen the box if it needs to be
@@ -399,6 +430,7 @@ document.addEventListener('click', function(event) {
             iframe.style.visibility = 'visible';
             close.style.visibility = 'visible';
             boycott.style.visibility = 'visible';
+            vote.style.visibility = 'visible';
             open.style.visibility = 'hidden';
         };
         // If the clicked element doesn't have the right selector, bail
@@ -418,6 +450,7 @@ document.addEventListener('click', function(event) {
         iframe.style.visibility = 'hidden';
         close.style.visibility = 'hidden';
         boycott.style.visibility = 'hidden';
+        vote.style.visibility = 'hidden';
         document.documentElement.appendChild(open);
         dragElement(open);
         chrome.storage.local.get('newplace', function(position) {
@@ -455,10 +488,10 @@ chrome.runtime.onMessage.addListener(msgObj => {
     if (msgObj == "InvisibleVoiceBlockCheck") {
 	if (aSiteYouVisit != window.location.href){
 		blockCheck();
-		console.log("block check", aSiteYouVisit, window.location.href);
 	}
+    } else {
+    	console.log("[ Invisible Voice ]: onMessage " + msgObj);
     }
-    console.log("[ Invisible Voice ]: onMessage " + msgObj);
     if (msgObj == "InvisibleVoiceRefresh") {
 	if (IVEnabled){
 	["invisible-voice-floating"].forEach(function(id){
