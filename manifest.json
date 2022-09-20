@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
 
-    "version": "22.09.03",
+    "version": "22.09.20",
     "name": "Invisible Voice",
     "description": "This extension boycotts a website",
 
@@ -13,7 +13,8 @@
     ],
     "host_permissions":[
         "https://invisible-voice.com/*",
-        "https://test.reveb.la/*"
+        "https://test.reveb.la/*",
+        "https://assets.reveb.la/*"
     ],
     "optional_host_permissions": [
     	"*://*/*"
@@ -55,10 +56,6 @@
 
     "background":{
     	"service_worker":"background.js"
-    },
-
-    "externally_connectable" : {
-    	"matches": [ "<all_urls>" ]
     },
 
     "content_scripts": [{

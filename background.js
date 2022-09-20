@@ -9,16 +9,61 @@ chrome.storage.local.get(function(localdata) {
 });
 
 function blockCheck(){
-    chrome.tabs.query({}, tabs => {
+    chrome.tabs.query({active: true}, tabs => {
         tabs.forEach(tab => {
             chrome.tabs.sendMessage(tab.id, "InvisibleVoiceBlockCheck");
         });
     });
 }
 
-chrome.runtime.onMessage.addListener(msgObj => {
+function vote(site, direction, tab){
+   var voteHeaders = new Headers({
+   	'site': site,
+   	'direction': direction
+   });
+   var voteVars = {
+       method: 'POST',
+       headers: voteHeaders,
+       mode: 'cors',
+   };
+   fetch(new Request(voteUrl + "/vote", voteVars))
+   	.then(response => response.json()).then(data => {
+		chrome.tabs.sendMessage(tab, {"InvisibleVote": data });
+	});
+}
+
+function getTotal(site, tab){
+   var voteHeaders = new Headers({
+   	'site': site
+   });
+   var voteVars = {
+       method: 'GET',
+       headers: voteHeaders,
+       mode: 'cors',
+   };
+   fetch(new Request(voteUrl + "/get-data", voteVars))
+   	.then(response => response.json()).then(data => {
+		chrome.tabs.sendMessage(tab, {"InvisibleVote": {"total": data } });
+	});
+}
+
+var voteUrl = "https://assets.reveb.la";
+chrome.runtime.onMessage.addListener(function(msgObj, sender, sendResponse) {
+	console.log(msgObj);
     if (msgObj == "InvisibleVoiceRefresh") {
 	    console.log("refreshed");
+    }
+    if (Object.keys(msgObj)[0] == "InvisibleVoiceUpvote") {
+	objectkey = Object.keys(msgObj)[0];
+	vote(msgObj[objectkey], "up", sender.tab.id);
+    }
+    if (Object.keys(msgObj)[0] == "InvisibleVoiceDownvote") {
+	objectkey = Object.keys(msgObj)[0];
+	vote(msgObj[objectkey], "down", sender.tab.id);
+    }
+    if (Object.keys(msgObj)[0] == "InvisibleVoteTotal") {
+	objectkey = Object.keys(msgObj)[0];
+	getTotal(msgObj[objectkey], sender.tab.id);
     }
     if (Object.keys(msgObj)[0] == "InvisibleVoiceReblock") {
 	objectkey = Object.keys(msgObj)[0];

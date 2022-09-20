@@ -22,6 +22,7 @@ var localIndex = chrome.runtime.getURL('index.json');
 var localReplace = chrome.runtime.getURL('replacements.json');
 var localHash = chrome.runtime.getURL('hashtosite.json');
 var localSite = chrome.runtime.getURL('sitetohash.json');
+var voteUrl = "https://assets.reveb.la";
 
 var aSiteWePullAndPushTo;
 var showButton, allKeys;
@@ -151,10 +152,14 @@ function fetchCodeForPattern(sourceString){
             		globalCode = sourceString;
 			if(coded) run(globalCode);
 		} catch {
+			try {
 			fetch(new Request(localReplace, init))
 			    .then(response => response.json())
 			    .then(data => data[pattern]["t"].replace(/\//g,''))
 		            .then(global => run(global));
+			} catch {
+				return;
+			}
 	    	}
 	});
 	return coded;
@@ -270,6 +275,7 @@ function appendObjects() {
         close.style.visibility = 'visible';
         boycott.style.visibility = 'visible';
         vote.style.visibility = 'visible';
+	chrome.runtime.sendMessage({"InvisibleVoteTotal": hashforsite});
     }
 };
 
@@ -413,11 +419,11 @@ document.addEventListener('click', function(event) {
         };
         if (event.target.matches('#Invisible-vote-up')) {
 		console.log("vote up");
-		votenum.innerHTML = "+1"
+	    	chrome.runtime.sendMessage({"InvisibleVoiceUpvote": hashforsite});
         };
         if (event.target.matches('#Invisible-vote-down')) {
 		console.log("vote down");
-		votenum.innerHTML = "-1"
+	    	chrome.runtime.sendMessage({"InvisibleVoiceDownvote": hashforsite});
         };
 
     if (dontOpen != true) {
@@ -432,6 +438,7 @@ document.addEventListener('click', function(event) {
             boycott.style.visibility = 'visible';
             vote.style.visibility = 'visible';
             open.style.visibility = 'hidden';
+	    chrome.runtime.sendMessage({"InvisibleVoteTotal": hashforsite});
         };
         // If the clicked element doesn't have the right selector, bail
         if (!event.target.matches('#invisible-voice-button')) return;
@@ -514,6 +521,11 @@ chrome.runtime.onMessage.addListener(msgObj => {
 	blockCheck();
         getData();
 	fetchCodeForPattern(sourceString);
+    }
+    if (Object.keys(msgObj)[0] == "InvisibleVote") {
+	objectkey = Object.keys(msgObj)[0];
+	console.log(msgObj[objectkey]);
+	votenum.innerHTML = msgObj[objectkey].total;
     }
     if (Object.keys(msgObj)[0] == "InvisibleVoiceReblock") {
 	objectkey = Object.keys(msgObj)[0];
