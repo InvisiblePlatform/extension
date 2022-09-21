@@ -29,6 +29,7 @@ function vote(site, direction, tab){
    fetch(new Request(voteUrl + "/vote", voteVars))
    	.then(response => response.json()).then(data => {
 		chrome.tabs.sendMessage(tab, {"InvisibleVote": data });
+		console.log(data);
 	});
 }
 
@@ -43,7 +44,8 @@ function getTotal(site, tab){
    };
    fetch(new Request(voteUrl + "/get-data", voteVars))
    	.then(response => response.json()).then(data => {
-		chrome.tabs.sendMessage(tab, {"InvisibleVote": {"total": data } });
+		chrome.tabs.sendMessage(tab, {"InvisibleVote": data });
+		console.log(data);
 	});
 }
 
@@ -52,6 +54,10 @@ chrome.runtime.onMessage.addListener(function(msgObj, sender, sendResponse) {
 	console.log(msgObj);
     if (msgObj == "InvisibleVoiceRefresh") {
 	    console.log("refreshed");
+    }
+    if (Object.keys(msgObj)[0] == "InvisibleVoiceUnvote") {
+	objectkey = Object.keys(msgObj)[0];
+	vote(msgObj[objectkey], "un", sender.tab.id);
     }
     if (Object.keys(msgObj)[0] == "InvisibleVoiceUpvote") {
 	objectkey = Object.keys(msgObj)[0];

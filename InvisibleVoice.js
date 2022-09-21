@@ -223,10 +223,10 @@ function createObjects(value, type) {
     voteup = document.createElement("div");
     voteup.id = "Invisible-vote-up";
     voteup.innerHTML = "▲";
-    voteup.style.cssText = "color:green;cursor: pointer;";
+    voteup.style.cssText = "color:grey;cursor: pointer;";
     votedown = document.createElement("div");
     votedown.id = "Invisible-vote-down";
-    votedown.style.cssText = "color:red;cursor: pointer;";
+    votedown.style.cssText = "color:grey;cursor: pointer;";
     votedown.innerHTML = "▼";
     votenum = document.createElement("div");
     votenum.id = "Invisible-vote-num";
@@ -408,6 +408,26 @@ document.addEventListener('fullscreenchange', function() {
 });
 
 
+document.addEventListener('mouseup', function(event) {
+        if (event.target.matches('#Invisible-vote-up')) {
+		console.log("vote up");
+    		if (voteup.style.cssText == "color: grey; cursor: pointer;"){
+	    		chrome.runtime.sendMessage({"InvisibleVoiceUpvote": hashforsite});
+		} else {
+	    		chrome.runtime.sendMessage({"InvisibleVoiceUnvote": hashforsite});
+		};
+        };
+        if (event.target.matches('#Invisible-vote-down')) {
+		console.log("vote down");
+    		if (votedown.style.cssText == "color: grey; cursor: pointer;"){
+	    		chrome.runtime.sendMessage({"InvisibleVoiceDownvote": hashforsite});
+		} else {
+	    		chrome.runtime.sendMessage({"InvisibleVoiceUnvote": hashforsite});
+		};
+        };
+
+});
+
 document.addEventListener('click', function(event) {
     // console.log(dontOpen)
         if (event.target.matches('#Invisible-boycott')) {
@@ -416,14 +436,6 @@ document.addEventListener('click', function(event) {
             	chrome.storage.local.set({ "blockedHashes": blockedHashes });
 		aSiteYouVisit = window.location.href;
 		window.location.replace(chrome.runtime.getURL('blocked.html') + "?site=" +domainString + "&return=" + aSiteYouVisit);
-        };
-        if (event.target.matches('#Invisible-vote-up')) {
-		console.log("vote up");
-	    	chrome.runtime.sendMessage({"InvisibleVoiceUpvote": hashforsite});
-        };
-        if (event.target.matches('#Invisible-vote-down')) {
-		console.log("vote down");
-	    	chrome.runtime.sendMessage({"InvisibleVoiceDownvote": hashforsite});
         };
 
     if (dontOpen != true) {
@@ -525,7 +537,17 @@ chrome.runtime.onMessage.addListener(msgObj => {
     if (Object.keys(msgObj)[0] == "InvisibleVote") {
 	objectkey = Object.keys(msgObj)[0];
 	console.log(msgObj[objectkey]);
-	votenum.innerHTML = msgObj[objectkey].total;
+	votenum.innerHTML = msgObj[objectkey]["total"];
+	if (msgObj[objectkey]["status"] == "up"){
+		voteup.style.cssText = "color: green; cursor: pointer;"
+    		votedown.style.cssText = "color: grey; cursor: pointer;"
+	} else if (msgObj[objectkey]["status"] == "down"){
+		voteup.style.cssText = "color: grey; cursor: pointer;"
+    		votedown.style.cssText = "color: red; cursor: pointer;"
+	} else {
+		voteup.style.cssText = "color: grey; cursor: pointer;"
+    		votedown.style.cssText = "color: grey; cursor: pointer;"
+	};
     }
     if (Object.keys(msgObj)[0] == "InvisibleVoiceReblock") {
 	objectkey = Object.keys(msgObj)[0];
