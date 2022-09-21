@@ -189,7 +189,7 @@ function inject(code) {
     document.head.prepend(changeMeta);
     if (isInjected == false) {
         console.log("[ Invisible Voice ]: Injected - "+ code);
-        iframe.src = aSiteWePullAndPushTo + "/" + code + "/";
+        iframe.src = aSiteWePullAndPushTo + "/" + code + "/" + "?date=" + Date.now();
         isInjected = true;
         found = true;
     }
