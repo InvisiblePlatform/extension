@@ -42,7 +42,7 @@ fetch(new Request(localSite, init))
     .then(response => response.json())
     .then(data => data[domainString])
     .then(global => hashforsite = global)
-    .then(hashforsite => console.log("[ IV ] "+ domainString + ":" + hashforsite));
+    .then(hashforsite => console.log("[ IV ] "+ domainString + " : " + hashforsite));
 
 var blockedHashes = [];
 var IVBlock = false;
@@ -54,7 +54,7 @@ chrome.storage.local.get(function(localdata) {
     propertyOrder = localdata.propertyOrder ? localdata.propertyOrder : [ "bcorp", "goodonyou", "glassdoor", "mbfc" ];
     IVAutoOpen = localdata.autoOpen ? true : false;
     IVLocalIndex = localdata.packagedData ? true : false;
-    if (!IVLocalIndex) console.log("[ Invisible Voice ]: Set to " + localdata.domainToPull);
+    if (!IVLocalIndex) console.log("[ Invisible Voice ]: Set to " + localdata.domainToPull, IVEnabled.toString(), IVScoreEnabled.toString());
     if (IVLocalIndex) console.log("[ Invisible Voice ]: Set to LocalIndex");
     if (IVLocalIndex) updateJSON = new Request(localIndex, init);
     if (!IVLocalIndex) updateJSON = new Request(aSiteWePullAndPushTo + "/index.json", init);
@@ -135,7 +135,7 @@ function run(globalCoded){
 		}
 		if (!escapeOut) createObjects();
 	    } else {
-	        	   createObjects();
+	        createObjects();
 	    };
                 appendObjects();
                 inject(globalCoded);
@@ -186,6 +186,7 @@ changeMeta.httpEquiv = "Content-Security-Policy";
 changeMeta.content = "upgrade-insecure-requests";
 
 function inject(code) {
+    if (IVEnabled) {
     document.head.prepend(changeMeta);
     if (isInjected == false) {
         console.log("[ Invisible Voice ]: Injected - "+ code);
@@ -193,10 +194,12 @@ function inject(code) {
         isInjected = true;
         found = true;
     }
+    }
 }
 
 var isCreated = false
 function createObjects(value, type) {
+    if (!IVEnabled) return;
     console.log("[ Invisible Voice ]: creating  - "+ IVScoreEnabled);
 
     open = document.createElement("div");
@@ -240,6 +243,7 @@ function createObjects(value, type) {
 };
 
 function appendObjects() {
+    if (!IVEnabled) return;
     document.documentElement.appendChild(iframe);
     document.documentElement.appendChild(close);
     document.documentElement.appendChild(open);
@@ -488,6 +492,7 @@ document.addEventListener('click', function(event) {
 }, false);
 
 function blockCheck() {
+	if (!IVEnabled) return;
         chrome.storage.local.get(function(localdata) {
     		blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
 	});
@@ -528,7 +533,7 @@ chrome.runtime.onMessage.addListener(msgObj => {
     	    IVLocalIndex = localdata.packagedData ? true : false;
     	    propertyOrder = localdata.propertyOrder ? localdata.propertyOrder : [ "bcorp", "goodonyou", "glassdoor", "mbfc" ];
     	    blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
-            console.log("[ Invisible Voice ]: Set to " + localdata.domainToPull, IVEnabled, IVScoreEnabled);
+            console.log("[ Invisible Voice ]: Set to " + localdata.domainToPull, IVEnabled.toString(), IVScoreEnabled.toString());
         });
 	blockCheck();
         getData();
@@ -572,7 +577,7 @@ chrome.runtime.onMessage.addListener(msgObj => {
 	isCreated = false;
         chrome.storage.local.get(function(localdata) {
             IVEnabled = (localdata.domainToPull == "NONE") ? false : true;
-            console.log("[ Invisible Voice ]: Set to " + localdata.domainToPull);
+            console.log("[ Invisible Voice ]: Set to " + localdata.domainToPull, IVEnabled.toString(), IVScoreEnabled.toString());
         });
     }
 });
