@@ -41,8 +41,8 @@ var hashforsite;
 fetch(new Request(localSite, init))
     .then(response => response.json())
     .then(data => data[domainString])
-    .then(global => hashforsite = global)
-    .then(hashforsite => console.log("[ IV ] "+ domainString + " : " + hashforsite));
+    .then(global => hashforsite = global);
+    // .then(hashforsite => console.log("[ IV ] "+ domainString + " : " + hashforsite));
 
 var blockedHashes = [];
 var IVBlock = false;
@@ -54,8 +54,8 @@ chrome.storage.local.get(function(localdata) {
     propertyOrder = localdata.propertyOrder ? localdata.propertyOrder : [ "bcorp", "goodonyou", "glassdoor", "mbfc" ];
     IVAutoOpen = localdata.autoOpen ? true : false;
     IVLocalIndex = localdata.packagedData ? true : false;
-    if (!IVLocalIndex) console.log("[ Invisible Voice ]: Set to " + localdata.domainToPull, IVEnabled.toString(), IVScoreEnabled.toString());
-    if (IVLocalIndex) console.log("[ Invisible Voice ]: Set to LocalIndex");
+    // if (!IVLocalIndex) console.log("[ Invisible Voice ]: Set to " + localdata.domainToPull, IVEnabled.toString(), IVScoreEnabled.toString());
+    // if (IVLocalIndex) console.log("[ Invisible Voice ]: Set to LocalIndex");
     if (IVLocalIndex) updateJSON = new Request(localIndex, init);
     if (!IVLocalIndex) updateJSON = new Request(aSiteWePullAndPushTo + "/index.json", init);
     if (IVEnabled) getData();
@@ -66,7 +66,7 @@ chrome.storage.local.get(function(localdata) {
 
 function triggerUpdate(){
     if (IVLocalIndex){
-    	console.log("[ Invisible Voice ]: LocalIndex");
+    	// console.log("[ Invisible Voice ]: LocalIndex");
     	updateJSON = new Request(localIndex, init);
         fetch(updateJSON)
             .then(response => response.json())
@@ -75,7 +75,7 @@ function triggerUpdate(){
 	return
 
     }
-    console.log("[ Invisible Voice ]: Updating "+ aSiteWePullAndPushTo);
+    // console.log("[ Invisible Voice ]: Updating "+ aSiteWePullAndPushTo);
     try {
         fetch(updateJSON)
             .then(response => response.json())
@@ -95,8 +95,8 @@ function run(globalCoded){
                 showButton = ((timeSince < now) || timeSince < (now - waitingTime)) ? false : true;
 		chrome.storage.local.get("data", function(data){
 			coded = data.data[globalCoded];
-			console.log("[ Invisible Voice ]: coded");
-			console.log(coded);
+			// console.log("[ Invisible Voice ]: coded");
+			// console.log(coded);
 		});
 	    if (IVScoreEnabled){
 		let escapeOut = false;
@@ -177,7 +177,7 @@ function getData() {
         } catch (error) {
     	  triggerUpdate();
         }
-        console.log("[ Invisible Voice ]: Running - " + sourceString, IVScoreEnabled);
+        // console.log("[ Invisible Voice ]: Running - " + sourceString, IVScoreEnabled);
     });
 }
 
@@ -189,7 +189,7 @@ function inject(code) {
     if (IVEnabled) {
     document.head.prepend(changeMeta);
     if (isInjected == false) {
-        console.log("[ Invisible Voice ]: Injected - "+ code);
+        // console.log("[ Invisible Voice ]: Injected - "+ code);
         iframe.src = aSiteWePullAndPushTo + "/" + code + "/" + "?date=" + Date.now();
         isInjected = true;
         found = true;
@@ -200,7 +200,7 @@ function inject(code) {
 var isCreated = false
 function createObjects(value, type) {
     if (!IVEnabled) return;
-    console.log("[ Invisible Voice ]: creating  - "+ IVScoreEnabled);
+    // console.log("[ Invisible Voice ]: creating  - "+ IVScoreEnabled);
 
     open = document.createElement("div");
     open.id = "invisible-voice-floating";
@@ -414,7 +414,7 @@ document.addEventListener('fullscreenchange', function() {
 
 document.addEventListener('mouseup', function(event) {
         if (event.target.matches('#Invisible-vote-up')) {
-		console.log("vote up");
+		// console.log("vote up");
     		if (voteup.style.cssText == "color: grey; cursor: pointer;"){
 	    		chrome.runtime.sendMessage({"InvisibleVoiceUpvote": hashforsite});
 		} else {
@@ -422,7 +422,7 @@ document.addEventListener('mouseup', function(event) {
 		};
         };
         if (event.target.matches('#Invisible-vote-down')) {
-		console.log("vote down");
+		// console.log("vote down");
     		if (votedown.style.cssText == "color: grey; cursor: pointer;"){
 	    		chrome.runtime.sendMessage({"InvisibleVoiceDownvote": hashforsite});
 		} else {
@@ -435,7 +435,7 @@ document.addEventListener('mouseup', function(event) {
 document.addEventListener('click', function(event) {
     // console.log(dontOpen)
         if (event.target.matches('#Invisible-boycott')) {
-		console.log("boycott: " + hashforsite );
+		// console.log("boycott: " + hashforsite );
 		blockedHashes.push(hashforsite);
             	chrome.storage.local.set({ "blockedHashes": blockedHashes });
 		aSiteYouVisit = window.location.href;
@@ -496,14 +496,14 @@ function blockCheck() {
         chrome.storage.local.get(function(localdata) {
     		blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
 	});
-    	console.log(domainString);
+    	// console.log(domainString);
     	if (blockedHashes.includes(hashforsite)){
     	// lookup hash
     		fetch(new Request(localHash, init))
     	    	.then(response => response.json())
-    	    	.then(data => data[hashforsite])
-    	    	.then(global => console.log(global));
-    		console.log(domainString);
+    	    	.then(data => data[hashforsite]);
+    	    	// .then(global => console.log(global));
+    		// console.log(domainString);
     	    window.location.replace(chrome.runtime.getURL('blocked.html') + "?site=" +domainString + "&return=" + aSiteYouVisit);
     	};
 }
@@ -514,7 +514,7 @@ chrome.runtime.onMessage.addListener(msgObj => {
 		blockCheck();
 	}
     } else {
-    	console.log("[ Invisible Voice ]: onMessage " + msgObj);
+    	// console.log("[ Invisible Voice ]: onMessage " + msgObj);
     }
     if (msgObj == "InvisibleVoiceRefresh") {
 	if (IVEnabled){
@@ -533,7 +533,7 @@ chrome.runtime.onMessage.addListener(msgObj => {
     	    IVLocalIndex = localdata.packagedData ? true : false;
     	    propertyOrder = localdata.propertyOrder ? localdata.propertyOrder : [ "bcorp", "goodonyou", "glassdoor", "mbfc" ];
     	    blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
-            console.log("[ Invisible Voice ]: Set to " + localdata.domainToPull, IVEnabled.toString(), IVScoreEnabled.toString());
+            // console.log("[ Invisible Voice ]: Set to " + localdata.domainToPull, IVEnabled.toString(), IVScoreEnabled.toString());
         });
 	blockCheck();
         getData();
@@ -541,7 +541,7 @@ chrome.runtime.onMessage.addListener(msgObj => {
     }
     if (Object.keys(msgObj)[0] == "InvisibleVote") {
 	objectkey = Object.keys(msgObj)[0];
-	console.log(msgObj[objectkey]);
+	// console.log(msgObj[objectkey]);
 	votenum.innerHTML = msgObj[objectkey]["total"];
 	if (msgObj[objectkey]["status"] == "up"){
 		voteup.style.cssText = "color: green; cursor: pointer;"
@@ -563,8 +563,8 @@ chrome.runtime.onMessage.addListener(msgObj => {
 		});
 		blockedHashes.push(hashtoadd);
         	chrome.storage.local.set({ "blockedHashes": blockedHashes });
-		console.log("block: ", hashtoadd);
-		console.log("block: ", blockedHashes);
+		// console.log("block: ", hashtoadd);
+		// console.log("block: ", blockedHashes);
 	}, 1000);
     }
     if (msgObj == "InvisibleVoiceOff") {
@@ -577,7 +577,7 @@ chrome.runtime.onMessage.addListener(msgObj => {
 	isCreated = false;
         chrome.storage.local.get(function(localdata) {
             IVEnabled = (localdata.domainToPull == "NONE") ? false : true;
-            console.log("[ Invisible Voice ]: Set to " + localdata.domainToPull, IVEnabled.toString(), IVScoreEnabled.toString());
+            // console.log("[ Invisible Voice ]: Set to " + localdata.domainToPull, IVEnabled.toString(), IVScoreEnabled.toString());
         });
     }
 });
