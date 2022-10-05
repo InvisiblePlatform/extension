@@ -39,8 +39,8 @@ var propertyOrder;
 fetchCodeForPattern(sourceString);
 var hashforsite;
 var darkMode = false;
-var backgroundColor = "#eee";
-var textColor = "#444";
+var backgroundColor = "#fff";
+var textColor = "#343434";
 var heavyTextColor = "#111";
 
 fetch(new Request(localSite, init))
@@ -55,8 +55,8 @@ var IVBlock = false;
 if (window.matchMedia && !!window.matchMedia('(prefers-color-scheme: dark)').matches) {
     console.info('Dark Theme detected 🌒 ')
     darkMode = true; 
-    backgroundColor = "#111";
-    textColor = "#999";
+    backgroundColor = "#343434";
+    textColor = "#fff";
     heavyTextColor = "#AAA";
 }
 
@@ -238,35 +238,11 @@ function createObjects(value, type) {
 			 "font-family: 'Roboto', sans-serif;" +
 			 "font-size: 16px;" +
 			 "text-align:center;" +
-			 "height:50vh;" +
+			 "height:100vh;" +
 			 "top:0px;" +
 			 "background:#eee;" +
 			 "transition: right .2s;";
 
-    openFurther = document.createElement("div");
-    openFurther.id = "invisible-voice-floating2";
-    openFurther.innerHTML = "<div id='invisible-voice-float2'" + 
-		       "style='position: absolute;" + 
-		              "width:16px !important;" +
-		              "background:"+ backgroundColor +";" + 
-		              "height:-webkit-fill-available;" +
-			      "display:flex;" + 
-		 	      "margin: auto;" + 
-			      "align-items:center;" +
-			      "border:"+ textColor + " solid 1px !important;" + 
-			      "justify-content: center;'" +
-			"> > </div>";
-    openFurther.style.cssText = "right: 16px;" +
-			 "z-index: 2147483647;" +
-			 "position: fixed;" +
-			 "color: " + textColor + ";"+
-			 "font-family: 'Roboto', sans-serif;" +
-			 "font-size: 16px;" +
-			 "text-align:center;" +
-			 "height:50vh;" +
-			 "bottom:0px;" +
-			 "background:#eee;" +
-			 "transition: right .2s;";
 
     if (isCreated) return;
     close = document.createElement("div");
@@ -375,7 +351,7 @@ function createObjects(value, type) {
 			   "right: 0;" +
 			   "width: 0px;" +
 			   "bottom:0px;" +
-			   "height: calc(100vh - 40px);" +
+			   "height: 100vh;" +
 			   "z-index: 2147483646;" +
 			   "box-shadow: rgba(0, 0, 0, 1) 0 0 400px;" +
 			   "position: fixed;" +
@@ -391,7 +367,6 @@ function appendObjects() {
     document.documentElement.appendChild(close);
     document.documentElement.appendChild(closeButton);
     document.documentElement.appendChild(open);
-    document.documentElement.appendChild(openFurther);
     document.documentElement.appendChild(vote);
     document.documentElement.appendChild(boycott);
     vote.appendChild(voteup);
@@ -404,14 +379,12 @@ function appendObjects() {
 	boycott.style.visibility = 'hidden';
         vote.style.visibility = 'hidden';
 	open.style.right = '16px';
-	openFurther.style.right = '16px';
     } else {
-        iframe.style.width = '320px';
+        iframe.style.width = '640px';
         close.style.visibility = 'visible';
         closeButton.style.visibility = 'visible';
         boycott.style.visibility = 'visible';
-	open.style.right = '336px';
-	openFurther.style.right = '336px';
+	open.style.right = '656px';
 	chrome.runtime.sendMessage({"InvisibleVoteTotal": hashforsite});
     }
 };
@@ -421,17 +394,38 @@ document.addEventListener('fullscreenchange', function() {
         document.mozFullScreen ||
         document.webkitIsFullScreen || (document.msFullscreenElement != null);
     if (isFullScreen) {
-        floating2 = document.getElementById("invisible-voice-floating2");
-        floating2.style.visibility = 'hidden';
         floating = document.getElementById("invisible-voice-floating");
         floating.style.visibility = 'hidden';
     } else {
-        floating2 = document.getElementById("invisible-voice-floating2");
-        floating2.style.visibility = 'visible';
         floating = document.getElementById("invisible-voice-floating");
         floating.style.visibility = 'visible';};
 });
 
+let resize = function(x = ""){
+        floater = document.getElementById("invisible-voice-float");
+	    floater.innerHTML = '<';
+	    if (distance == 0) {distance = 140;}
+	    else if (distance == 140) {
+		    distance = 640;
+		    floater.innerHTML = '>';
+	    }
+	    else if (distance == 640) {distance = 140;}
+            iframe.style.width = distance + 'px';
+	    open.style.right = distance + 16 + 'px';
+	    if (distance == 140){
+            	boycott.style.visibility = 'hidden';
+            	vote.style.visibility = 'hidden';
+            	vote.style.width = distance + 'px';
+            	boycott.style.width = distance + 'px';
+	    }
+	    if (distance > 140){
+            	boycott.style.visibility = 'visible';
+            	vote.style.visibility = 'visible';
+            	vote.style.width = distance + 'px';
+            	boycott.style.width = distance + 'px';
+	    	chrome.runtime.sendMessage({"InvisibleVoteTotal": hashforsite});
+	    }
+};
 
 document.addEventListener('mouseup', function(event) {
 	//console.log(event);
@@ -453,71 +447,12 @@ document.addEventListener('mouseup', function(event) {
         };
     if (dontOpen != true) {
         // This is to reopen the box if it needs to be
-        if (event.target.matches('#invisible-voice-float2')) {
-	    if (distance == 140) {
-		distance = 0;
-            	close.style.visibility = 'hidden';
-            	boycott.style.visibility = 'hidden';
-            	vote.style.visibility = 'hidden';
-	    } else if (distance == 320) {distance = 140;}
-	      else if (distance == 640) {distance = 320;}
-            iframe.style.width = distance + 'px';
-	    open.style.right = distance + 16 + 'px';
-	    openFurther.style.right = distance + 16 + 'px';
-            vote.style.width = distance + 'px';
-            boycott.style.width = distance + 'px';
-	    if (distance == 140){
-            	iframe.style.height = 'calc(100vh - 40px)';
-            	closeButton.style.width = '70px';
-            	closeButton.style.fontSize = '32px';
-            	closeButton.style.height = '40px';
-	    }
-	    if (distance > 140){
-            	iframe.style.height = '100vh';
-            	close.style.visibility = 'visible';
-            	closeButton.style.visibility = 'visible';
-            	closeButton.style.height = '32px';
-            	closeButton.style.fontSize = '21px';
-            	closeButton.style.width = '30px';
-            	boycott.style.visibility = 'visible';
-            	vote.style.visibility = 'visible';
-	    	chrome.runtime.sendMessage({"InvisibleVoteTotal": hashforsite});
-	    } else {
-            	boycott.style.visibility = 'hidden';
-            	close.style.visibility = 'hidden';
-            	vote.style.visibility = 'hidden';
-	    }
-	}
         if (event.target.matches('#invisible-voice-float')) {
             var dismissData = {};
             dismissData[globalCode] = 0;
             chrome.storage.local.set(dismissData);
             inject(globalCode);
-	    if (distance == 0) {distance = 140;}
-	    else if (distance == 140) {distance = 320;}
-	    else if (distance == 320) {distance = 640;}
-            iframe.style.width = distance + 'px';
-	    open.style.right = distance + 16 + 'px';
-	    openFurther.style.right = distance + 16 + 'px';
-	    if (distance == 140){
-            	closeButton.style.visibility = 'visible';
-            	closeButton.style.width = '70px';
-            	closeButton.style.height = '40px';
-            	closeButton.style.fontSize = '30px';
-            	iframe.style.height = 'calc(100vh - 40px)';
-	    }
-	    if (distance > 140){
-            	iframe.style.height = '100vh';
-            	closeButton.style.width = '32px';
-            	closeButton.style.height = '32px';
-            	closeButton.style.fontSize = '21px';
-            	close.style.visibility = 'visible';
-            	boycott.style.visibility = 'visible';
-            	vote.style.visibility = 'visible';
-            	vote.style.width = distance + 'px';
-            	boycott.style.width = distance + 'px';
-	    	chrome.runtime.sendMessage({"InvisibleVoteTotal": hashforsite});
-	    }
+		resize();
         };
         // If the clicked element doesn't have the right selector, bail
         if (!event.target.matches('#invisible-voice-button')) return;
@@ -540,7 +475,6 @@ document.addEventListener('mouseup', function(event) {
         boycott.style.visibility = 'hidden';
         vote.style.visibility = 'hidden';
 	open.style.right = distance + 16 + 'px';
-	openFurther.style.right = distance + 16 + 'px';
     }
     dontOpen = false;
 
@@ -650,3 +584,22 @@ chrome.runtime.onMessage.addListener(msgObj => {
     }
 });
 
+window.addEventListener('message', function (e){
+	console.log(e.data);
+	if (e.data.type == 'IVClicked'){
+		console.log("resize stub " + e.data.message);
+		if (distance == 140) resize();
+		if (e.data == "network"){
+			resizeNetwork();
+		}
+	}
+	if (e.data.type == 'IVClose'){
+		console.log("close stub");
+	}
+	if (e.data.type == 'IVDarkMode'){
+		console.log("DarkMode stub");
+	}
+	if (e.data.type == 'IVKeepOpen'){
+		console.log("KeepOpen stub");
+	}
+});
