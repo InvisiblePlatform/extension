@@ -401,24 +401,47 @@ document.addEventListener('fullscreenchange', function() {
         floating.style.visibility = 'visible';};
 });
 
+let resizeCloseIV = function(x = ""){
+        floater = document.getElementById("invisible-voice-float");
+	floater.innerHTML = '<';
+	distance = 0;
+        iframe.style.width = distance + 'px';
+	open.style.right = distance + 16 + 'px';
+        boycott.style.visibility = 'hidden';
+        vote.style.visibility = 'hidden';
+        vote.style.width = distance + 'px';
+        boycott.style.width = distance + 'px';
+};
+
+let resizeNetwork = function(x = ""){
+        floater = document.getElementById("invisible-voice-float");
+	floater.innerHTML = '>';
+	distance = 840;
+        iframe.style.width = distance + 'px';
+	open.style.right = distance + 16 + 'px';
+        boycott.style.visibility = 'hidden';
+        vote.style.visibility = 'hidden';
+        vote.style.width = distance + 'px';
+        boycott.style.width = distance + 'px';
+};
 let resize = function(x = ""){
         floater = document.getElementById("invisible-voice-float");
 	    floater.innerHTML = '<';
-	    if (distance == 0) {distance = 140;}
-	    else if (distance == 140) {
+	    if (distance == 0) {distance = 160;}
+	    else if (distance == 160) {
 		    distance = 640;
 		    floater.innerHTML = '>';
 	    }
-	    else if (distance == 640) {distance = 140;}
+	    else {distance = 160;}
             iframe.style.width = distance + 'px';
 	    open.style.right = distance + 16 + 'px';
-	    if (distance == 140){
+	    if (distance == 160){
             	boycott.style.visibility = 'hidden';
             	vote.style.visibility = 'hidden';
             	vote.style.width = distance + 'px';
             	boycott.style.width = distance + 'px';
 	    }
-	    if (distance > 140){
+	    if (distance > 160){
             	boycott.style.visibility = 'visible';
             	vote.style.visibility = 'visible';
             	vote.style.width = distance + 'px';
@@ -585,16 +608,20 @@ chrome.runtime.onMessage.addListener(msgObj => {
 });
 
 window.addEventListener('message', function (e){
-	console.log(e.data);
-	if (e.data.type == 'IVClicked'){
-		console.log("resize stub " + e.data.message);
-		if (distance == 140) resize();
-		if (e.data == "network"){
+	if (e.data.type == 'IVClicked' && e.data.data != ''){
+		console.log("resize stub " + e.data.data);
+		if (e.data.data == 'network'){
 			resizeNetwork();
-		}
+		} else {
+			if (e.data.data == 'back'){
+				resize();
+			} else {
+				if (distance == 160) resize();
+			};
+		};
 	}
 	if (e.data.type == 'IVClose'){
-		console.log("close stub");
+		resizeCloseIV();	
 	}
 	if (e.data.type == 'IVDarkMode'){
 		console.log("DarkMode stub");
