@@ -30,6 +30,7 @@ var showButton, allKeys;
 var IVEnabled, IVScoreEnabled;
 var IVAutoOpen, IVLocalIndex;
 var updateJSON;
+var vstatus;
 
 var iframe, open; 
 var sourceString = aSiteYouVisit.replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0].replace(/\./g,"");
@@ -371,60 +372,25 @@ document.addEventListener('fullscreenchange', function() {
 let resizeCloseIV = function(x = ""){
 	distance = 0;
         iframe.style.width = distance + 'px';
-        boycott.style.visibility = 'hidden';
-        vote.style.visibility = 'hidden';
-        vote.style.width = distance + 'px';
-        boycott.style.width = distance + 'px';
 };
 
 let resizeNetwork = function(x = ""){
 	distance = 840;
         iframe.style.width = distance + 'px';
-        boycott.style.visibility = 'hidden';
-        vote.style.visibility = 'hidden';
-        vote.style.width = distance + 'px';
-        boycott.style.width = distance + 'px';
 };
 let resize = function(x = ""){
-	    if (distance == 0) {distance = 160;}
-	    else if (distance == 160) {
-		    distance = 640;
-	    }
-	    else {distance = 160;}
-            iframe.style.width = distance + 'px';
-	    if (distance == 160){
-            	boycott.style.visibility = 'hidden';
-            	vote.style.visibility = 'hidden';
-            	vote.style.width = distance + 'px';
-            	boycott.style.width = distance + 'px';
-	    }
-	    if (distance > 160){
-            	boycott.style.visibility = 'visible';
-            	vote.style.visibility = 'visible';
-            	vote.style.width = distance + 'px';
-            	boycott.style.width = distance + 'px';
-	    	chrome.runtime.sendMessage({"InvisibleVoteTotal": hashforsite});
-	    }
+	if (distance == 0) {distance = 160;}
+	else if (distance == 160) {
+	        distance = 640;
+	}
+	else {distance = 160;}
+	iframe.style.width = distance + 'px';
+	if (distance > 160){
+		chrome.runtime.sendMessage({"InvisibleVoteTotal": hashforsite});
+	}
 };
 
 document.addEventListener('mouseup', function(event) {
-	//console.log(event);
-        if (event.target.matches('#Invisible-vote-up')) {
-		console.log("vote up");
-    		if (voteup.style.cssText == "filter: grayscale(100%); cursor: pointer; flex-grow: 0.5;"){
-	    		chrome.runtime.sendMessage({"InvisibleVoiceUpvote": hashforsite});
-		} else {
-	    		chrome.runtime.sendMessage({"InvisibleVoiceUnvote": hashforsite});
-		};
-        };
-        if (event.target.matches('#Invisible-vote-down')) {
-		console.log("vote down");
-    		if (votedown.style.cssText == "filter: grayscale(100%); cursor: pointer; flex-grow: 0.5;"){
-	    		chrome.runtime.sendMessage({"InvisibleVoiceDownvote": hashforsite});
-		} else {
-	    		chrome.runtime.sendMessage({"InvisibleVoiceUnvote": hashforsite});
-		};
-        };
     if (dontOpen != true) {
         // This is to reopen the box if it needs to be
         if (event.target.matches('#invisible-voice-float')) {
@@ -459,17 +425,6 @@ document.addEventListener('mouseup', function(event) {
 });
 
 var distance = 0;
-document.addEventListener('click', function(event) {
-    // console.log(dontOpen)
-    if (event.target.matches('#Invisible-boycott')) {
-    	// console.log("boycott: " + hashforsite );
-    	blockedHashes.push(hashforsite);
-        	chrome.storage.local.set({ "blockedHashes": blockedHashes });
-    	aSiteYouVisit = window.location.href;
-    	window.location.replace(chrome.runtime.getURL('blocked.html') + "?site=" +domainString + "&return=" + aSiteYouVisit);
-    };
-
-}, false);
 
 function blockCheck() {
 	if (!IVEnabled) return;
@@ -522,17 +477,14 @@ chrome.runtime.onMessage.addListener(msgObj => {
     if (Object.keys(msgObj)[0] == "InvisibleVote") {
 	objectkey = Object.keys(msgObj)[0];
 	// console.log(msgObj[objectkey]);
-	votenum.innerHTML = msgObj[objectkey]["total"];
-	if (msgObj[objectkey]["status"] == "up"){
-    		voteup.style.cssText = "filter: hue-rotate(1.3rad);cursor: pointer;flex-grow:0.5;";
-    		votedown.style.cssText = "filter: grayscale(100%);cursor: pointer;flex-grow:0.5;";
-	} else if (msgObj[objectkey]["status"] == "down"){
-    		voteup.style.cssText = "filter: grayscale(100%);cursor: pointer;flex-grow:0.5;";
-    		votedown.style.cssText = "filter: hue-rotate(5.4rad);cursor: pointer;flex-grow:0.5;";
-	} else {
-    		voteup.style.cssText = "filter: grayscale(100%);cursor: pointer;flex-grow:0.5;";
-    		votedown.style.cssText = "filter: grayscale(100%);cursor: pointer;flex-grow:0.5;";
-	};
+	vstatus = msgObj[objectkey]["status"];
+	var message = JSON.stringify({
+		message: "VoteUpdate",
+		vstatus: msgObj[objectkey]["status"],
+		utotal: msgObj[objectkey]["up_total"],
+		dtotal: msgObj[objectkey]["down_total"]
+	});
+	iframe.contentWindow.postMessage(message, '*');
     }
     if (Object.keys(msgObj)[0] == "InvisibleVoiceReblock") {
 	objectkey = Object.keys(msgObj)[0];
@@ -573,11 +525,34 @@ level2 = ['wikipedia-first-frame',
 	  'small-wikidata',
 	  'trust-pilot',
 	  'wikipedia-infocard-frame',
+	  'disclaimer',
 	  'settings'
 ];
 
 var graphOpen = false;
 window.addEventListener('message', function (e){
+	if (e.data.type == 'IVLike' && e.data.data != ''){
+		console.log(e.data.type + " Stub");
+		if (vstatus == "up" ){
+	    		chrome.runtime.sendMessage({"InvisibleVoiceUnvote": hashforsite});
+		} else {
+	    	chrome.runtime.sendMessage({"InvisibleVoiceUpvote": hashforsite});
+		}
+	}
+	if (e.data.type == 'IVDislike' && e.data.data != ''){
+		console.log(e.data.type + " Stub");
+		if (vstatus == "down" ){
+	    		chrome.runtime.sendMessage({"InvisibleVoiceUnvote": hashforsite});
+		} else {
+	    		chrome.runtime.sendMessage({"InvisibleVoiceDownvote": hashforsite});
+		}
+	}
+	if (e.data.type == 'IVBoycott' && e.data.data != ''){
+    		blockedHashes.push(hashforsite);
+        	chrome.storage.local.set({ "blockedHashes": blockedHashes });
+    		aSiteYouVisit = window.location.href;
+    		window.location.replace(chrome.runtime.getURL('blocked.html') + "?site=" +domainString + "&return=" + aSiteYouVisit);
+	}
 	if (e.data.type == 'IVClicked' && e.data.data != ''){
 		console.log("resize stub " + e.data.data);
 		if (level2.includes(e.data.data)){
@@ -585,13 +560,7 @@ window.addEventListener('message', function (e){
 			resize();
 		}
 		if (e.data.data == 'network' || e.data.data == 'graph-box'){
-			if (graphOpen ==false) {
-				resizeNetwork();
-				graphOpen = true;
-			} else {
-				resize();
-				graphOpen = false;
-			}
+		 	resizeNetwork();
 		} else {
 			if (e.data.data == 'back'){
 				resize();

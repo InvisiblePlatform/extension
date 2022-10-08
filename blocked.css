@@ -1,6 +1,11 @@
+:root{
+	--c-main: ;
+	--c-light: ;
+	--c-dark: ;
+}
 * {
 	font-size: 1.5em;
-	text-align: center;
+	background-color: var(--c-dark);
 }
 #Invisible-information{
 	font-size: 1em;
