@@ -607,9 +607,12 @@ window.addEventListener('message', function (e){
 		console.log("DarkMode stub", e.data.data);
 	}
 	if (e.data.type == 'IVKeepOnScreen'){
-		if (e.data.data){
+		if (e.data.data == "yes" ){
 			console.log("KeepOpen stub ", e.data.data);
-			chrome.storage.local.set({"autoOpen": e.data.data });
+			chrome.storage.local.set({"autoOpen": true });
+		} else {
+			console.log("KeepOpen stub ", e.data.data);
+			chrome.storage.local.set({"autoOpen": false });
 		}
 	}
 });
