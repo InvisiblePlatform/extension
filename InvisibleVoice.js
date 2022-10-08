@@ -31,7 +31,7 @@ var IVEnabled, IVScoreEnabled;
 var IVAutoOpen, IVLocalIndex;
 var updateJSON;
 
-var close, iframe, open, closeButton;
+var iframe, open; 
 var sourceString = aSiteYouVisit.replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0].replace(/\./g,"");
 var domainString = aSiteYouVisit.replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0];
 var globablCode, globalSince, code;
@@ -69,6 +69,7 @@ chrome.storage.local.get(function(localdata) {
     IVLocalIndex = localdata.packagedData ? true : false;
     // if (!IVLocalIndex) console.log("[ Invisible Voice ]: Set to " + localdata.domainToPull, IVEnabled.toString(), IVScoreEnabled.toString());
     // if (IVLocalIndex) console.log("[ Invisible Voice ]: Set to LocalIndex");
+    if (IVAutoOpen) console.log('AutoOpenOn');
     if (IVLocalIndex) updateJSON = new Request(localIndex, init);
     if (!IVLocalIndex) updateJSON = new Request(aSiteWePullAndPushTo + "/index.json", init);
     if (IVEnabled) getData();
@@ -205,10 +206,11 @@ function inject(code) {
     if (IVEnabled) {
     document.head.prepend(changeMeta);
     if (isInjected == false) {
-        // console.log("[ Invisible Voice ]: Injected - "+ code);
+        console.log("[ Invisible Voice ]: Injected - "+ code);
         iframe.src = aSiteWePullAndPushTo + "/" + code + "/" + "?date=" + Date.now();
         isInjected = true;
         found = true;
+	chrome.runtime.sendMessage("IVICON");
     }
     }
 }
@@ -232,7 +234,7 @@ function createObjects(value, type) {
 			"> < </div>";
 
     open.style.cssText = "right: 16px;" +
-			 "z-index: 2147483647;" +
+			 "z-index: 2147483646;" +
 			 "position: fixed;" +
 			 "color: " + textColor + ";"+
 			 "font-family: 'Roboto', sans-serif;" +
@@ -245,36 +247,6 @@ function createObjects(value, type) {
 
 
     if (isCreated) return;
-    close = document.createElement("div");
-    close.id = "invisible-voice-button";
-    close.innerHTML = " ";
-    close.style.cssText = "top:0;" +
-			  "left: auto;" +
-			  "z-index: 2147483645;" +
-			  "position: fixed;" +
-			  "background-color: #98FB9821;" +
-			 "font-family: 'Roboto', sans-serif;" +
-			  "visibility: hidden;" +
-			  "width: 100%;" +
-			  "height: 100%;";
-
-    closeButton = document.createElement("div");
-    closeButton.id = "invisible-voice-button";
-    closeButton.innerHTML = "×";
-    closeButton.style.cssText = "top: 0;" +
-			  "right:0px;" +
-			  "z-index: 2147483647;" +
-			  "position: fixed;" +
-			  "background-color:"+ backgroundColor +";" +
-		       	  "border:"+ textColor + " solid 2px;" + 
-			  "color:" + textColor + ";" +
-			  "font-family: 'Roboto', sans-serif;" +
-			  "font-size: 21px;" +
-			  "text-align: center;" +
-			  "visibility: hidden;" +
-			  "width: 32px;" +
-			  "height: 32px;";
-
     boycott = document.createElement("div");
     boycott.style.cssText = "visibility:hidden;" +
 			    "font-size:1em;" +
@@ -284,7 +256,7 @@ function createObjects(value, type) {
 			    "height:32px;" +
 			    "background-color:" + backgroundColor + ";" +
 			    "right:0;" +
-			 "font-family: 'Roboto', sans-serif;" +
+			    "font-family: 'Roboto', sans-serif;" +
 		       	    "border:"+ textColor + " solid 2px;" + 
 			    "color:" + textColor + ";" +
 			    "width:320px;" +
@@ -346,13 +318,15 @@ function createObjects(value, type) {
     iframe = document.createElement("iframe");
     iframe.style.cssText = "border:" + textColor + " solid 2px;" +
 			   "border-right: none;" +
-			   "overflow: hidden;" +
-			   "padding: 0px;" +
+			   "overflow-y: scroll;" +
+			   "overflow-x: hidden;" +
+			   "padding: 0;" +
 			   "right: 0;" +
+		           "margin: 0;" + 
 			   "width: 0px;" +
-			   "bottom:0px;" +
+			   "bottom:0;" +
 			   "height: 100vh;" +
-			   "z-index: 2147483646;" +
+			   "z-index: 2147483647;" +
 			   "box-shadow: rgba(0, 0, 0, 1) 0 0 400px;" +
 			   "position: fixed;" +
 			   "background-color:" + backgroundColor + ";" +
@@ -364,27 +338,20 @@ function createObjects(value, type) {
 function appendObjects() {
     if (!IVEnabled) return;
     document.documentElement.appendChild(iframe);
-    document.documentElement.appendChild(close);
-    document.documentElement.appendChild(closeButton);
     document.documentElement.appendChild(open);
     document.documentElement.appendChild(vote);
     document.documentElement.appendChild(boycott);
     vote.appendChild(voteup);
     vote.appendChild(votenum);
     vote.appendChild(votedown);
-    if (showButton || !IVAutoOpen ) {
+    if (!IVAutoOpen) {
         iframe.style.width = '0px';
-        close.style.visibility = 'hidden';
-        closeButton.style.visibility = 'hidden';
+	open.style.right = '16px';
 	boycott.style.visibility = 'hidden';
         vote.style.visibility = 'hidden';
-	open.style.right = '16px';
     } else {
-        iframe.style.width = '640px';
-        close.style.visibility = 'visible';
-        closeButton.style.visibility = 'visible';
-        boycott.style.visibility = 'visible';
-	open.style.right = '656px';
+        iframe.style.width = '160px';
+        boycott.style.visibility = 'hidden';
 	chrome.runtime.sendMessage({"InvisibleVoteTotal": hashforsite});
     }
 };
@@ -402,11 +369,8 @@ document.addEventListener('fullscreenchange', function() {
 });
 
 let resizeCloseIV = function(x = ""){
-        floater = document.getElementById("invisible-voice-float");
-	floater.innerHTML = '<';
 	distance = 0;
         iframe.style.width = distance + 'px';
-	open.style.right = distance + 16 + 'px';
         boycott.style.visibility = 'hidden';
         vote.style.visibility = 'hidden';
         vote.style.width = distance + 'px';
@@ -414,27 +378,20 @@ let resizeCloseIV = function(x = ""){
 };
 
 let resizeNetwork = function(x = ""){
-        floater = document.getElementById("invisible-voice-float");
-	floater.innerHTML = '>';
 	distance = 840;
         iframe.style.width = distance + 'px';
-	open.style.right = distance + 16 + 'px';
         boycott.style.visibility = 'hidden';
         vote.style.visibility = 'hidden';
         vote.style.width = distance + 'px';
         boycott.style.width = distance + 'px';
 };
 let resize = function(x = ""){
-        floater = document.getElementById("invisible-voice-float");
-	    floater.innerHTML = '<';
 	    if (distance == 0) {distance = 160;}
 	    else if (distance == 160) {
 		    distance = 640;
-		    floater.innerHTML = '>';
 	    }
 	    else {distance = 160;}
             iframe.style.width = distance + 'px';
-	    open.style.right = distance + 16 + 'px';
 	    if (distance == 160){
             	boycott.style.visibility = 'hidden';
             	vote.style.visibility = 'hidden';
@@ -493,8 +450,6 @@ document.addEventListener('mouseup', function(event) {
         chrome.storage.local.set(dismissData);
         // console.log("[ Invisible Voice ]: Dismiss id ", globalCode);
         iframe.style.width = '0px';
-        close.style.visibility = 'hidden';
-        closeButton.style.visibility = 'hidden';
         boycott.style.visibility = 'hidden';
         vote.style.visibility = 'hidden';
 	open.style.right = distance + 16 + 'px';
@@ -607,11 +562,35 @@ chrome.runtime.onMessage.addListener(msgObj => {
     }
 });
 
+level2 = ['wikipedia-first-frame', 
+	  'isin ssd', 
+	  'isin fas', 
+	  'mbfc-header', 
+	  'yahoo', 
+	  'similar-site-wrapper', 
+	  'glassdoor', 
+	  'social-wikidata',
+	  'small-wikidata',
+	  'trust-pilot',
+	  'wikipedia-infocard-frame'
+];
+
+var graphOpen = false;
 window.addEventListener('message', function (e){
 	if (e.data.type == 'IVClicked' && e.data.data != ''){
 		console.log("resize stub " + e.data.data);
-		if (e.data.data == 'network'){
-			resizeNetwork();
+		if (level2.includes(e.data.data)){
+			console.log("level2 resize");
+			resize();
+		}
+		if (e.data.data == 'network' || e.data.data == 'graph-box'){
+			if (graphOpen ==false) {
+				resizeNetwork();
+				graphOpen = true;
+			} else {
+				resize();
+				graphOpen = false;
+			}
 		} else {
 			if (e.data.data == 'back'){
 				resize();
@@ -623,10 +602,13 @@ window.addEventListener('message', function (e){
 	if (e.data.type == 'IVClose'){
 		resizeCloseIV();	
 	}
-	if (e.data.type == 'IVDarkMode'){
-		console.log("DarkMode stub");
+	if (e.data.type == 'IVDarkModeOverride'){
+		console.log("DarkMode stub", e.data.data);
 	}
-	if (e.data.type == 'IVKeepOpen'){
-		console.log("KeepOpen stub");
+	if (e.data.type == 'IVKeepOnScreen'){
+		if (e.data.data){
+			console.log("KeepOpen stub ", e.data.data);
+			chrome.storage.local.set({"autoOpen": e.data.data });
+		}
 	}
 });

@@ -21,23 +21,26 @@
     ],
 
     "action": {
-    	"default_icon": "icon.svg",
+    	"default_icon": "icon128.png",
 	"default_title": "invisible voice",
-	"default_popup": "options.html",
     	"default_icons": {
-    	    "16" : "icon.svg",
-    	    "24" : "icon.svg",
-    	    "48" : "icon.svg",
-    	    "96" : "icon.svg"
+    	    "16" : "icon16.png",
+    	    "24" : "icon24.png",
+    	    "32" : "icon32.png",
+    	    "48" : "icon48.png",
+    	    "96" : "icon96.png",
+    	    "128" : "icon128.png"
     	},
 	"browser_style": true
     },
 
     	"icons": {
-    	    "16" : "icon.svg",
-    	    "24" : "icon.svg",
-    	    "48" : "icon.svg",
-    	    "96" : "icon.svg"
+    	    "16" : "icon16.png",
+    	    "24" : "icon24.png",
+    	    "32" : "icon32.png",
+    	    "48" : "icon48.png",
+    	    "96" : "icon96.png",
+    	    "128" : "icon128.png"
     	},
 
 
@@ -47,7 +50,7 @@
 	    {"resources":["sitetohash.json"],"matches":["<all_urls>"]},
 	    {"resources":["hashtosite.json"],"matches":["<all_urls>"]},
 	    {"resources":["blocked.html"],"matches":["<all_urls>"]},
-	    {"resources":["logo.svg"],"matches":["<all_urls>"]}
+	    {"resources":["logoShow.png"],"matches":["<all_urls>"]}
     ],
 
     "options_ui": {

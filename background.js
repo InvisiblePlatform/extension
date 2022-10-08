@@ -52,6 +52,13 @@ function getTotal(site, tab){
 var voteUrl = "https://assets.reveb.la";
 chrome.runtime.onMessage.addListener(function(msgObj, sender, sendResponse) {
 	console.log(msgObj);
+    if (msgObj == "IVICON"){
+	    console.log("show icon");
+	chrome.browserAction.setIcon({
+		imageData:  chrome.runtime.getURL('iconShow.png'),
+		tabId: sender.tab.id
+	})
+    }
     if (msgObj == "InvisibleVoiceRefresh") {
 	    console.log("refreshed");
     }
