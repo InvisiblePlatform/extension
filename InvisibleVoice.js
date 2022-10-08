@@ -483,7 +483,7 @@ chrome.runtime.onMessage.addListener(msgObj => {
 		vstatus: msgObj[objectkey]["status"],
 		utotal: msgObj[objectkey]["up_total"],
 		dtotal: msgObj[objectkey]["down_total"]
-	});
+	};
 	iframe.contentWindow.postMessage(message, '*');
     }
     if (Object.keys(msgObj)[0] == "InvisibleVoiceReblock") {
