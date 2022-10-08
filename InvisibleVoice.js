@@ -564,7 +564,7 @@ window.addEventListener('message', function (e){
 			console.log("level2 resize");
 			resize();
 		}
-		if (e.data.data == 'network' || e.data.data == 'graph-box'){
+		if (e.data.data == 'antwork' || e.data.data == 'graph-box'){
 		 	resizeNetwork();
 		} else {
 			if (e.data.data == 'back'){

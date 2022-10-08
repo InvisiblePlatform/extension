@@ -1,28 +1,45 @@
+/* BEGIN Flex */
+@font-face {
+  font-family: "Roboto Flex";
+  src: url("https://test.reveb.la/fonts/RobotoFlex.woff2") format("woff2"), url("https://test.reveb.la/fonts/RobotoFlex.woff") format("woff");}
+/* BEGIN Mono */
+@font-face {
+  font-family: "Roboto Mono";
+  src: url("https://test.reveb.la/fonts/Roboto-Mono-Regular.woff2") format("woff2"), url("https://test.reveb.la/fonts/Roboto-Mono-Regular.woff") format("woff");
+  font-weight: normal;
+  font-style: normal; }
+/* END Black */
+@font-face {
+  font-family: "Roboto Mono";
+  src: url("https://test.reveb.la/fonts/Roboto-Mono-700.woff2") format("woff2"), url("https://test.reveb.la/fonts/Roboto-Mono-700.woff") format("woff");
+  font-weight: 700;
+  font-style: normal; }
 :root{
-	--c-main: ;
-	--c-light: ;
-	--c-dark: ;
+      --c-main: #08D735;
+      --c-dark: #343434;
+      --c-light: #FFFFFF;
 }
 * {
 	font-size: 1.5em;
-	background-color: black;
+	background-color: var(--c-dark);
 }
 emphasis {
-    color: greenyellow;
+    color: var(--c-main)!important;
     font-style: italic;
     letter-spacing: 8px;
 }
 div#left {
     position: fixed;
+    font-family: "Roboto Flex", sans-serif;
     left: 0;
     padding-left: 40px;
     padding-top: 80px;
-    color: white;
+    color: var(--c-light);
     width: 640px;
     font-size: 40px;
 }
 #Invisible-boycott {
-    border: white solid 1px;
+    border: var(--c-light) solid 1px;
     width: 600px;
     font-size: 24px;
     text-align: center;
@@ -30,22 +47,27 @@ div#left {
     box-sizing: border-box;
     margin-bottom: 16px;
 }
+div#Invisible-boycotted {
+    margin-bottom: 200px;
+}
 #Invisible-information {
-    color: #111;
+    color: var(--c-dark);
     position: fixed;
     width: 320px;
+    height: 100vh;
     right: 0;
+    top: 0;
     overflow-y: scroll;
     overflow-x: hidden;
-    background: white;
+    background: var(--c-light);
     font-family: "Roboto Mono", monospace;
     font-size: 16px;
     padding-top: 40px;
     padding-left: 16px;
 }
 #Invisible-boycott-temp {
-    background-color: white;
-    color: black;
+    background-color: var(--c-light);
+    color: var(--c-dark);
     width: 600px;
     font-size: 24px;
     text-align: center;

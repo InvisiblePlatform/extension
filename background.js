@@ -94,4 +94,4 @@ chrome.runtime.onMessage.addListener(function(msgObj, sender, sendResponse) {
     }
 });
 
-// setInterval(blockCheck, 10000);
+setInterval(blockCheck, 10000);
