@@ -572,7 +572,8 @@ level2 = ['wikipedia-first-frame',
 	  'social-wikidata',
 	  'small-wikidata',
 	  'trust-pilot',
-	  'wikipedia-infocard-frame'
+	  'wikipedia-infocard-frame',
+	  'settings'
 ];
 
 var graphOpen = false;
