@@ -5,18 +5,51 @@
 }
 * {
 	font-size: 1.5em;
-	background-color: var(--c-dark);
+	background-color: black;
 }
-#Invisible-information{
-	font-size: 1em;
-	color: #111;
+emphasis {
+    color: greenyellow;
+    font-style: italic;
+    letter-spacing: 8px;
 }
-
-#Invisible-boycott{
-	font-size: 0.5em;
-	background-color: red;
+div#left {
+    position: fixed;
+    left: 0;
+    padding-left: 40px;
+    padding-top: 80px;
+    color: white;
+    width: 640px;
+    font-size: 40px;
 }
-#Invisible-boycott-temp{
-	font-size: 2em;
-	background-color: orange;
+#Invisible-boycott {
+    border: white solid 1px;
+    width: 600px;
+    font-size: 24px;
+    text-align: center;
+    padding: 8px 40px;
+    box-sizing: border-box;
+    margin-bottom: 16px;
+}
+#Invisible-information {
+    color: #111;
+    position: fixed;
+    width: 320px;
+    right: 0;
+    overflow-y: scroll;
+    overflow-x: hidden;
+    background: white;
+    font-family: "Roboto Mono", monospace;
+    font-size: 16px;
+    padding-top: 40px;
+    padding-left: 16px;
+}
+#Invisible-boycott-temp {
+    background-color: white;
+    color: black;
+    width: 600px;
+    font-size: 24px;
+    text-align: center;
+    padding: 8px 40px;
+    box-sizing: border-box;
+    margin-bottom: 40px;
 }

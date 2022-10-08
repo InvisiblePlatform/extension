@@ -478,7 +478,7 @@ chrome.runtime.onMessage.addListener(msgObj => {
 	objectkey = Object.keys(msgObj)[0];
 	// console.log(msgObj[objectkey]);
 	vstatus = msgObj[objectkey]["status"];
-	var message = JSON.stringify({
+	var message = {
 		message: "VoteUpdate",
 		vstatus: msgObj[objectkey]["status"],
 		utotal: msgObj[objectkey]["up_total"],
