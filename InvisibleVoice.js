@@ -447,9 +447,9 @@ chrome.runtime.onMessage.addListener(msgObj => {
     if (msgObj == "InvisibleVoiceBlockCheck") {
 	if (aSiteYouVisit != window.location.href){
 		blockCheck();
-	}
+	};
     } else {
-    	// console.log("[ Invisible Voice ]: onMessage " + msgObj);
+    	console.log("[ Invisible Voice ]: onMessage " + msgObj);
     }
     if (msgObj == "InvisibleVoiceRefresh") {
 	if (IVEnabled){
@@ -483,6 +483,11 @@ chrome.runtime.onMessage.addListener(msgObj => {
 		vstatus: msgObj[objectkey]["status"],
 		utotal: msgObj[objectkey]["up_total"],
 		dtotal: msgObj[objectkey]["down_total"]
+	};
+	iframe.contentWindow.postMessage(message, '*');
+	var message = {
+		message: "IVAutoOpen",
+		enabled: IVAutoOpen, 
 	};
 	iframe.contentWindow.postMessage(message, '*');
     }
