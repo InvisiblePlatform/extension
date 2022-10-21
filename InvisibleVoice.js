@@ -18,7 +18,6 @@ var found = false;
 var isInjected = false;
 var dontOpen = false;
 var svgloc = chrome.runtime.getURL('logo.svg');
-var localIndex = chrome.runtime.getURL('index.json');
 var localReplace = chrome.runtime.getURL('replacements.json');
 var localHash = chrome.runtime.getURL('hashtosite.json');
 var localSite = chrome.runtime.getURL('sitetohash.json');
@@ -66,11 +65,9 @@ chrome.storage.local.get(function(localdata) {
     IVEnabled = (localdata.domainToPull == "NONE") ? false : true;
     IVScoreEnabled = localdata.scoreEnabled ? true : false;
     propertyOrder = localdata.propertyOrder ? localdata.propertyOrder : [ "bcorp", "goodonyou", "glassdoor", "mbfc" ];
-    IVLocalIndex = localdata.packagedData ? true : false;
     // if (!IVLocalIndex) console.log("[ Invisible Voice ]: Set to " + localdata.domainToPull, IVEnabled.toString(), IVScoreEnabled.toString());
     // if (IVLocalIndex) console.log("[ Invisible Voice ]: Set to LocalIndex");
-    if (IVLocalIndex) updateJSON = new Request(localIndex, init);
-    if (!IVLocalIndex) updateJSON = new Request(aSiteWePullAndPushTo + "/index.json", init);
+    updateJSON = new Request(aSiteWePullAndPushTo + "/index.json", init);
     if (IVEnabled) getData();
     // Prevent page load
     blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
