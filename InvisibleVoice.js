@@ -23,6 +23,7 @@ var localHash = chrome.runtime.getURL('hashtosite.json');
 var localSite = chrome.runtime.getURL('sitetohash.json');
 var voteUrl = "https://assets.reveb.la";
 var level = 0;
+var defaultIndexUrl = "https://invisible-voice.com";
 
 var aSiteWePullAndPushTo;
 var showButton, allKeys;
@@ -61,7 +62,7 @@ if (window.matchMedia && !!window.matchMedia('(prefers-color-scheme: dark)').mat
 }
 
 chrome.storage.local.get(function(localdata) {
-    aSiteWePullAndPushTo = localdata.domainToPull || "https://test.reveb.la";
+    aSiteWePullAndPushTo = localdata.domainToPull || defaultIndexURL;
     IVEnabled = (localdata.domainToPull == "NONE") ? false : true;
     IVScoreEnabled = localdata.scoreEnabled ? true : false;
     propertyOrder = localdata.propertyOrder ? localdata.propertyOrder : [ "bcorp", "goodonyou", "glassdoor", "mbfc" ];
