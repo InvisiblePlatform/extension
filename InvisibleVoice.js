@@ -23,7 +23,7 @@ var localHash = chrome.runtime.getURL('hashtosite.json');
 var localSite = chrome.runtime.getURL('sitetohash.json');
 var voteUrl = "https://assets.reveb.la";
 var level = 0;
-var defaultIndexUrl = "https://invisible-voice.com";
+var defaultIndexURL = "https://invisible-voice.com";
 
 var aSiteWePullAndPushTo;
 var showButton, allKeys;
@@ -43,6 +43,7 @@ var darkMode = false;
 var backgroundColor = "#fff";
 var textColor = "#343434";
 var heavyTextColor = "#111";
+var debug = false;
 
 fetch(new Request(localSite, init))
     .then(response => response.json())
@@ -62,7 +63,7 @@ if (window.matchMedia && !!window.matchMedia('(prefers-color-scheme: dark)').mat
 }
 
 chrome.storage.local.get(function(localdata) {
-    aSiteWePullAndPushTo = localdata.domainToPull || defaultIndexURL;
+    aSiteWePullAndPushTo = defaultIndexURL;
     IVEnabled = (localdata.domainToPull == "NONE") ? false : true;
     IVScoreEnabled = localdata.scoreEnabled ? true : false;
     propertyOrder = localdata.propertyOrder ? localdata.propertyOrder : [ "bcorp", "goodonyou", "glassdoor", "mbfc" ];
@@ -204,7 +205,7 @@ function inject(code) {
     document.head.prepend(changeMeta);
     if (isInjected == false) {
         console.log("[ Invisible Voice ]: Injected - "+ code);
-        iframe.src = aSiteWePullAndPushTo + "/" + code + "/" + "?date=" + Date.now();
+        // iframe.src = aSiteWePullAndPushTo + "/" + code + "/" + "?date=" + Date.now();
         isInjected = true;
         found = true;
 	chrome.runtime.sendMessage("IVICON");
@@ -213,6 +214,7 @@ function inject(code) {
 }
 
 var isCreated = false
+var isSet = false
 function createObjects(value, type) {
     if (!IVEnabled) return;
     // console.log("[ Invisible Voice ]: creating  - "+ IVScoreEnabled);
@@ -263,6 +265,7 @@ function createObjects(value, type) {
 			   "transition:width .2s;";
     iframe.id = "Invisible";
     isCreated = true
+  
 };
 
 function appendObjects() {
@@ -295,6 +298,10 @@ let resizeNetwork = function(x = ""){
         iframe.style.width = distance + 'px';
 };
 let resize = function(x = ""){
+	if (isSet == false) {
+        	iframe.src = aSiteWePullAndPushTo + "/" + globalCode + "/" + "?date=" + Date.now();
+		isSet = true;
+	}
 	if (distance == 0) {distance = 160;}
 	else if (distance == 160) {
 	        distance = 640;
@@ -363,14 +370,14 @@ chrome.runtime.onMessage.addListener(msgObj => {
 		blockCheck();
 	};
     } else {
-    	console.log(msgObj);
+    	if (debug == true) console.log(msgObj);
     }
     if (msgObj == "InvisibleVoiceRefresh") {
 	if (IVEnabled){
 	["invisible-voice-floating"].forEach(function(id){
 	try{
        	    document.getElementById(id).remove();
-        } catch (e) {console.log("[ Invisible Voice ]: errorOnMessage" + e);};
+        } catch (e) {if (debug == true) console.log("[ Invisible Voice ]: errorOnMessage" + e);};
 	});};
         isInjected = false;
 	found = false;
@@ -389,7 +396,7 @@ chrome.runtime.onMessage.addListener(msgObj => {
     }
     if (Object.keys(msgObj)[0] == "InvisibleVote") {
 	objectkey = Object.keys(msgObj)[0];
-	// console.log(msgObj[objectkey]);
+	if (debug == true) console.log(msgObj[objectkey]);
 	vstatus = msgObj[objectkey]["status"];
 	var message = {
 		message: "VoteUpdate",
@@ -408,8 +415,8 @@ chrome.runtime.onMessage.addListener(msgObj => {
 		});
 		blockedHashes.push(hashtoadd);
         	chrome.storage.local.set({ "blockedHashes": blockedHashes });
-		// console.log("block: ", hashtoadd);
-		// console.log("block: ", blockedHashes);
+		if (debug == true) console.log("block: ", hashtoadd);
+		if (debug == true)  console.log("block: ", blockedHashes);
 	}, 1000);
     }
     if (msgObj == "InvisibleVoiceOff") {
@@ -417,7 +424,7 @@ chrome.runtime.onMessage.addListener(msgObj => {
 	["Invisible", "invisible-voice-floating", "invisible-voice-button"].forEach(function(id){
 	try{
        	    document.getElementById(id).remove();
-        } catch (e) {console.log("[ Invisible Voice ]: errorOnMessage" + e);};
+        } catch (e) {if (debug == true) console.log("[ Invisible Voice ]: errorOnMessage" + e);};
 	});};
 	isCreated = false;
         chrome.storage.local.get(function(localdata) {
@@ -445,7 +452,7 @@ level2 = ['wikipedia-first-frame',
 var graphOpen = false;
 window.addEventListener('message', function (e){
 	if (e.data.type == 'IVLike' && e.data.data != ''){
-		console.log(e.data.type + " Stub");
+		if (debug == true) console.log(e.data.type + " Stub");
 		if (vstatus == "up" ){
 	    		chrome.runtime.sendMessage({"InvisibleVoiceUnvote": hashforsite});
 		} else {
@@ -453,7 +460,7 @@ window.addEventListener('message', function (e){
 		}
 	}
 	if (e.data.type == 'IVDislike' && e.data.data != ''){
-		console.log(e.data.type + " Stub");
+		if (debug == true) console.log(e.data.type + " Stub");
 		if (vstatus == "down" ){
 	    		chrome.runtime.sendMessage({"InvisibleVoiceUnvote": hashforsite});
 		} else {
@@ -467,9 +474,9 @@ window.addEventListener('message', function (e){
     		window.location.replace(chrome.runtime.getURL('blocked.html') + "?site=" +domainString + "&return=" + aSiteYouVisit);
 	}
 	if (e.data.type == 'IVClicked' && e.data.data != ''){
-		console.log("resize stub " + e.data.data);
+		if (debug == true) console.log("resize stub " + e.data.data);
 		if (level2.includes(e.data.data)){
-			console.log("level2 resize");
+			if (debug == true) console.log("level2 resize");
 			resize();
 		}
 		if (e.data.data == 'antwork' || e.data.data == 'graph-box'){
@@ -486,10 +493,10 @@ window.addEventListener('message', function (e){
 		resizeCloseIV();	
 	}
 	if (e.data.type == 'IVDarkModeOverride'){
-		console.log("DarkMode stub", e.data.data);
+		if (debug == true) console.log("DarkMode stub", e.data.data);
 	}
 	if (e.data.type == 'IVKeepOnScreen'){
-		console.log("keep on screen stub", e.data.data);
+		if (debug == true) console.log("keep on screen stub", e.data.data);
 		if ( e.data.data == "true" ){
 			distance = 0;
 			resize();
