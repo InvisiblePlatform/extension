@@ -23,7 +23,7 @@ var localHash = chrome.runtime.getURL('hashtosite.json');
 var localSite = chrome.runtime.getURL('sitetohash.json');
 var voteUrl = "https://assets.reveb.la";
 var level = 0;
-var defaultIndexURL = "https://invisible-voice.com";
+var defaultIndexURL = "https://test.reveb.la";
 
 var aSiteWePullAndPushTo;
 var showButton, allKeys;
