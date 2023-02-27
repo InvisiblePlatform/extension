@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
 
-    "version": "22.10.31",
+    "version": "22.02.27",
     "name": "Invisible Voice",
     "description": "This extension boycotts a website",
 
@@ -31,7 +31,8 @@
     	    "96" : "icon96.png",
     	    "128" : "icon128.png"
     	},
-	"browser_style": true
+	"browser_style": true,
+	"default_popup": "popup.html"
     },
 
     	"icons": {

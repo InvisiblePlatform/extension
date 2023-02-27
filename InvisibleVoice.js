@@ -32,6 +32,9 @@ var IVLocalIndex;
 var updateJSON;
 var vstatus;
 
+var buttonOffsetVal = 32;
+var buttonOffset = buttonOffsetVal + "px";
+
 var iframe, open; 
 var sourceString = aSiteYouVisit.replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0].replace(/\./g,"");
 var domainString = aSiteYouVisit.replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0];
@@ -197,8 +200,8 @@ function getData() {
 }
 
 var changeMeta = document.createElement("meta");
-changeMeta.httpEquiv = "Content-Security-Policy";
-changeMeta.content = "upgrade-insecure-requests";
+changeMeta.setAttribute('http-equiv', "Content-Security-Policy");
+changeMeta.setAttribute("content", "upgrade-insecure-requests");
 
 function inject(code) {
     if (IVEnabled) {
@@ -220,20 +223,20 @@ function createObjects(value, type) {
     // console.log("[ Invisible Voice ]: creating  - "+ IVScoreEnabled);
     open = document.createElement("div");
     open.id = "invisible-voice-floating";
-    open.innerHTML = "<div id='invisible-voice-float'" + 
-		       "style='position: absolute;" + 
-		              "width:16px !important;" +
-			      "border:"+ textColor + " solid 1px !important;" + 
-		              "background:"+ backgroundColor +";" + 
-		              "height:-webkit-fill-available;" +
-			      "display:flex;" + 
-		 	      "margin: auto;" + 
-			      "align-items:center;" +
-			      "justify-content: center;'" +
+    open.innerHTML = "<div id='invisible-voice-float' " +
+                "style='position: fixed;" +
+                "width: " + buttonOffset + " !important;" +
+                "border:"+ textColor + " solid 1px !important;" +
+                "background:"+ backgroundColor +";" +
+                "height:-webkit-fill-available;" +
+                "display:flex;" +
+                "right: 0;" +
+                "margin: auto;" +
+                "align-items:center;" +
+                "justify-content: center;'" +
 			"> < </div>";
 
-    open.style.cssText = "right: 16px;" +
-			 "z-index: 2147483646;" +
+    open.style.cssText = "z-index: 2147483646;" +
 			 "position: fixed;" +
 			 "color: " + textColor + ";"+
 			 "font-family: 'Roboto', sans-serif;" +
@@ -241,6 +244,7 @@ function createObjects(value, type) {
 			 "text-align:center;" +
 			 "height:100vh;" +
 			 "top:0px;" +
+             "width:" + buttonOffset + ";" +
 			 "background:#eee;" +
 			 "transition: right .2s;";
 
@@ -252,11 +256,9 @@ function createObjects(value, type) {
 			   "border-right: none;" +
 			   "overflow-y: scroll;" +
 			   "overflow-x: hidden;" +
-			   "padding: 0;" +
 			   "right: 0;" +
-		           "margin: 0;" + 
 			   "width: 0px;" +
-			   "bottom:0;" +
+			   "top:0;" +
 			   "height: 100vh;" +
 			   "z-index: 2147483647;" +
 			   "box-shadow: rgba(0, 0, 0, 0.1) 0 0 100px;" +
@@ -273,7 +275,7 @@ function appendObjects() {
     document.documentElement.appendChild(iframe);
     document.documentElement.appendChild(open);
     iframe.style.width = '0px';
-    open.style.right = '16px';
+    open.style.right = "0";
 };
 
 document.addEventListener('fullscreenchange', function() {
@@ -339,7 +341,7 @@ document.addEventListener('mouseup', function(event) {
         chrome.storage.local.set(dismissData);
         // console.log("[ Invisible Voice ]: Dismiss id ", globalCode);
         iframe.style.width = '0px';
-	open.style.right = distance + 16 + 'px';
+        open.style.right = distance + buttonOffsetVal + 'px';
     }
     dontOpen = false;
 
