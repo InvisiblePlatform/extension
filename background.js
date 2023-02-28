@@ -1,3 +1,4 @@
+var voteUrl = "https://assets.reveb.la";
 var localIndex = chrome.runtime.getURL('index.json');
 var localReplace = chrome.runtime.getURL('replacements.json');
 var localHash = chrome.runtime.getURL('hashtosite.json');
@@ -49,15 +50,15 @@ function getTotal(site, tab){
 	});
 }
 
-var voteUrl = "https://assets.reveb.la";
+
 chrome.runtime.onMessage.addListener(function(msgObj, sender, sendResponse) {
-	console.log(msgObj);
+	console.log(msgObj, sender, sendResponse);
     if (msgObj == "IVICON"){
 	    console.log("show icon");
-	chrome.browserAction.setIcon({
-		imageData:  chrome.runtime.getURL('iconShow.png'),
-		tabId: sender.tab.id
-	})
+	// chrome.browserAction.setIcon({
+	// 	imageData:  chrome.runtime.getURL('iconShow.png'),
+	// 	tabId: sender.tab.id
+	// })
     }
     if (msgObj == "InvisibleVoiceRefresh") {
 	    console.log("refreshed");
@@ -77,6 +78,7 @@ chrome.runtime.onMessage.addListener(function(msgObj, sender, sendResponse) {
     if (Object.keys(msgObj)[0] == "InvisibleVoteTotal") {
 	objectkey = Object.keys(msgObj)[0];
 	getTotal(msgObj[objectkey], sender.tab.id);
+    chrome.tabs.create({url:"popup.html"});
     }
     if (Object.keys(msgObj)[0] == "InvisibleVoiceReblock") {
 	objectkey = Object.keys(msgObj)[0];
