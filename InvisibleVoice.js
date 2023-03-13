@@ -47,6 +47,13 @@ var heavyTextColor = "#111";
 var voteUrl = "https://assets.reveb.la";
 var voteStatus;
 
+var mode = 0
+const phoneRegex = /iPhone/i;
+
+if (phoneRegex.test(navigator.userAgent)){
+    mode = 1;
+}
+
 fetchCodeForPattern(sourceString);
 
 fetch(new Request(localSite, init))
@@ -191,8 +198,6 @@ var isCreated = false
 var isSet = false
 
 // Mode 0 is Desktop, Mode 1 is mobile
-var mode = 0;
-
 function createObjects(value, type) {
     if (!IVEnabled) return;
     if (debug) console.log("[ Invisible Voice ]: creating ");
@@ -249,6 +254,7 @@ function createObjects(value, type) {
 
 function appendObjects() {
     if (!IVEnabled) return;
+    if (mode == 1) return;
     document.documentElement.appendChild(iframe);
     document.documentElement.appendChild(open);
     iframe.style.width = '0px';
@@ -279,7 +285,7 @@ let resizeNetwork = function(x = "") {
 };
 let resize = function(x = "") {
     if (isSet == false) {
-        iframe.src = aSiteWePullAndPushTo + "/" + globalCode + "/" + "?date=" + Date.now();
+        iframe.src = aSiteWePullAndPushTo + "/db/" + globalCode + "/" + "?date=" + Date.now();
         isSet = true;
     }
     if (distance == 0) {

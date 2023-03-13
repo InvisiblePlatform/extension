@@ -3,6 +3,7 @@ var query = {
     currentWindow: true
 };
 var iframe = document.getElementById("invisible-frame");
+var testframe = document.getElementById("testout");
 var defaultIndexURL = "https://test.reveb.la";
 var aSiteWePullAndPushTo = defaultIndexURL;
 var domainString = "";
@@ -10,8 +11,14 @@ var sourceString = "";
 var debug = true;
 var graphOpen = false;
 var distance = 160;
-var mode = 1
 var voting = false;
+var mode = 0
+const phoneRegex = /iPhone/i;
+
+if (phoneRegex.test(navigator.userAgent)){
+    mode = 1;
+}
+
 
 function callback(tabs) {
     if (sourceString == "") {
@@ -22,7 +29,7 @@ function callback(tabs) {
         var pattern = "/" + sourceString + "/";
         chrome.tabs.query(query, callback);
         console.log(sourceString);
-        iframe.src = defaultIndexURL + "/" + sourceString;
+        iframe.src = defaultIndexURL + "/db/" + sourceString;
         if (mode == 0) iframe.style.width = distance + 'px';
         if (mode == 1) iframe.style.width = '100vw';
 
@@ -42,7 +49,7 @@ var isSet = false;
 let resize = function(x = "") {
     if (mode == 0) {
         if (isSet == false) {
-            iframe.src = aSiteWePullAndPushTo + "/" + sourceString + "/" + "?date=" + Date.now();
+            iframe.src = aSiteWePullAndPushTo + "/db/" + sourceString + "/" + "?date=" + Date.now();
             isSet = true;
         }
         if (distance == 0) {
