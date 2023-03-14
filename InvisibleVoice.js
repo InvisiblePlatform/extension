@@ -17,7 +17,6 @@ var init = {
 var updateJSON; // Request
 var IVEnabled, IVLocalIndex;
 
-
 var svgloc = chrome.runtime.getURL('logo.svg');
 var localReplace = chrome.runtime.getURL('replacements.json');
 var localHash = chrome.runtime.getURL('hashtosite.json');
@@ -52,72 +51,88 @@ const phoneRegex = /iPhone/i;
 
 if (phoneRegex.test(navigator.userAgent)){
     mode = 1;
+    console.log("[ Invisible Voice ]: phone mode")
 }
 
+getFromLocalData();
 fetchCodeForPattern(sourceString);
 
 fetch(new Request(localSite, init))
     .then(response => response.json())
     .then(data => data[domainString])
-    .then(item => hashforsite = item);
-// .then(hashforsite => console.log("[ IV ] " + domainString + " : " + hashforsite));
+    .then(item => hashforsite = item)
+    .then(hashforsite => console.log("[ IV ] " + domainString + " : " + hashforsite));
 
 var blockedHashes = [];
 var IVBlock = false;
 
 if (window.matchMedia && !!window.matchMedia('(prefers-color-scheme: dark)').matches) {
-    if (debug) console.info('Dark Theme detected 🌒 ');
+    if (debug) console.info('[ Invisible Voice ]: Dark Theme detected 🌒 ');
     darkMode = true;
     backgroundColor = "#343434";
     textColor = "#fff";
     heavyTextColor = "#AAA";
 }
 
-chrome.storage.local.get(function(localdata) {
-    IVEnabled = (localdata.domainToPull == "NONE") ? false : true;
-    // IVScoreEnabled = localdata.scoreEnabled ? true : false;
-    // propertyOrder = localdata.propertyOrder ? localdata.propertyOrder : ["bcorp", "goodonyou", "glassdoor", "mbfc"];
-    if (debug && !IVLocalIndex) console.log("[ Invisible Voice ]: Set to " + localdata.domainToPull, IVEnabled.toString());
-    if (debug && IVLocalIndex) console.log("[ Invisible Voice ]: Set to LocalIndex");
-    updateJSON = new Request(aSiteWePullAndPushTo + "/index.json", init);
-    if (IVEnabled) getData();
-    // Prevent page load
-    blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
-    blockCheck();
-});
+
+function getData() {
+    now = (new Date).getTime();
+    chrome.storage.local.get(function(topSiteOfTheWeek) {
+        if (!topSiteOfTheWeek.time) triggerUpdate();
+        if ((topSiteOfTheWeek.time + 480000) < now) triggerUpdate();
+    });
+    chrome.storage.local.get("data", function(data) {
+        try {
+            var test = data.data[100];
+        } catch (error) {
+            triggerUpdate();
+        }
+        if (debug) console.log("[ Invisible Voice ]: Running - " + sourceString);
+    });
+}
+function getFromLocalData(){
+    chrome.storage.local.get(function(localdata) {
+        IVEnabled = (localdata.domainToPull == "NONE") ? false : true;
+        if (debug) console.log(localdata);
+        // IVScoreEnabled = localdata.scoreEnabled ? true : false;
+        // propertyOrder = localdata.propertyOrder ? localdata.propertyOrder : ["bcorp", "goodonyou", "glassdoor", "mbfc"];
+        if (debug && !IVLocalIndex) console.log("[ Invisible Voice ]: Set to " + localdata.domainToPull, IVEnabled.toString());
+        if (debug && IVLocalIndex) console.log("[ Invisible Voice ]: Set to LocalIndex");
+        updateJSON = new Request(aSiteWePullAndPushTo + "/index.json", init);
+        if (IVEnabled) getData();
+        // Prevent page load
+        blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
+        blockCheck();
+    });
+}
+
+function fetchIndex(updateJSON) {
+    fetch(updateJSON)
+        .then(response => response.json())
+        .then(data => chrome.storage.local.set({
+            "data": data
+        }))
+        .then(chrome.storage.local.set({
+            "time": now
+        }));
+}
 
 function triggerUpdate() {
     if (IVLocalIndex) {
         if (debug) console.log("[ Invisible Voice ]: LocalIndex");
         updateJSON = new Request(localIndex, init);
-        fetch(updateJSON)
-            .then(response => response.json())
-            .then(data => chrome.storage.local.set({
-                "data": data
-            }))
-            .then(chrome.storage.local.set({
-                "time": now
-            }));
+        fetchIndex(updateJSON);
         return
-
     }
     if (debug) console.log("[ Invisible Voice ]: Updating " + aSiteWePullAndPushTo);
     try {
-        fetch(updateJSON)
-            .then(response => response.json())
-            .then(data => chrome.storage.local.set({
-                "data": data
-            }))
-            .then(chrome.storage.local.set({
-                "time": now
-            }));
+        fetchIndex(updateJSON);
     } catch (error) {
         error => console.log("[ Invisible Voice ]: Fetch Error", error.message)
     }
 }
 
 var coded;
-
 function run(globalCoded) {
     try {
         chrome.storage.local.get(globalCoded, function(id) {
@@ -140,6 +155,7 @@ function fetchCodeForPattern(sourceString) {
     chrome.storage.local.get("data", function(data) {
         pattern = "/" + sourceString + "/";
         try {
+            console.log(data.data);
             coded = data.data[sourceString];
             if (!coded) throw "no";
             globalCode = sourceString;
@@ -152,7 +168,8 @@ function fetchCodeForPattern(sourceString) {
                         if (data[pattern]) {
                             return data[pattern]["t"].replace(/\//g, '');
                         }
-                    }).then(global => console.log(global));
+                    });
+                    // .then(global => console.log(global));
             } catch {
                 return;
             }
@@ -161,21 +178,6 @@ function fetchCodeForPattern(sourceString) {
     return coded;
 }
 
-function getData() {
-    now = (new Date).getTime();
-    chrome.storage.local.get(function(topSiteOfTheWeek) {
-        if (!topSiteOfTheWeek.time) triggerUpdate();
-        if ((topSiteOfTheWeek.time + 480000) < now) triggerUpdate();
-    });
-    chrome.storage.local.get("data", function(data) {
-        try {
-            var test = data.data[100];
-        } catch (error) {
-            triggerUpdate();
-        }
-        if (debug) console.log("[ Invisible Voice ]: Running - " + sourceString);
-    });
-}
 
 var changeMeta = document.createElement("meta");
 changeMeta.setAttribute('http-equiv', "Content-Security-Policy");
@@ -200,59 +202,59 @@ var isSet = false
 // Mode 0 is Desktop, Mode 1 is mobile
 function createObjects(value, type) {
     if (!IVEnabled) return;
+    if (mode == 1) return;
     if (debug) console.log("[ Invisible Voice ]: creating ");
 
-    if (mode == 0) {
-        open = document.createElement("div");
-        open.id = "invisible-voice-floating";
-        open.innerHTML = "<div id='invisible-voice-float' " +
-            "style='position: fixed;" +
-            "width: " + buttonOffset + " !important;" +
-            "border:" + textColor + " solid 1px !important;" +
-            "background:" + backgroundColor + ";" +
-            "height:-webkit-fill-available;" +
-            "display:flex;" +
-            "right: 0;" +
-            "margin: auto;" +
-            "align-items:center;" +
-            "justify-content: center;'" +
-            "> < </div>";
+    open = document.createElement("div");
+    open.id = "invisible-voice-floating";
+    open.innerHTML = "<div id='invisible-voice-float' " +
+        "style='position: fixed;" +
+        "width: " + buttonOffset + " !important;" +
+        "border:" + textColor + " solid 1px !important;" +
+        "background:" + backgroundColor + ";" +
+        "height:-webkit-fill-available;" +
+        "display:flex;" +
+        "right: 0;" +
+        "margin: auto;" +
+        "align-items:center;" +
+        "justify-content: center;'" +
+        "> < </div>";
 
-        open.style.cssText = "z-index: 2147483646;" +
-            "position: fixed;" +
-            "color: " + textColor + ";" +
-            "font-family: 'Roboto', sans-serif;" +
-            "font-size: 16px;" +
-            "text-align:center;" +
-            "height:100vh;" +
-            "top:0px;" +
-            "width:" + buttonOffset + ";" +
-            "background:#eee;" +
-            "transition: right .2s;";
+    open.style.cssText = "z-index: 2147483646;" +
+        "position: fixed;" +
+        "color: " + textColor + ";" +
+        "font-family: 'Roboto', sans-serif;" +
+        "font-size: 16px;" +
+        "text-align:center;" +
+        "height:100vh;" +
+        "top:0px;" +
+        "width:" + buttonOffset + ";" +
+        "background:#eee;" +
+        "transition: right .2s;";
 
 
-        if (isCreated) return;
-        iframe = document.createElement("iframe");
-        iframe.style.cssText = "border:" + textColor + " solid 1px;" +
-            "border-right: none;" +
-            "overflow-y: scroll;" +
-            "overflow-x: hidden;" +
-            "right: 0;" +
-            "width: 0px;" +
-            "top:0;" +
-            "height: 100vh;" +
-            "z-index: 2147483647;" +
-            "box-shadow: rgba(0, 0, 0, 0.1) 0 0 100px;" +
-            "position: fixed;" +
-            "background-color:" + backgroundColor + ";" +
-            "transition:width .2s;";
-        iframe.id = "Invisible";
+    if (isCreated) return;
+    iframe = document.createElement("iframe");
+    iframe.style.cssText = "border:" + textColor + " solid 1px;" +
+        "border-right: none;" +
+        "overflow-y: scroll;" +
+        "overflow-x: hidden;" +
+        "right: 0;" +
+        "width: 0px;" +
+        "top:0;" +
+        "height: 100vh;" +
+        "z-index: 2147483647;" +
+        "box-shadow: rgba(0, 0, 0, 0.1) 0 0 100px;" +
+        "position: fixed;" +
+        "background-color:" + backgroundColor + ";" +
+        "transition:width .2s;";
+    iframe.id = "Invisible";
 
-        isCreated = true
-    }
+    isCreated = true
 };
 
 function appendObjects() {
+    console.log("mode", mode)
     if (!IVEnabled) return;
     if (mode == 1) return;
     document.documentElement.appendChild(iframe);
@@ -374,16 +376,7 @@ chrome.runtime.onMessage.addListener(msgObj => {
         };
         isInjected = false;
         found = false;
-        chrome.storage.local.get(function(localdata) {
-            aSiteWePullAndPushTo = localdata.domainToPull || "https://test.reveb.la";
-            IVEnabled = (localdata.domainToPull == "NONE") ? false : true;
-            // IVScoreEnabled = localdata.scoreEnabled ? true : false;
-            IVLocalIndex = localdata.packagedData ? true : false;
-            // propertyOrder = localdata.propertyOrder ? localdata.propertyOrder : ["bcorp", "goodonyou", "glassdoor", "mbfc"];
-            blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
-            // console.log("[ Invisible Voice ]: Set to " + localdata.domainToPull, IVEnabled.toString(), IVScoreEnabled.toString());
-        });
-        blockCheck();
+        getFromLocalData();
         getData();
         fetchCodeForPattern(sourceString);
     }

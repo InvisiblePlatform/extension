@@ -77,8 +77,7 @@ chrome.runtime.onMessage.addListener(function(msgObj, sender, sendResponse) {
     }
     if (Object.keys(msgObj)[0] == "InvisibleVoteTotal") {
 	objectkey = Object.keys(msgObj)[0];
-	getTotal(msgObj[objectkey], sender.tab.id);
-    chrome.tabs.create({url:"popup.html"});
+	    getTotal(msgObj[objectkey], sender.tab.id);
     }
     if (Object.keys(msgObj)[0] == "InvisibleVoiceReblock") {
 	objectkey = Object.keys(msgObj)[0];
