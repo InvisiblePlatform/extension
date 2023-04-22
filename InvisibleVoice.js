@@ -32,8 +32,8 @@ var level = 0;
 
 var iframe, open; // The Elements we inject
 var globalCode, code, hashforsite;
-var sourceString = aSiteYouVisit.replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0].replace(/\./g, "");
-var domainString = aSiteYouVisit.replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0];
+var sourceString = aSiteYouVisit.replace(/\.m\./g, '.').replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0].replace(/\./g, "");
+var domainString = aSiteYouVisit.replace(/\.m\./g, '.').replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0];
 
 
 var buttonOffsetVal = 16;
@@ -259,7 +259,7 @@ function appendObjects() {
     if (mode == 1) return;
     document.documentElement.appendChild(iframe);
     document.documentElement.appendChild(open);
-    iframe.style.width = '0px';
+    resize("close");
     open.style.right = "0";
 };
 
@@ -276,16 +276,10 @@ document.addEventListener('fullscreenchange', function() {
     };
 });
 
-let resizeCloseIV = function(x = "") {
-    distance = 0;
-    iframe.style.width = distance + 'px';
-};
+let resize = function(x) {
+    if(typeof(x)==='undefined') x = "";
 
-let resizeNetwork = function(x = "") {
-    distance = 840;
-    iframe.style.width = distance + 'px';
-};
-let resize = function(x = "") {
+    if (mode == 1) return;
     if (isSet == false) {
         iframe.src = aSiteWePullAndPushTo + "/db/" + globalCode + "/" + "?date=" + Date.now();
         isSet = true;
@@ -296,6 +290,12 @@ let resize = function(x = "") {
         distance = 640;
     } else {
         distance = 160;
+    }
+    if (x == "close") {
+        distance = 0;
+    }
+    if (x == "network") {
+        distance = 840;
     }
     iframe.style.width = distance + 'px';
     if (distance > 160) {
@@ -330,7 +330,7 @@ document.addEventListener('mouseup', function(event) {
         dismissData[globalCode] = now;
         chrome.storage.local.set(dismissData);
         // console.log("[ Invisible Voice ]: Dismiss id ", globalCode);
-        iframe.style.width = '0px';
+        resize();
         open.style.right = distance + buttonOffsetVal + 'px';
     }
     dontOpen = false;
@@ -475,14 +475,14 @@ window.addEventListener('message', function(e) {
         aSiteYouVisit = window.location.href;
         window.location.replace(chrome.runtime.getURL('blocked.html') + "?site=" + domainString + "&return=" + aSiteYouVisit);
     }
-    if (e.data.type == 'IVClicked' && e.data.data != '') {
+    if (e.data.type == 'IVClicked' && e.data.data != '' && e.data.data != 'titlebar') {
         if (debug == true) console.log("resize stub " + e.data.data, hashforsite);
         if (level2.includes(e.data.data)) {
             if (debug == true) console.log("level2 resize");
             resize();
         }
         if (e.data.data == 'antwork' || e.data.data == 'graph-box') {
-            resizeNetwork();
+            resize("network");
         } else {
             if (e.data.data == 'back') {
                 resize();
@@ -492,7 +492,7 @@ window.addEventListener('message', function(e) {
         };
     }
     if (e.data.type == 'IVClose') {
-        resizeCloseIV();
+        resize("close");
     }
     if (e.data.type == 'IVDarkModeOverride') {
         if (debug == true) console.log("DarkMode stub", e.data.data);

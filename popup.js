@@ -19,52 +19,51 @@ if (phoneRegex.test(navigator.userAgent)){
     mode = 1;
 }
 
-
 function callback(tabs) {
     if (sourceString == "") {
         var currentTab = tabs[0]; // there will be only one in this array
         var aSiteYouVisit = currentTab.url;
-        sourceString = aSiteYouVisit.replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0].replace(/\./g, "");
-        domainString = aSiteYouVisit.replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0];
+        sourceString = aSiteYouVisit.replace(/\.m\./g, '.').replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0].replace(/\./g, "");
+        domainString = aSiteYouVisit.replace(/\.m\./g, '.').replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0];
         var pattern = "/" + sourceString + "/";
         chrome.tabs.query(query, callback);
         console.log(sourceString);
-        iframe.src = defaultIndexURL + "/db/" + sourceString;
+        iframe.src = aSiteWePullAndPushTo + "/db/" + sourceString + "/" + "?date=" + Date.now().toString();
         if (mode == 0) iframe.style.width = distance + 'px';
+        if (mode == 0) iframe.style.height = '100em';
         if (mode == 1) iframe.style.width = '100vw';
+        if (mode == 1) iframe.style.height = '100vh';
 
     }
 }
 
-let resizeCloseIV = function(x = "") {
-    distance = 0;
-    iframe.style.width = distance + 'px';
-};
-
-let resizeNetwork = function(x = "") {
-    distance = 840;
-    iframe.style.width = distance + 'px';
-};
 var isSet = false;
-let resize = function(x = "") {
+let resize = function(x) {
+    if(typeof(x)==='undefined') x = "";
     if (mode == 0) {
-        if (isSet == false) {
-            iframe.src = aSiteWePullAndPushTo + "/db/" + sourceString + "/" + "?date=" + Date.now();
-            isSet = true;
-        }
-        if (distance == 0) {
-            distance = 160;
-        } else if (distance == 160) {
-            distance = 640;
-        } else {
-            distance = 160;
-        }
-        iframe.style.width = distance + 'px';
-        if (distance > 160) {
-            chrome.runtime.sendMessage({
-                "InvisibleVoteTotal": hashforsite
-            });
-        }
+    if (isSet == false) {
+        iframe.src = aSiteWePullAndPushTo + "/db/" + sourceString + "/" + "?date=" + Date.now();
+        isSet = true;
+    }
+    if (distance == 0) {
+        distance = 160;
+    } else if (distance == 160) {
+        distance = 640;
+    } else {
+        distance = 160;
+    }
+    if (x == "close") {
+        distance = 0;
+    }
+    if (x == "network") {
+        distance = 840;
+    }
+    iframe.style.width = distance + 'px';
+    if (distance > 160) {
+        chrome.runtime.sendMessage({
+            "InvisibleVoteTotal": hashforsite
+        });
+    }
     } else {
 if (voting){
             chrome.runtime.sendMessage({
@@ -119,7 +118,7 @@ window.addEventListener('message', function(e) {
             resize();
         }
         if (e.data.data == 'antwork' || e.data.data == 'graph-box') {
-            resizeNetwork();
+            resize("network");
         } else {
             if (e.data.data == 'back') {
                 resize();
@@ -129,7 +128,7 @@ window.addEventListener('message', function(e) {
         };
     }
     if (e.data.type == 'IVClose') {
-        resizeCloseIV();
+        resize("close");
     }
     if (e.data.type == 'IVDarkModeOverride') {
         if (debug == true) console.log("DarkMode stub", e.data.data);
