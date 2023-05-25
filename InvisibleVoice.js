@@ -1,8 +1,7 @@
 // Simple code that gets the job done by Orange
 //
-var debug = true;
+var debug = false;
 // Set up environment 
-
 var aSiteWePullAndPushTo = "https://test.reveb.la";
 var aSiteYouVisit = window.location.href;
 var now = (new Date).getTime();
@@ -55,7 +54,7 @@ if (phoneRegex.test(navigator.userAgent)){
 }
 
 getFromLocalData();
-fetchCodeForPattern(sourceString);
+if (mode != 1) fetchCodeForPattern(sourceString);
 
 fetch(new Request(localSite, init))
     .then(response => response.json())
@@ -76,6 +75,7 @@ if (window.matchMedia && !!window.matchMedia('(prefers-color-scheme: dark)').mat
 
 
 function getData() {
+    if (mode != 1) {
     now = (new Date).getTime();
     chrome.storage.local.get(function(topSiteOfTheWeek) {
         if (!topSiteOfTheWeek.time) triggerUpdate();
@@ -89,9 +89,10 @@ function getData() {
         }
         if (debug) console.log("[ Invisible Voice ]: Running - " + sourceString);
     });
+    }
 }
 function getFromLocalData(){
-    chrome.storage.local.get(function(localdata) {
+    if (mode != 1) chrome.storage.local.get(function(localdata) {
         IVEnabled = (localdata.domainToPull == "NONE") ? false : true;
         if (debug) console.log(localdata);
         // IVScoreEnabled = localdata.scoreEnabled ? true : false;
@@ -155,7 +156,7 @@ function fetchCodeForPattern(sourceString) {
     chrome.storage.local.get("data", function(data) {
         pattern = "/" + sourceString + "/";
         try {
-            console.log(data.data);
+            if (debug) console.log(data.data);
             coded = data.data[sourceString];
             if (!coded) throw "no";
             globalCode = sourceString;
@@ -169,7 +170,6 @@ function fetchCodeForPattern(sourceString) {
                             return data[pattern]["t"].replace(/\//g, '');
                         }
                     });
-                    // .then(global => console.log(global));
             } catch {
                 return;
             }
@@ -187,7 +187,7 @@ function inject(code) {
     if (IVEnabled) {
         document.head.prepend(changeMeta);
         if (isInjected == false) {
-            console.log("[ Invisible Voice ]: Injected - " + code);
+            if (debug) console.log("[ Invisible Voice ]: Injected - " + code);
             // iframe.src = aSiteWePullAndPushTo + "/" + code + "/" + "?date=" + Date.now();
             isInjected = true;
             found = true;
@@ -254,7 +254,7 @@ function createObjects(value, type) {
 };
 
 function appendObjects() {
-    console.log("mode", mode)
+    if (debug) console.log("mode", mode);
     if (!IVEnabled) return;
     if (mode == 1) return;
     document.documentElement.appendChild(iframe);
