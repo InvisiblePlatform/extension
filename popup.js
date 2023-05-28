@@ -11,30 +11,54 @@ var sourceString = "";
 var debug = true;
 var graphOpen = false;
 var distance = 160;
-var voting = false;
+var voting = true;
 var mode = 0
 const phoneRegex = /iPhone/i;
+var voteStatus, hashforsite, currentTab;
 
 if (phoneRegex.test(navigator.userAgent)){
     mode = 1;
 }
 
+function sendToPage(data){
+    var msgObj = data;
+    console.log(data);
+    voteStatus = msgObj["status"];
+    var message = {
+        message: "VoteUpdate",
+        voteStatus: msgObj["status"],
+        utotal: msgObj["up_total"],
+        dtotal: msgObj["down_total"]
+    };
+    if (debug == true) console.log(message);
+    iframe.contentWindow.postMessage(message, '*');
+}
+
 function callback(tabs) {
     if (sourceString == "") {
-        var currentTab = tabs[0]; // there will be only one in this array
+        currentTab = tabs[0]; // there will be only one in this array
         var aSiteYouVisit = currentTab.url;
-        sourceString = aSiteYouVisit.replace(/\.m\./g, '.').replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0].replace(/\./g, "");
-        domainString = aSiteYouVisit.replace(/\.m\./g, '.').replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0];
-        var pattern = "/" + sourceString + "/";
-        chrome.tabs.query(query, callback);
-        console.log(sourceString);
-        iframe.src = aSiteWePullAndPushTo + "/db/" + sourceString + "/" + "?date=" + Date.now().toString();
-        if (mode == 0) iframe.style.width = distance + 'px';
-        if (mode == 0) iframe.style.height = '100em';
-        if (mode == 1) iframe.style.width = '100vw';
-        if (mode == 1) iframe.style.height = '100vh';
-
+        var bgresponse;
+        chrome.runtime.sendMessage( 
+        {
+            "IVHASH": aSiteYouVisit,
+            "tabId": currentTab.id,
+        }, function(response){
+            bgresponse = JSON.parse(response);
+            sourceString = bgresponse['sourceString'];
+            domainString = bgresponse['domainString'];
+            hashforsite = bgresponse['hashforsite'];
+            var pattern = "/" + sourceString + "/";
+            chrome.tabs.query(query, callback);
+            console.log(sourceString);
+            iframe.src = aSiteWePullAndPushTo + "/db/" + sourceString + "/" + "?date=" + Date.now().toString();
+            if (mode == 0) iframe.style.width = distance + 'px';
+            if (mode == 0) iframe.style.height = '100em';
+            if (mode == 1) iframe.style.width = '100vw';
+            if (mode == 1) iframe.style.height = '100vh';
+        })
     }
+    return true
 }
 
 var isSet = false;
@@ -59,16 +83,12 @@ let resize = function(x) {
         distance = 840;
     }
     iframe.style.width = distance + 'px';
-    if (distance > 160) {
-        chrome.runtime.sendMessage({
-            "InvisibleVoteTotal": hashforsite
-        });
+    if (voting){
+        (async () => {
+        const response =  await chrome.runtime.sendMessage({ "InvisibleVoteTotal": hashforsite });
+        sendToPage(response);
+        })();
     }
-    } else {
-if (voting){
-            chrome.runtime.sendMessage({
-                "InvisibleVoteTotal": hashforsite
-            });}
     }
 };
 
@@ -86,29 +106,43 @@ level2 = ['wikipedia-first-frame',
     'disclaimer',
     'settings'
 ];
+
+chrome.runtime.onMessage.addListener(msgObj => {
+    console.log(msgObj, sender, sendResponse);
+    if (Object.keys(msgObj)[0] == "InvisibleHash") {
+        objectkey = Object.keys(msgObj)[0];
+        if (debug == true) console.log(msgObj[objectkey]);
+    }
+})
+
 window.addEventListener('message', function(e) {
+    console.log(voteStatus);
     if (e.data.type == 'IVLike' && e.data.data != '') {
         if (debug == true) console.log(e.data.type + " Stub");
-        if (vstatus == "up") {
-            chrome.runtime.sendMessage({
-                "InvisibleVoiceUnvote": hashforsite
-            });
+        if (voteStatus == "up") {
+            (async () => {
+                const respond =  await chrome.runtime.sendMessage({ "InvisibleVoteUnvote": hashforsite });
+                sendToPage(respond);
+            })();
         } else {
-            chrome.runtime.sendMessage({
-                "InvisibleVoiceUpvote": hashforsite
-            });
+            (async () => {
+                const respond =  await chrome.runtime.sendMessage({ "InvisibleVoteUpvote": hashforsite });
+                sendToPage(respond);
+            })();
         }
     }
     if (e.data.type == 'IVDislike' && e.data.data != '') {
         if (debug == true) console.log(e.data.type + " Stub");
-        if (vstatus == "down") {
-            chrome.runtime.sendMessage({
-                "InvisibleVoiceUnvote": hashforsite
-            });
+        if (voteStatus == "down") {
+            (async () => {
+                const respond =  await chrome.runtime.sendMessage({ "InvisibleVoteUnvote": hashforsite });
+                sendToPage(respond);
+            })();
         } else {
-            chrome.runtime.sendMessage({
-                "InvisibleVoiceDownvote": hashforsite
-            });
+            (async () => {
+                const respond =  await chrome.runtime.sendMessage({ "InvisibleVoteDownvote": hashforsite });
+                sendToPage(respond);
+            })();
         }
     }
     if (e.data.type == 'IVClicked' && e.data.data != '') {
@@ -140,6 +174,12 @@ window.addEventListener('message', function(e) {
             resize();
         }
     }
+});
+iframe.addEventListener('load', function(e){
+        (async () => {
+        const response =  await chrome.runtime.sendMessage({ "InvisibleVoteTotal": hashforsite });
+        sendToPage(response);
+        })();
 });
 
 chrome.tabs.query(query, callback);

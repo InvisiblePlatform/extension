@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
 
-    "version": "22.5.25",
+    "version": "22.5.28",
     "name": "Invisible Voice",
     "description": "This extension boycotts a website",
 
@@ -58,6 +58,7 @@
     },
 
     "content_scripts": [{
+        "all_frames": true,
 	"matches": ["<all_urls>"],
         "js": ["InvisibleVoice.js"],
 	"run_at": "document_start"

@@ -31,9 +31,9 @@ var level = 0;
 
 var iframe, open; // The Elements we inject
 var globalCode, code, hashforsite;
-var sourceString = aSiteYouVisit.replace(/\.m\./g, '.').replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0].replace(/\./g, "");
-var domainString = aSiteYouVisit.replace(/\.m\./g, '.').replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0];
-
+var sourceString = aSiteYouVisit.replace(/\.m\./g, '.').replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0].replace(/^m\./g, '').replace(/\./g, "");
+var domainString = aSiteYouVisit.replace(/\.m\./g, '.').replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0].replace(/^m\./g, '');
+console.log(sourceString, domainString);
 
 var buttonOffsetVal = 16;
 var buttonOffset = buttonOffsetVal + "px";
@@ -53,10 +53,14 @@ if (phoneRegex.test(navigator.userAgent)){
     console.log("[ Invisible Voice ]: phone mode")
 }
 
+if (aSiteWePullAndPushTo.match(domainString)){
+    mode = -1;
+}
+
 getFromLocalData();
 if (mode != 1) fetchCodeForPattern(sourceString);
 
-fetch(new Request(localSite, init))
+if (mode != 1 && mode != -1) fetch(new Request(localSite, init))
     .then(response => response.json())
     .then(data => data[domainString])
     .then(item => hashforsite = item)
@@ -92,7 +96,7 @@ function getData() {
     }
 }
 function getFromLocalData(){
-    if (mode != 1) chrome.storage.local.get(function(localdata) {
+    chrome.storage.local.get(function(localdata) {
         IVEnabled = (localdata.domainToPull == "NONE") ? false : true;
         if (debug) console.log(localdata);
         // IVScoreEnabled = localdata.scoreEnabled ? true : false;
