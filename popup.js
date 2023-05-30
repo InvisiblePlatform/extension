@@ -3,6 +3,7 @@ var query = {
     currentWindow: true
 };
 var iframe = document.getElementById("invisible-frame");
+var identifier = "com.morkforid.Invisible-Voice.Extension (C5N688B362)"
 var testframe = document.getElementById("testout");
 var defaultIndexURL = "https://test.reveb.la";
 var aSiteWePullAndPushTo = defaultIndexURL;
@@ -14,11 +15,17 @@ var distance = 160;
 var voting = true;
 var mode = 0
 const phoneRegex = /iPhone/i;
+const chrRegex = /Chr/i;
 var voteStatus, hashforsite, currentTab;
 
 if (phoneRegex.test(navigator.userAgent)){
     mode = 1;
 }
+if (chrRegex.test(navigator.userAgent)){
+    browser = chrome;
+    identifier = "fafojfdhjlapbpafdcoggecpagohpono"
+}
+
 
 function sendToPage(data){
     var msgObj = data;
@@ -38,18 +45,18 @@ function callback(tabs) {
     if (sourceString == "") {
         currentTab = tabs[0]; // there will be only one in this array
         var aSiteYouVisit = currentTab.url;
+        console.log(currentTab.url)
         var bgresponse;
-        chrome.runtime.sendMessage( 
+        browser.runtime.sendMessage( 
+            identifier,
         {
             "IVHASH": aSiteYouVisit,
-            "tabId": currentTab.id,
         }, function(response){
             bgresponse = JSON.parse(response);
             sourceString = bgresponse['sourceString'];
             domainString = bgresponse['domainString'];
             hashforsite = bgresponse['hashforsite'];
             var pattern = "/" + sourceString + "/";
-            chrome.tabs.query(query, callback);
             console.log(sourceString);
             iframe.src = aSiteWePullAndPushTo + "/db/" + sourceString + "/" + "?date=" + Date.now().toString();
             if (mode == 0) iframe.style.width = distance + 'px';
@@ -85,7 +92,7 @@ let resize = function(x) {
     iframe.style.width = distance + 'px';
     if (voting){
         (async () => {
-        const response =  await chrome.runtime.sendMessage({ "InvisibleVoteTotal": hashforsite });
+        const response =  await browser.runtime.sendMessage(identifier, { "InvisibleVoteTotal": hashforsite });
         sendToPage(response);
         })();
     }
@@ -107,7 +114,7 @@ level2 = ['wikipedia-first-frame',
     'settings'
 ];
 
-chrome.runtime.onMessage.addListener(msgObj => {
+browser.runtime.onMessageExternal.addListener(msgObj => {
     console.log(msgObj, sender, sendResponse);
     if (Object.keys(msgObj)[0] == "InvisibleHash") {
         objectkey = Object.keys(msgObj)[0];
@@ -121,12 +128,12 @@ window.addEventListener('message', function(e) {
         if (debug == true) console.log(e.data.type + " Stub");
         if (voteStatus == "up") {
             (async () => {
-                const respond =  await chrome.runtime.sendMessage({ "InvisibleVoteUnvote": hashforsite });
+                const respond =  await browser.runtime.sendMessage(identifier, { "InvisibleVoteUnvote": hashforsite });
                 sendToPage(respond);
             })();
         } else {
             (async () => {
-                const respond =  await chrome.runtime.sendMessage({ "InvisibleVoteUpvote": hashforsite });
+                const respond =  await browser.runtime.sendMessage(identifier, { "InvisibleVoteUpvote": hashforsite });
                 sendToPage(respond);
             })();
         }
@@ -135,12 +142,12 @@ window.addEventListener('message', function(e) {
         if (debug == true) console.log(e.data.type + " Stub");
         if (voteStatus == "down") {
             (async () => {
-                const respond =  await chrome.runtime.sendMessage({ "InvisibleVoteUnvote": hashforsite });
+                const respond =  await browser.runtime.sendMessage(identifier, { "InvisibleVoteUnvote": hashforsite });
                 sendToPage(respond);
             })();
         } else {
             (async () => {
-                const respond =  await chrome.runtime.sendMessage({ "InvisibleVoteDownvote": hashforsite });
+                const respond =  await browser.runtime.sendMessage(identifier, { "InvisibleVoteDownvote": hashforsite });
                 sendToPage(respond);
             })();
         }
@@ -177,9 +184,14 @@ window.addEventListener('message', function(e) {
 });
 iframe.addEventListener('load', function(e){
         (async () => {
-        const response =  await chrome.runtime.sendMessage({ "InvisibleVoteTotal": hashforsite });
+        const response =  await browser.runtime.sendMessage(identifier, { "InvisibleVoteTotal": hashforsite });
         sendToPage(response);
         })();
 });
 
-chrome.tabs.query(query, callback);
+function onError(e){
+    console.error(`Error: ${e}`);
+};
+
+console.log(identifier);
+browser.tabs.query(query).then(callback, onError);

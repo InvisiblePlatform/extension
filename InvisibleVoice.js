@@ -16,18 +16,26 @@ var init = {
 var updateJSON; // Request
 var IVEnabled, IVLocalIndex;
 
-var svgloc = chrome.runtime.getURL('logo.svg');
-var localReplace = chrome.runtime.getURL('replacements.json');
-var localHash = chrome.runtime.getURL('hashtosite.json');
-var localSite = chrome.runtime.getURL('sitetohash.json');
+// Set browser to chrome if chromium based
+const chrRegex = /Chr/i;
+if (chrRegex.test(navigator.userAgent)){
+    browser = chrome;
+    identifier = "fafojfdhjlapbpafdcoggecpagohpono"
+}
+const phoneRegex = /iPhone/i;
+if (phoneRegex.test(navigator.userAgent)){
+    mode = 1;
+}
+
+var svgloc = browser.runtime.getURL('logo.svg');
+var localReplace = browser.runtime.getURL('replacements.json');
+var localHash = browser.runtime.getURL('hashtosite.json');
+var localSite = browser.runtime.getURL('sitetohash.json');
 
 var found = false;
 var isInjected = false;
 var dontOpen = false;
 var level = 0;
-
-// var showButton, IVScoreEnabled;
-// var propertyOrder;
 
 var iframe, open; // The Elements we inject
 var globalCode, code, hashforsite;
@@ -46,13 +54,6 @@ var voteUrl = "https://assets.reveb.la";
 var voteStatus;
 
 var mode = 0
-const phoneRegex = /iPhone/i;
-
-if (phoneRegex.test(navigator.userAgent)){
-    mode = 1;
-    console.log("[ Invisible Voice ]: phone mode")
-}
-
 if (aSiteWePullAndPushTo.match(domainString)){
     mode = -1;
 }
@@ -77,15 +78,14 @@ if (window.matchMedia && !!window.matchMedia('(prefers-color-scheme: dark)').mat
     heavyTextColor = "#AAA";
 }
 
-
 function getData() {
     if (mode != 1) {
     now = (new Date).getTime();
-    chrome.storage.local.get(function(topSiteOfTheWeek) {
+    browser.storage.local.get(function(topSiteOfTheWeek) {
         if (!topSiteOfTheWeek.time) triggerUpdate();
         if ((topSiteOfTheWeek.time + 480000) < now) triggerUpdate();
     });
-    chrome.storage.local.get("data", function(data) {
+    browser.storage.local.get("data", function(data) {
         try {
             var test = data.data[100];
         } catch (error) {
@@ -96,7 +96,7 @@ function getData() {
     }
 }
 function getFromLocalData(){
-    chrome.storage.local.get(function(localdata) {
+    browser.storage.local.get(function(localdata) {
         IVEnabled = (localdata.domainToPull == "NONE") ? false : true;
         if (debug) console.log(localdata);
         // IVScoreEnabled = localdata.scoreEnabled ? true : false;
@@ -114,10 +114,10 @@ function getFromLocalData(){
 function fetchIndex(updateJSON) {
     fetch(updateJSON)
         .then(response => response.json())
-        .then(data => chrome.storage.local.set({
+        .then(data => browser.storage.local.set({
             "data": data
         }))
-        .then(chrome.storage.local.set({
+        .then(browser.storage.local.set({
             "time": now
         }));
 }
@@ -140,10 +140,10 @@ function triggerUpdate() {
 var coded;
 function run(globalCoded) {
     try {
-        chrome.storage.local.get(globalCoded, function(id) {
+        browser.storage.local.get(globalCoded, function(id) {
             timeSince = Object.values(id)[0];
             // showButton = ((timeSince < now) || timeSince < (now - 480000)) ? false : true;
-            chrome.storage.local.get("data", function(data) {
+            browser.storage.local.get("data", function(data) {
                 coded = data.data[globalCoded];
                 if (debug) console.log("[ Invisible Voice ]: coded");
             });
@@ -157,7 +157,7 @@ function run(globalCoded) {
 }
 
 function fetchCodeForPattern(sourceString) {
-    chrome.storage.local.get("data", function(data) {
+    browser.storage.local.get("data", function(data) {
         pattern = "/" + sourceString + "/";
         try {
             if (debug) console.log(data.data);
@@ -195,7 +195,7 @@ function inject(code) {
             // iframe.src = aSiteWePullAndPushTo + "/" + code + "/" + "?date=" + Date.now();
             isInjected = true;
             found = true;
-            chrome.runtime.sendMessage("IVICON");
+            browser.runtime.sendMessage("IVICON");
         }
     }
 }
@@ -303,7 +303,7 @@ let resize = function(x) {
     }
     iframe.style.width = distance + 'px';
     if (distance > 160) {
-        chrome.runtime.sendMessage({
+        browser.runtime.sendMessage({
             "InvisibleVoteTotal": hashforsite
         });
     }
@@ -315,7 +315,7 @@ document.addEventListener('mouseup', function(event) {
         if (event.target.matches('#invisible-voice-float')) {
             var dismissData = {};
             dismissData[globalCode] = 0;
-            chrome.storage.local.set(dismissData);
+            browser.storage.local.set(dismissData);
             inject(globalCode);
             resize();
         };
@@ -332,7 +332,7 @@ document.addEventListener('mouseup', function(event) {
         var dismissData = {};
         distance = 0;
         dismissData[globalCode] = now;
-        chrome.storage.local.set(dismissData);
+        browser.storage.local.set(dismissData);
         // console.log("[ Invisible Voice ]: Dismiss id ", globalCode);
         resize();
         open.style.right = distance + buttonOffsetVal + 'px';
@@ -345,7 +345,7 @@ var distance = 0;
 
 function blockCheck() {
     if (!IVEnabled) return;
-    chrome.storage.local.get(function(localdata) {
+    browser.storage.local.get(function(localdata) {
         blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
     });
     // console.log(domainString);
@@ -356,11 +356,11 @@ function blockCheck() {
             .then(data => data[hashforsite]);
         // .then(global => console.log(global));
         // console.log(domainString);
-        window.location.replace(chrome.runtime.getURL('blocked.html') + "?site=" + domainString + "&return=" + aSiteYouVisit);
+        window.location.replace(browser.runtime.getURL('blocked.html') + "?site=" + domainString + "&return=" + aSiteYouVisit);
     };
 }
 
-chrome.runtime.onMessage.addListener(msgObj => {
+browser.runtime.onMessage.addListener(msgObj => {
     if (msgObj == "InvisibleVoiceBlockCheck") {
         if (aSiteYouVisit != window.location.href) {
             blockCheck();
@@ -400,11 +400,11 @@ chrome.runtime.onMessage.addListener(msgObj => {
         objectkey = Object.keys(msgObj)[0];
         setTimeout(function() {
             hashtoadd = msgObj[objectkey];
-            chrome.storage.local.get(function(localdata) {
+            browser.storage.local.get(function(localdata) {
                 blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
             });
             blockedHashes.push(hashtoadd);
-            chrome.storage.local.set({
+            browser.storage.local.set({
                 "blockedHashes": blockedHashes
             });
             if (debug == true) console.log("block: ", hashtoadd);
@@ -422,7 +422,7 @@ chrome.runtime.onMessage.addListener(msgObj => {
             });
         };
         isCreated = false;
-        chrome.storage.local.get(function(localdata) {
+        browser.storage.local.get(function(localdata) {
             IVEnabled = (localdata.domainToPull == "NONE") ? false : true;
             // console.log("[ Invisible Voice ]: Set to " + localdata.domainToPull, IVEnabled.toString(), IVScoreEnabled.toString());
         });
@@ -450,11 +450,11 @@ window.addEventListener('message', function(e) {
         if (debug == true) console.log(e.data.type + " Stub");
         if (debug == true) console.log(voteStatus);
         if (voteStatus == "up") {
-            chrome.runtime.sendMessage({
+            browser.runtime.sendMessage({
                 "InvisibleVoiceUnvote": hashforsite
             });
         } else {
-            chrome.runtime.sendMessage({
+            browser.runtime.sendMessage({
                 "InvisibleVoiceUpvote": hashforsite
             });
         }
@@ -462,22 +462,22 @@ window.addEventListener('message', function(e) {
     if (e.data.type == 'IVDislike' && e.data.data != '') {
         if (debug == true) console.log(e.data.type + " Stub");
         if (voteStatus == "down") {
-            chrome.runtime.sendMessage({
+            browser.runtime.sendMessage({
                 "InvisibleVoiceUnvote": hashforsite
             });
         } else {
-            chrome.runtime.sendMessage({
+            browser.runtime.sendMessage({
                 "InvisibleVoiceDownvote": hashforsite
             });
         }
     }
     if (e.data.type == 'IVBoycott' && e.data.data != '') {
         blockedHashes.push(hashforsite);
-        chrome.storage.local.set({
+        browser.storage.local.set({
             "blockedHashes": blockedHashes
         });
         aSiteYouVisit = window.location.href;
-        window.location.replace(chrome.runtime.getURL('blocked.html') + "?site=" + domainString + "&return=" + aSiteYouVisit);
+        window.location.replace(browser.runtime.getURL('blocked.html') + "?site=" + domainString + "&return=" + aSiteYouVisit);
     }
     if (e.data.type == 'IVClicked' && e.data.data != '' && e.data.data != 'titlebar') {
         if (debug == true) console.log("resize stub " + e.data.data, hashforsite);

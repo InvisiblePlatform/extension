@@ -1,8 +1,13 @@
 var voteUrl = "https://assets.reveb.la";
-var localIndex = chrome.runtime.getURL('index.json');
+var identifier = "com.morkforid.Invisible-Voice.Extension (C5N688B362)"
+if (chrome){
+    browser = chrome;
+    identifier = "fafojfdhjlapbpafdcoggecpagohpono"
+}
+var localIndex = browser.runtime.getURL('index.json');
 
-var localHash = chrome.runtime.getURL('hashtosite.json');
-var localSite = chrome.runtime.getURL('sitetohash.json');
+var localHash = browser.runtime.getURL('hashtosite.json');
+var localSite = browser.runtime.getURL('sitetohash.json');
 var blockedHashes=[];
 var headers = new Headers();
 var lookup; 
@@ -13,7 +18,7 @@ var init = {
     cache: 'default'
 };
 
-chrome.storage.local.get(function(localdata) {
+browser.storage.local.get(function(localdata) {
 	blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
 });
 
@@ -33,9 +38,9 @@ function loopupDomainHash(domain){
 }
 
 function blockCheck(){
-    chrome.tabs.query({active: true}, tabs => {
+    browser.tabs.query({active: true}, tabs => {
         tabs.forEach(tab => {
-            chrome.tabs.sendMessage(tab.id, "InvisibleVoiceBlockCheck");
+            browser.tabs.sendMessage(tab.id, "InvisibleVoiceBlockCheck");
         });
     });
 }
@@ -81,14 +86,14 @@ async function getTotal(site){
 }
 
 
-chrome.runtime.onMessage.addListener(function(msgObj, sender, sendResponse) {
+browser.runtime.onMessage.addListener(function(msgObj, sender, sendResponse) {
 	console.log(msgObj, sender, sendResponse);
     objectkey = Object.keys(msgObj)[0] ? Object.keys(msgObj)[0] : false ;
     tabId = msgObj["tabId"] ? msgObj["tabId"] : false;
     if (msgObj == "IVICON"){
 	    console.log("show icon");
-	// chrome.browserAction.setIcon({
-	// 	imageData:  chrome.runtime.getURL('iconShow.png'),
+	// browser.browserAction.setIcon({
+	// 	imageData:  browser.runtime.getURL('iconShow.png'),
 	// 	tabId: sender.tab.id
 	// })
     }
@@ -135,11 +140,11 @@ chrome.runtime.onMessage.addListener(function(msgObj, sender, sendResponse) {
     if (Object.keys(msgObj)[0] == "InvisibleVoiceReblock") {
         setTimeout(function(){
 		    hashtoadd = msgObj[objectkey];
-		    chrome.storage.local.get(function(localdata) {
+		    browser.storage.local.get(function(localdata) {
     	    		blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
 		    });
 		    blockedHashes.push(hashtoadd);
-            chrome.storage.local.set({ "blockedHashes": blockedHashes });
+            browser.storage.local.set({ "blockedHashes": blockedHashes });
 		    console.log("block: ", hashtoadd);
 		    console.log("block: ", blockedHashes);
 	    }, 1000);
