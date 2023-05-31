@@ -3,7 +3,6 @@
 var debug = false;
 // Set up environment 
 var aSiteWePullAndPushTo = "https://test.reveb.la";
-var aSiteYouVisit = window.location.href;
 var now = (new Date).getTime();
 var headers = new Headers();
 var globalCode = "";
@@ -14,13 +13,17 @@ var init = {
     cache: 'default'
 };
 var updateJSON; // Request
-var IVEnabled, IVLocalIndex;
-
+var IVLocalIndex;
+var mode = 0
 // Set browser to chrome if chromium based
 const chrRegex = /Chr/i;
 if (chrRegex.test(navigator.userAgent)){
     browser = chrome;
     identifier = "fafojfdhjlapbpafdcoggecpagohpono"
+}
+const frRegex = /Firefox/i;
+if (frRegex.test(navigator.userAgent)){
+    identifier = "c81358df75e512918fcefb49e12266fadd4be00f@temporary-addon"
 }
 const phoneRegex = /iPhone/i;
 if (phoneRegex.test(navigator.userAgent)){
@@ -37,12 +40,13 @@ var isInjected = false;
 var dontOpen = false;
 var level = 0;
 
-var iframe, open; // The Elements we inject
-var globalCode, code, hashforsite;
-var sourceString = aSiteYouVisit.replace(/\.m\./g, '.').replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0].replace(/^m\./g, '').replace(/\./g, "");
-var domainString = aSiteYouVisit.replace(/\.m\./g, '.').replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0].replace(/^m\./g, '');
-console.log(sourceString, domainString);
+// The Elements we inject
+var iframe = document.createElement("iframe");
+var open = document.createElement("div");
+var globalCode, code, hashforsite, domainString, sourceString;
+var bgresponse;
 
+var aSiteYouVisit = window.location.href;
 var buttonOffsetVal = 16;
 var buttonOffset = buttonOffsetVal + "px";
 var darkMode = false;
@@ -52,21 +56,6 @@ var heavyTextColor = "#111";
 
 var voteUrl = "https://assets.reveb.la";
 var voteStatus;
-
-var mode = 0
-if (aSiteWePullAndPushTo.match(domainString)){
-    mode = -1;
-}
-
-getFromLocalData();
-if (mode != 1) fetchCodeForPattern(sourceString);
-
-if (mode != 1 && mode != -1) fetch(new Request(localSite, init))
-    .then(response => response.json())
-    .then(data => data[domainString])
-    .then(item => hashforsite = item)
-    .then(hashforsite => console.log("[ IV ] " + domainString + " : " + hashforsite));
-
 var blockedHashes = [];
 var IVBlock = false;
 
@@ -77,6 +66,37 @@ if (window.matchMedia && !!window.matchMedia('(prefers-color-scheme: dark)').mat
     textColor = "#fff";
     heavyTextColor = "#AAA";
 }
+
+function appendObjects() {
+    if (mode == 1) return;
+    document.documentElement.appendChild(iframe);
+    document.documentElement.appendChild(open);
+    resize("close");
+    open.style.right = "0";
+    if (debug) console.log("mode", mode);
+};
+
+browser.runtime.sendMessage( 
+    identifier,
+{
+    "IVHASH": aSiteYouVisit,
+}, function(response){
+    bgresponse = JSON.parse(response);
+    sourceString = bgresponse['sourceString'];
+    domainString = bgresponse['domainString'];
+    hashforsite = bgresponse['hashforsite'];
+    var pattern = "/" + sourceString + "/";
+    if (debug == true) console.log(sourceString, hashforsite);
+    iframe.src = aSiteWePullAndPushTo + "/db/" + sourceString + "/" + "?date=" + Date.now().toString();
+    if (mode == 0) iframe.style.width = distance + 'px';
+    if (mode == 0) iframe.style.height = '100em';
+    if (mode == 1) iframe.style.width = '100vw';
+    if (mode == 1) iframe.style.height = '100vh';
+    getFromLocalData();
+    fetchCodeForPattern();
+    if (debug == true) console.log("[ IV ] " + domainString + " : " + hashforsite);
+})
+
 
 function getData() {
     if (mode != 1) {
@@ -97,14 +117,13 @@ function getData() {
 }
 function getFromLocalData(){
     browser.storage.local.get(function(localdata) {
-        IVEnabled = (localdata.domainToPull == "NONE") ? false : true;
         if (debug) console.log(localdata);
         // IVScoreEnabled = localdata.scoreEnabled ? true : false;
         // propertyOrder = localdata.propertyOrder ? localdata.propertyOrder : ["bcorp", "goodonyou", "glassdoor", "mbfc"];
-        if (debug && !IVLocalIndex) console.log("[ Invisible Voice ]: Set to " + localdata.domainToPull, IVEnabled.toString());
+        if (debug && !IVLocalIndex) console.log("[ Invisible Voice ]: Set to " + aSiteWePullAndPushTo);
         if (debug && IVLocalIndex) console.log("[ Invisible Voice ]: Set to LocalIndex");
         updateJSON = new Request(aSiteWePullAndPushTo + "/index.json", init);
-        if (IVEnabled) getData();
+        getData();
         // Prevent page load
         blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
         blockCheck();
@@ -137,6 +156,53 @@ function triggerUpdate() {
     }
 }
 
+// Mode 0 is Desktop, Mode 1 is mobile
+function createObjects() {
+    if (mode == 1) return;
+    if (debug) console.log("[ Invisible Voice ]: creating ");
+    open.id = "invisible-voice-floating";
+    open.innerHTML = "<div id='invisible-voice-float' " +
+        "style='position: fixed;" +
+        "width: " + buttonOffset + " !important;" +
+        "border:" + textColor + " solid 1px !important;" +
+        "background:" + backgroundColor + ";" +
+        "height:inherit;" +
+        "height:-webkit-fill-available;" +
+        "display:flex;" +
+        "right: 0;" +
+        "margin: auto;" +
+        "align-items:center;" +
+        "justify-content: center;'" +
+        "> < </div>";
+    open.style.cssText = "z-index: 2147483646;" +
+        "position: fixed;" +
+        "color: " + textColor + ";" +
+        "font-family: 'Roboto', sans-serif;" +
+        "font-size: 16px;" +
+        "text-align:center;" +
+        "height:100vh;" +
+        "top:0px;" +
+        "width:" + buttonOffset + ";" +
+        "background:#eee;" +
+        "transition: right .2s;";
+    if (isCreated) return;
+    iframe.style.cssText = "border:" + textColor + " solid 1px;" +
+        "border-right: none;" +
+        "overflow-y: scroll;" +
+        "overflow-x: hidden;" +
+        "right: 0;" +
+        "width: 0px;" +
+        "top:0;" +
+        "height: 100vh;" +
+        "z-index: 2147483647;" +
+        "box-shadow: rgba(0, 0, 0, 0.1) 0 0 100px;" +
+        "position: fixed;" +
+        "background-color:" + backgroundColor + ";" +
+        "transition:width .2s;";
+    iframe.id = "Invisible";
+    isCreated = true
+};
+
 var coded;
 function run(globalCoded) {
     try {
@@ -156,7 +222,7 @@ function run(globalCoded) {
     }
 }
 
-function fetchCodeForPattern(sourceString) {
+function fetchCodeForPattern() {
     browser.storage.local.get("data", function(data) {
         pattern = "/" + sourceString + "/";
         try {
@@ -188,84 +254,19 @@ changeMeta.setAttribute('http-equiv', "Content-Security-Policy");
 changeMeta.setAttribute("content", "upgrade-insecure-requests");
 
 function inject(code) {
-    if (IVEnabled) {
-        document.head.prepend(changeMeta);
-        if (isInjected == false) {
-            if (debug) console.log("[ Invisible Voice ]: Injected - " + code);
-            // iframe.src = aSiteWePullAndPushTo + "/" + code + "/" + "?date=" + Date.now();
-            isInjected = true;
-            found = true;
-            browser.runtime.sendMessage("IVICON");
-        }
+    document.head.prepend(changeMeta);
+    if (isInjected == false) {
+        if (debug) console.log("[ Invisible Voice ]: Injected - " + code);
+        // iframe.src = aSiteWePullAndPushTo + "/" + code + "/" + "?date=" + Date.now();
+        isInjected = true;
+        found = true;
+        browser.runtime.sendMessage("IVICON");
     }
 }
 
 var isCreated = false
 var isSet = false
 
-// Mode 0 is Desktop, Mode 1 is mobile
-function createObjects(value, type) {
-    if (!IVEnabled) return;
-    if (mode == 1) return;
-    if (debug) console.log("[ Invisible Voice ]: creating ");
-
-    open = document.createElement("div");
-    open.id = "invisible-voice-floating";
-    open.innerHTML = "<div id='invisible-voice-float' " +
-        "style='position: fixed;" +
-        "width: " + buttonOffset + " !important;" +
-        "border:" + textColor + " solid 1px !important;" +
-        "background:" + backgroundColor + ";" +
-        "height:-webkit-fill-available;" +
-        "display:flex;" +
-        "right: 0;" +
-        "margin: auto;" +
-        "align-items:center;" +
-        "justify-content: center;'" +
-        "> < </div>";
-
-    open.style.cssText = "z-index: 2147483646;" +
-        "position: fixed;" +
-        "color: " + textColor + ";" +
-        "font-family: 'Roboto', sans-serif;" +
-        "font-size: 16px;" +
-        "text-align:center;" +
-        "height:100vh;" +
-        "top:0px;" +
-        "width:" + buttonOffset + ";" +
-        "background:#eee;" +
-        "transition: right .2s;";
-
-
-    if (isCreated) return;
-    iframe = document.createElement("iframe");
-    iframe.style.cssText = "border:" + textColor + " solid 1px;" +
-        "border-right: none;" +
-        "overflow-y: scroll;" +
-        "overflow-x: hidden;" +
-        "right: 0;" +
-        "width: 0px;" +
-        "top:0;" +
-        "height: 100vh;" +
-        "z-index: 2147483647;" +
-        "box-shadow: rgba(0, 0, 0, 0.1) 0 0 100px;" +
-        "position: fixed;" +
-        "background-color:" + backgroundColor + ";" +
-        "transition:width .2s;";
-    iframe.id = "Invisible";
-
-    isCreated = true
-};
-
-function appendObjects() {
-    if (debug) console.log("mode", mode);
-    if (!IVEnabled) return;
-    if (mode == 1) return;
-    document.documentElement.appendChild(iframe);
-    document.documentElement.appendChild(open);
-    resize("close");
-    open.style.right = "0";
-};
 
 document.addEventListener('fullscreenchange', function() {
     var isFullScreen = document.fullScreen ||
@@ -344,7 +345,6 @@ document.addEventListener('mouseup', function(event) {
 var distance = 0;
 
 function blockCheck() {
-    if (!IVEnabled) return;
     browser.storage.local.get(function(localdata) {
         blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
     });
@@ -369,20 +369,18 @@ browser.runtime.onMessage.addListener(msgObj => {
         if (debug == true) console.log(msgObj);
     }
     if (msgObj == "InvisibleVoiceRefresh") {
-        if (IVEnabled) {
-            ["invisible-voice-floating"].forEach(function(id) {
-                try {
-                    document.getElementById(id).remove();
-                } catch (e) {
-                    if (debug == true) console.log("[ Invisible Voice ]: errorOnMessage" + e);
-                };
-            });
-        };
+        ["invisible-voice-floating"].forEach(function(id) {
+            try {
+                document.getElementById(id).remove();
+            } catch (e) {
+                if (debug == true) console.log("[ Invisible Voice ]: errorOnMessage" + e);
+            };
+        });
         isInjected = false;
         found = false;
         getFromLocalData();
         getData();
-        fetchCodeForPattern(sourceString);
+        fetchCodeForPattern();
     }
     if (Object.keys(msgObj)[0] == "InvisibleVote") {
         objectkey = Object.keys(msgObj)[0];
@@ -412,20 +410,14 @@ browser.runtime.onMessage.addListener(msgObj => {
         }, 1000);
     }
     if (msgObj == "InvisibleVoiceOff") {
-        if (IVEnabled) {
-            ["Invisible", "invisible-voice-floating", "invisible-voice-button"].forEach(function(id) {
-                try {
-                    document.getElementById(id).remove();
-                } catch (e) {
-                    if (debug == true) console.log("[ Invisible Voice ]: errorOnMessage" + e);
-                };
-            });
-        };
-        isCreated = false;
-        browser.storage.local.get(function(localdata) {
-            IVEnabled = (localdata.domainToPull == "NONE") ? false : true;
-            // console.log("[ Invisible Voice ]: Set to " + localdata.domainToPull, IVEnabled.toString(), IVScoreEnabled.toString());
+        ["Invisible", "invisible-voice-floating", "invisible-voice-button"].forEach(function(id) {
+            try {
+                document.getElementById(id).remove();
+            } catch (e) {
+                if (debug == true) console.log("[ Invisible Voice ]: errorOnMessage" + e);
+            };
         });
+        isCreated = false;
     }
 });
 

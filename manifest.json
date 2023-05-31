@@ -54,14 +54,14 @@
     ],
 
     "background":{
-    	"service_worker":"background.js"
+    	"service_worker": "background.js",
+        "persistant": false
     },
 
     "content_scripts": [{
-        "all_frames": true,
-	"matches": ["<all_urls>"],
+	    "matches": ["<all_urls>"],
         "js": ["InvisibleVoice.js"],
-	"run_at": "document_start"
+	    "run_at": "document_start"
     }]
 
 }

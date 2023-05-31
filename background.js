@@ -1,10 +1,21 @@
+var debug = true;
+var aSiteWePullAndPushTo = "https://test.reveb.la";
 var voteUrl = "https://assets.reveb.la";
+var now = (new Date).getTime();
+
 var identifier = "com.morkforid.Invisible-Voice.Extension (C5N688B362)"
 if (chrome){
     browser = chrome;
     identifier = "fafojfdhjlapbpafdcoggecpagohpono"
 }
+const frRegex = /Firefox/i;
+if (frRegex.test(navigator.userAgent)){
+    identifier = "c81358df75e512918fcefb49e12266fadd4be00f@temporary-addon"
+}
+
 var localIndex = browser.runtime.getURL('index.json');
+var IVLocalIndex = false;
+var updateJSON; // Request
 
 var localHash = browser.runtime.getURL('hashtosite.json');
 var localSite = browser.runtime.getURL('sitetohash.json');
@@ -22,16 +33,62 @@ browser.storage.local.get(function(localdata) {
 	blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
 });
 
+
 fetch(new Request(localSite, init))
     .then(response => response.json())
     .then(data => lookup = data)
 
+function triggerUpdate() {
+    if (IVLocalIndex) {
+        if (debug) console.log("[ Invisible Voice ]: LocalIndex");
+        updateJSON = new Request(localIndex, init);
+        fetchIndex(updateJSON);
+        return
+    }
+    if (debug) console.log("[ Invisible Voice ]: Updating " + aSiteWePullAndPushTo);
+    try {
+        fetchIndex(updateJSON);
+    } catch (error) {
+        error => console.log("[ Invisible Voice ]: Fetch Error", error.message)
+    }
+}
+
+function fetchIndex(updateJSON) {
+    fetch(updateJSON)
+        .then(response => response.json())
+        .then(data => browser.storage.local.set({
+            "data": data
+        }))
+        .then(browser.storage.local.set({
+            "time": now
+        }));
+}
+
+function getFromLocalData(){
+    browser.storage.local.get(function(localdata) {
+        if (debug) console.log(localdata);
+        if (debug && !IVLocalIndex) console.log("[ Invisible Voice ]: Set to " + aSiteWePullAndPushTo);
+        if (debug && IVLocalIndex) console.log("[ Invisible Voice ]: Set to LocalIndex");
+        updateJSON = new Request(aSiteWePullAndPushTo + "/index.json", init);
+        if ((localdata.time + 480000) < now) triggerUpdate();
+        // Prevent page load
+        blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
+    });
+}
+
+getFromLocalData();
+fetchIndex();
+
 function loopupDomainHash(domain){
-    sourceString = domain.replace(/\.m\./g, '.').replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0].replace(/^m\./g, '').replace(/\./g, "");
     domainString = domain.replace(/\.m\./g, '.').replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0].replace(/^m\./g, '');
     hashforsite = lookup[domainString];
+    if (hashforsite === undefined)
+        if (domainString.split('.').length > 2){
+           domainString = domainString.split('.').slice(1).join('.');
+           hashforsite = lookup[domainString];
+        }
     return JSON.stringify({
-        "sourceString": sourceString, 
+        "sourceString": domainString.replace(/\./g,""), 
         "domainString": domainString, 
         "hashforsite": hashforsite
     });
@@ -85,53 +142,40 @@ async function getTotal(site){
     return data;
 }
 
-
 browser.runtime.onMessage.addListener(function(msgObj, sender, sendResponse) {
-	console.log(msgObj, sender, sendResponse);
-    objectkey = Object.keys(msgObj)[0] ? Object.keys(msgObj)[0] : false ;
-    tabId = msgObj["tabId"] ? msgObj["tabId"] : false;
-    if (msgObj == "IVICON"){
-	    console.log("show icon");
-	// browser.browserAction.setIcon({
-	// 	imageData:  browser.runtime.getURL('iconShow.png'),
-	// 	tabId: sender.tab.id
-	// })
-    }
-    if (msgObj == "InvisibleVoiceRefresh") {
-	    console.log("refreshed");
-    }
-    console.log("bonk!",objectkey);
-    if (objectkey == "InvisibleVoteUnvote") {
-    console.log("bonk!",objectkey);
+	console.log(msgObj);
+    // objectkey = (Object.keys(msgObj)[0] != "") ? Object.keys(msgObj)[0] : false ;
+    if (Object.keys(msgObj)[0] == "InvisibleVoteUnvote") {
+    console.log("bonk!",Object.keys(msgObj)[0]);
         (async function(){
-	            var data = await vote(msgObj[objectkey], "un");
+	            var data = await vote(msgObj[Object.keys(msgObj)[0]], "un");
                 console.log(data);
                 sendResponse(data);
         })();
         return true;
     }
-    if (objectkey == "InvisibleVoteUpvote") {
-    console.log("bonk!",objectkey);
+    if (Object.keys(msgObj)[0] == "InvisibleVoteUpvote") {
+    console.log("bonk!",Object.keys(msgObj)[0]);
         (async function(){
-	            var data = await vote(msgObj[objectkey], "up");
+	            var data = await vote(msgObj[Object.keys(msgObj)[0]], "up");
                 console.log(data);
                 sendResponse(data);
             })()
         return true;
     }
-    if (objectkey == "InvisibleVoteDownvote") {
-    console.log("bonk!",objectkey);
+    if (Object.keys(msgObj)[0] == "InvisibleVoteDownvote") {
+    console.log("bonk!",Object.keys(msgObj)[0]);
         (async function(){
-	            var data = await vote(msgObj[objectkey], "down");
+	            var data = await vote(msgObj[Object.keys(msgObj)[0]], "down");
                 console.log(data);
                 sendResponse(data);
             })()
         return true;
     }
-    if (objectkey == "InvisibleVoteTotal") {
-    console.log("bonk!",objectkey);
+    if (Object.keys(msgObj)[0] == "InvisibleVoteTotal") {
+    console.log("bonk!",Object.keys(msgObj)[0]);
         (async function(){
-	            var data = await getTotal(msgObj[objectkey]);
+	            var data = await getTotal(msgObj["InvisibleVoteTotal"]);
                 console.log(data);
                 sendResponse(data);
             })()
@@ -139,7 +183,7 @@ browser.runtime.onMessage.addListener(function(msgObj, sender, sendResponse) {
     }
     if (Object.keys(msgObj)[0] == "InvisibleVoiceReblock") {
         setTimeout(function(){
-		    hashtoadd = msgObj[objectkey];
+		    hashtoadd = msgObj[Object.keys(msgObj)[0]];
 		    browser.storage.local.get(function(localdata) {
     	    		blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
 		    });
@@ -150,9 +194,8 @@ browser.runtime.onMessage.addListener(function(msgObj, sender, sendResponse) {
 	    }, 1000);
 	    blockCheck();
     }
-    if (Object.keys(msgObj)[0] == 'IVHASH'){
-        data = loopupDomainHash(msgObj[objectkey]);
-        tab = msgObj["tabId"];
+    if (Object.keys(msgObj)[0] == "IVHASH"){
+        data = loopupDomainHash(msgObj["IVHASH"]);
         sendResponse(data);
     }
 });
