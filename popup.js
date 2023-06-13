@@ -16,6 +16,7 @@ var distance = 160;
 var voting = false;
 var mode = 0
 var useBG = false;
+var allowUpdate;
 const phoneRegex = /iPhone/i;
 const chrRegex = /Chr/i;
 const frRegex = /Firefox/i;
@@ -92,9 +93,11 @@ function sendToPage(data){
     iframe.contentWindow.postMessage(message, '*');
 }
 
-var localHash = browser.runtime.getURL('hashtosite.json');
-var localSite = browser.runtime.getURL('sitetohash.json');
-var lookup; 
+let localHash = browser.runtime.getURL('hashtosite.json');
+let localSite = browser.runtime.getURL('sitetohash.json');
+let localIndex = browser.runtime.getURL('index.json');
+var IVLocalIndex;
+var lookup = {}; 
 var headers = new Headers();
 var init = {
     method: 'GET',
@@ -112,46 +115,22 @@ fetch(new Request(localSite, init))
     .then(response => response.json())
     .then(data => lookup = data)
 
-function triggerUpdate() {
-    if (IVLocalIndex) {
-        if (debug) console.log("[ Invisible Voice ]: LocalIndex");
-        updateJSON = new Request(localIndex, init);
-        fetchIndex(updateJSON);
-        return
-    }
-    if (debug) console.log("[ Invisible Voice ]: Updating " + aSiteWePullAndPushTo);
-    try {
-        fetchIndex(updateJSON);
-    } catch (error) {
-        error => console.log("[ Invisible Voice ]: Fetch Error", error.message)
-    }
-}
-
-function fetchIndex(updateJSON) {
-    fetch(updateJSON)
-        .then(response => response.json())
-        .then(data => browser.storage.local.set({
-            "data": data
-        }))
-        .then(browser.storage.local.set({
-            "time": now
-        }));
-}
-
-function getFromLocalData(){
+function fetchIndex(){
     browser.storage.local.get(function(localdata) {
+        blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
+        if ((localdata.time + 480000) < now) allowUpdate = true;
         if (debug) console.log(localdata);
         if (debug && !IVLocalIndex) console.log("[ Invisible Voice ]: Set to " + aSiteWePullAndPushTo);
         if (debug && IVLocalIndex) console.log("[ Invisible Voice ]: Set to LocalIndex");
-        updateJSON = new Request(aSiteWePullAndPushTo + "/index.json", init);
-        if ((localdata.time + 480000) < now) triggerUpdate();
+        updateJSON = (IVLocalIndex) ? new Request(aSiteWePullAndPushTo + "/index.json", init) : new Request(localIndex, init);
         // Prevent page load
         blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
     });
+    if (allowUpdate) fetch(updateJSON)
+        .then(response => response.json())
+        .then(data => browser.storage.local.set({ "data": data }))
+        .then(browser.storage.local.set({ "time": now }));
 }
-
-getFromLocalData();
-fetchIndex();
 
 function lookupDomainHash(domain){
     domainString = domain.replace(/\.m\./g, '.').replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0].replace(/^m\./g, '');
@@ -332,4 +311,5 @@ function onError(e){
 };
 
 console.log(identifier);
+fetchIndex();
 browser.tabs.query(query).then(callback, onError);

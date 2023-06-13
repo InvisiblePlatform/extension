@@ -50,7 +50,8 @@
 	    {"resources":["sitetohash.json"],"matches":["<all_urls>"]},
 	    {"resources":["hashtosite.json"],"matches":["<all_urls>"]},
 	    {"resources":["blocked.html"],"matches":["<all_urls>"]},
-	    {"resources":["logoShow.png"],"matches":["<all_urls>"]}
+	    {"resources":["logoShow.png"],"matches":["<all_urls>"]},
+	    {"resources":["button.svg"],"matches":["<all_urls>"]}
     ],
 
     "background":{
