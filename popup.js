@@ -3,6 +3,7 @@ var query = {
     currentWindow: true
 };
 var iframe = document.getElementById("invisible-frame");
+var now = (new Date).getTime();
 var identifier = "com.morkforid.Invisible-Voice.Extension (C5N688B362)"
 var testframe = document.getElementById("testout");
 var defaultIndexURL = "https://test.reveb.la";
@@ -14,6 +15,7 @@ var graphOpen = false;
 var distance = 160;
 var voting = false;
 var mode = 0
+var useBG = false;
 const phoneRegex = /iPhone/i;
 const chrRegex = /Chr/i;
 const frRegex = /Firefox/i;
@@ -90,18 +92,110 @@ function sendToPage(data){
     iframe.contentWindow.postMessage(message, '*');
 }
 
+var localHash = browser.runtime.getURL('hashtosite.json');
+var localSite = browser.runtime.getURL('sitetohash.json');
+var lookup; 
+var headers = new Headers();
+var init = {
+    method: 'GET',
+    headers: headers,
+    mode: 'cors',
+    cache: 'default'
+};
+
+browser.storage.local.get(function(localdata) {
+	blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
+});
+
+
+fetch(new Request(localSite, init))
+    .then(response => response.json())
+    .then(data => lookup = data)
+
+function triggerUpdate() {
+    if (IVLocalIndex) {
+        if (debug) console.log("[ Invisible Voice ]: LocalIndex");
+        updateJSON = new Request(localIndex, init);
+        fetchIndex(updateJSON);
+        return
+    }
+    if (debug) console.log("[ Invisible Voice ]: Updating " + aSiteWePullAndPushTo);
+    try {
+        fetchIndex(updateJSON);
+    } catch (error) {
+        error => console.log("[ Invisible Voice ]: Fetch Error", error.message)
+    }
+}
+
+function fetchIndex(updateJSON) {
+    fetch(updateJSON)
+        .then(response => response.json())
+        .then(data => browser.storage.local.set({
+            "data": data
+        }))
+        .then(browser.storage.local.set({
+            "time": now
+        }));
+}
+
+function getFromLocalData(){
+    browser.storage.local.get(function(localdata) {
+        if (debug) console.log(localdata);
+        if (debug && !IVLocalIndex) console.log("[ Invisible Voice ]: Set to " + aSiteWePullAndPushTo);
+        if (debug && IVLocalIndex) console.log("[ Invisible Voice ]: Set to LocalIndex");
+        updateJSON = new Request(aSiteWePullAndPushTo + "/index.json", init);
+        if ((localdata.time + 480000) < now) triggerUpdate();
+        // Prevent page load
+        blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
+    });
+}
+
+getFromLocalData();
+fetchIndex();
+
+function lookupDomainHash(domain){
+    domainString = domain.replace(/\.m\./g, '.').replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0].replace(/^m\./g, '');
+    hashforsite = lookup[domainString];
+    if (hashforsite === undefined)
+        if (domainString.split('.').length > 2){
+           domainString = domainString.split('.').slice(1).join('.');
+           hashforsite = lookup[domainString];
+        }
+    return JSON.stringify({
+        "sourceString": domainString.replace(/\./g,""), 
+        "domainString": domainString, 
+        "hashforsite": hashforsite
+    });
+}
+
 function callback(tabs) {
     if (sourceString == "") {
         currentTab = tabs[0]; // there will be only one in this array
         var aSiteYouVisit = currentTab.url;
         console.log(currentTab.url)
-        var bgresponse;
-        browser.runtime.sendMessage( 
-            identifier,
-        {
-            "IVHASH": aSiteYouVisit,
-        }, function(response){
-            bgresponse = JSON.parse(response);
+        if (useBG) {
+            var bgresponse;
+            browser.runtime.sendMessage( 
+                identifier,
+            {
+                "IVHASH": aSiteYouVisit,
+            }, function(response){
+                bgresponse = JSON.parse(response);
+                sourceString = bgresponse['sourceString'];
+                domainString = bgresponse['domainString'];
+                hashforsite = bgresponse['hashforsite'];
+                var pattern = "/" + sourceString + "/";
+                if (hashforsite === undefined)
+                    hashforsite = md5(sourceString);
+                console.log(sourceString, hashforsite);
+                iframe.src = aSiteWePullAndPushTo + "/db/" + sourceString + "/" + "?date=" + Date.now().toString();
+                if (mode == 0) iframe.style.width = distance + 'px';
+                if (mode == 0) iframe.style.height = '100em';
+                if (mode == 1) iframe.style.width = '100vw';
+                if (mode == 1) iframe.style.height = '100vh';
+            })
+        } else {
+            bgresponse = JSON.parse(lookupDomainHash(aSiteYouVisit));
             sourceString = bgresponse['sourceString'];
             domainString = bgresponse['domainString'];
             hashforsite = bgresponse['hashforsite'];
@@ -114,7 +208,8 @@ function callback(tabs) {
             if (mode == 0) iframe.style.height = '100em';
             if (mode == 1) iframe.style.width = '100vw';
             if (mode == 1) iframe.style.height = '100vh';
-        })
+
+        }
     }
     return true
 }
