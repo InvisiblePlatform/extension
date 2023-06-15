@@ -75,7 +75,7 @@ function createObjects() {
         bobble = document.createElement("div");
         buttonSize = 40;
         bobble.style.cssText = `bottom: 10px;left: 60px;position:fixed;padding:0;margin:0;
-        border-radius:0;width:${buttonSize}px;background-color: black;background-image:url(${buttonSvg});object-fit:1;height:${buttonSize}px;background-size: ${buttonSize}px ${buttonSize}px;`;
+        border-radius:0;width:${buttonSize}px;background-color: transparent;background-image:url(${buttonSvg});object-fit:1;height:${buttonSize}px;background-size: ${buttonSize}px ${buttonSize}px;`;
         // bobble.setAttribute("onclick", this.remove());
         document.documentElement.appendChild(bobble);
     }
@@ -157,6 +157,7 @@ async function parsePSL(pslStream, lookup) {
 function parseDomain(domain, publicSuffixes) {
   const parts = domain.split('.').reverse();
   const suffix = getSuffix(parts, publicSuffixes);
+  if (suffix == null) return null
   const suffixSize = suffix.split('.').length;
   const suffixLessParts = parts.reverse().slice(suffixSize);
   const subdomains = suffixLessParts.slice(1);
@@ -179,11 +180,13 @@ function getSuffix(parts, publicSuffixes) {
         }
       }
     }
-    return longestMatch.suffix;
+    if (longestMatch !== null) return longestMatch.suffix;
+    return null
 }
 
 var coded;
 function lookupDomainHash(domain, lookup){
+    if (domainInfo == null) return null
     domainString = domainInfo.domain
     hashforsite = lookup[domainString];
     console.log(hashforsite)
@@ -217,23 +220,28 @@ function fetchIndex(){
 // Bubble Mode 0 is bubble, 1 is no bubble, 2 is no bubble or bar
 function domainChecker(domains, lookupList){
 	let domainList = domains
+    if (lookupList[sourceString]){
+        globalCode = sourceString;
+        createObjects();
+        return lookup[sourceString];
+    };
 	for (domain in domains){
 		let pattern = domains[domain].split('.').join('')
 		check = lookupList[pattern]
 		if (check){
 			sourceString = pattern;
 			globalCode = pattern;
-            document.head.prepend(changeMeta);
             createObjects();
-            browser.runtime.sendMessage("IVICON");
-			return check
+			return check;
 		}
 	}
 	return undefined
 }
 
 function fetchCodeForPattern(lookup) {
-    bgresponse = JSON.parse(lookupDomainHash(aSiteYouVisit, lookup));
+    bgjson = lookupDomainHash(aSiteYouVisit, lookup);
+    if (bgjson == null) return null
+    bgresponse = JSON.parse(bgjson);
     sourceString = bgresponse['sourceString'];
     domainString = bgresponse['domainString'];
     hashforsite = bgresponse['hashforsite'] ? bgresponse['hashforsite'] : false;
@@ -298,6 +306,7 @@ let resize = function(x) {
         Loaded = false;
     }
     if (x == "network") distance = 840;
+    if (iframe === undefined) return
     iframe.style.width = distance + 'px';
     if (distance > 160) browser.runtime.sendMessage({ "InvisibleVoteTotal": hashforsite });
 
@@ -421,6 +430,7 @@ level2 = ['wikipedia-first-frame',
 
 var graphOpen = false;
 window.addEventListener('message', function(e) {
+    if (e.data.type === undefined) return
     if (debug == true) console.log(e.data.type + " Stub " + e.data.data);
     if (e.data.type == 'IVLike' && e.data.data != '') {
         if (debug == true) console.log(voteStatus);

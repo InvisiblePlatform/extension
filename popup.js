@@ -223,6 +223,11 @@ function fetchIndex(){
 // Bubble Mode 0 is bubble, 1 is no bubble, 2 is no bubble or bar
 function domainChecker(domains, lookupList){
 	let domainList = domains
+    if (lookupList[sourceString]){
+        globalCode = sourceString;
+        createObjects();
+        return lookup[sourceString];
+    };
 	for (domain in domains){
 		let pattern = domains[domain].split('.').join('')
 		check = lookupList[pattern]
@@ -230,7 +235,7 @@ function domainChecker(domains, lookupList){
 			sourceString = pattern;
 			globalCode = pattern;
             createObjects();
-			return check
+			return check;
 		}
 	}
 	return undefined
@@ -245,10 +250,15 @@ function fetchCodeForPattern(lookup) {
     if (debug == true) console.log("[ IV ] " + domainString + " : " + hashforsite + " : " + pattern);
     browser.storage.local.get("data", function(data) {
         try {
-            fetch(new Request(localHash, init))
-				.then(response => response.json())
-				.then(subdata => subdata[hashforsite])
-				.then(possibileDomains => domainChecker(possibileDomains, data.data))
+            if (data.data[hashforsite] === undefined){
+                fetch(new Request(localHash, init))
+			    	.then(response => response.json())
+			    	.then(subdata => subdata[hashforsite])
+			    	.then(possibileDomains => domainChecker(possibileDomains, data.data))
+            } else {
+			    globalCode = sourceString;
+                createObjects();
+            }
         } catch {
             try {
                 fetch(new Request(localReplace, init))
@@ -429,6 +439,7 @@ function onError(e){
 };
 
 function startDataChain(lookup){
+    console.log("chain")
     fetch(new Request(psl, init))
         .then(response => parsePSL(response.body, lookup, aSiteYouVisit));
 }
