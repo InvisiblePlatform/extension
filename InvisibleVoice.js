@@ -32,22 +32,23 @@ let localReplace = browser.runtime.getURL('replacements.json');
 let localHash = browser.runtime.getURL('hashtosite.json');
 let localSite = browser.runtime.getURL('sitetohash.json');
 let buttonSvg = browser.runtime.getURL('button.svg');
+let psl = browser.runtime.getURL('public_suffix_list.dat');
 let localIndex = browser.runtime.getURL('index.json');
+
 var lookup = {}; 
-fetch(new Request(localSite, init))
-    .then(response => response.json())
-    .then(data => lookup = data)
 
 var dontOpen = false;
 var level = 0;
 
 // The Elements we inject
 var globalCode, code, hashforsite, domainString, sourceString, open, iframe;
+var domainInfo;
 var bgresponse;
 
 var aSiteYouVisit = window.location.href;
 var buttonOffsetVal = 16;
 var buttonOffset = buttonOffsetVal + "px";
+
 var darkMode = false;
 var backgroundColor = "#fff";
 var textColor = "#343434";
@@ -66,6 +67,131 @@ if (window.matchMedia && !!window.matchMedia('(prefers-color-scheme: dark)').mat
     backgroundColor = "#343434";
     textColor = "#fff";
     heavyTextColor = "#AAA";
+}
+
+function createObjects() {
+    if (debug) console.log("[ Invisible Voice ]: creating " + mode);
+    if (bubbleMode == 0){
+        bobble = document.createElement("div");
+        buttonSize = 40;
+        bobble.style.cssText = `bottom: 10px;left: 60px;position:fixed;padding:0;margin:0;
+        border-radius:0;width:${buttonSize}px;background-color: black;background-image:url(${buttonSvg});object-fit:1;height:${buttonSize}px;background-size: ${buttonSize}px ${buttonSize}px;`;
+        // bobble.setAttribute("onclick", this.remove());
+        document.documentElement.appendChild(bobble);
+    }
+    if (mode == 1) return;
+    iframe = document.createElement("iframe");
+    open = document.createElement("div");
+    open.id = "invisible-voice";
+    open.style.cssText =
+        `position: fixed; width: ${buttonOffset}!important;
+         border:${textColor} solid 1px !important;
+         background:${backgroundColor};
+         height:inherit;
+         height:-webkit-fill-available;
+         display:flex; right: 0; top: 0; padding: 0; border-radius: 0;
+         color: ${textColor}; margin: auto; align-items:center;
+         justify-content: center;`;
+    open.innerHTML = "<";
+    iframe.id = "Invisible";
+    iframe.style.cssText = 
+        `border:${textColor} solid 1px; border-right: none;
+         overflow-y: scroll; overflow-x: hidden; right: 0; width: 0px; top:0;
+         height: 100vh; z-index: 2147483647; position: fixed;
+         box-shadow: rgba(0, 0, 0, 0.1) 0 0 100px; 
+         background-color:${backgroundColor}; transition:width .2s;`
+    if (mode == 1) return;
+    document.documentElement.appendChild(iframe);
+    document.documentElement.appendChild(open);
+    resize("close");
+    open.style.right = "0";
+    if (mode == 0) iframe.style.width = distance + 'px';
+    if (mode == 0) iframe.style.height = '100em';
+};
+
+
+// Domain handling
+// PSL 2023/06/23 updated
+async function parsePSL(pslStream, lookup) {
+  const decoder = new TextDecoder();
+  const reader = pslStream.getReader();
+  let chunk;
+  let pslData = '';
+
+  while (!(chunk = await reader.read()).done) {
+    const decodedChunk = decoder.decode(chunk.value, { stream: true });
+    pslData += decodedChunk;
+  }
+
+  const lines = pslData.trim().split('\n');
+  const publicSuffixes = [];
+
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+    if (trimmedLine === '' || trimmedLine.startsWith('//')) {
+      continue; // Ignore empty lines and comments
+    }
+
+    const isException = trimmedLine.startsWith('!');
+    const domainOrRule = trimmedLine.substring(isException ? 1 : 0);
+    const isWildcard = domainOrRule.startsWith('*');
+    const suffix = isWildcard ? domainOrRule.substring(1) : domainOrRule;
+
+    if (isException) {
+      const lastSuffix = publicSuffixes[publicSuffixes.length - 1];
+      if (lastSuffix && lastSuffix.exceptionRules) {
+        lastSuffix.exceptionRules.push(suffix);
+      } else {
+        console.warn('Exception rule without preceding regular rule:', trimmedLine);
+      }
+    } else {
+      publicSuffixes.push({ suffix, exceptionRules: [] });
+    }
+  }
+  domainString = aSiteYouVisit.replace(/\.m\./g, '.').replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0].replace(/^m\./g, '');
+  domainInfo = parseDomain(domainString, publicSuffixes);
+  fetchCodeForPattern(lookup);
+  return domainInfo;
+}
+
+function parseDomain(domain, publicSuffixes) {
+  const parts = domain.split('.').reverse();
+  const suffix = getSuffix(parts, publicSuffixes);
+  const suffixSize = suffix.split('.').length;
+  const suffixLessParts = parts.reverse().slice(suffixSize);
+  const subdomains = suffixLessParts.slice(1);
+  return {
+    domain: domain,
+    subdomains: subdomains,
+    suffix: suffix
+  };
+}
+
+function getSuffix(parts, publicSuffixes) {
+    let domainParts = parts.reverse();
+    let longestMatch = null;
+    for (let i = 0; i < domainParts.length; i++) {
+      const suffix = domainParts.slice(i).join('.');
+      const match = publicSuffixes.find(ps => ps.suffix == suffix);
+      if (match) {
+        if (!longestMatch || suffix.length > longestMatch.length) {
+          longestMatch = match;
+        }
+      }
+    }
+    return longestMatch.suffix;
+}
+
+var coded;
+function lookupDomainHash(domain, lookup){
+    domainString = domainInfo.domain
+    hashforsite = lookup[domainString];
+    console.log(hashforsite)
+    return JSON.stringify({
+        "sourceString": domainString.replace(/\./g,""), 
+        "domainString": domainString, 
+        "hashforsite": hashforsite
+    });
 }
 
 function fetchIndex(){
@@ -89,90 +215,36 @@ function fetchIndex(){
 
 // Mode 0 is Desktop, Mode 1 is mobile
 // Bubble Mode 0 is bubble, 1 is no bubble, 2 is no bubble or bar
-function createObjects() {
-    if (debug) console.log("[ Invisible Voice ]: creating " + mode);
-    if (bubbleMode == 0){
-        bobble = document.createElement("div");
-        buttonSize = 40;
-        bobble.style.cssText = `bottom: 10px;left: 10px;position:fixed;padding:0;margin:0;
-        border-radius:0;width:${buttonSize}px;background-color: transparent;background-image:url(${buttonSvg});object-fit:1;height:${buttonSize}px;background-size: ${buttonSize}px ${buttonSize}px;`;
-        // bobble.setAttribute("onclick", this.remove());
-        document.documentElement.appendChild(bobble);
-    }
-    if (mode == 1) return;
-    iframe = document.createElement("iframe");
-    open = document.createElement("div");
-    open.id = "invisible-voice";
-    open.style.cssText =
-        `position: fixed; width: ${buttonOffset}!important;
-         border:${textColor} solid 1px !important;
-         background:${backgroundColor};
-         height:inherit;
-         height:-webkit-fill-available;
-         display:flex; right: 0; top: 0; padding: 0; border-radius: 0;
-         color: ${textColor}; margin: auto; align-items:center;
-         justify-content: center;`;
-    open.innerHTML = "<";
-    iframe.id = "Invisible";
-    iframe.style.cssText = "border:" + textColor + " solid 1px;" +
-        "border-right: none;" +
-        "overflow-y: scroll;" +
-        "overflow-x: hidden;" +
-        "right: 0;" +
-        "width: 0px;" +
-        "top:0;" +
-        "height: 100vh;" +
-        "z-index: 2147483647;" +
-        "box-shadow: rgba(0, 0, 0, 0.1) 0 0 100px;" +
-        "position: fixed;" +
-        "background-color:" + backgroundColor + ";" +
-        "transition:width .2s;";
-    if (mode == 1) return;
-    document.documentElement.appendChild(iframe);
-    document.documentElement.appendChild(open);
-    resize("close");
-    open.style.right = "0";
-    if (mode == 0) iframe.style.width = distance + 'px';
-    if (mode == 0) iframe.style.height = '100em';
-};
-
-var coded;
-function lookupDomainHash(domain){
-    domainString = domain.replace(/\.m\./g, '.').replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0].replace(/^m\./g, '');
-    hashforsite = lookup[domainString];
-    if (hashforsite === undefined)
-        if (domainString.split('.').length > 2){
-           domainString = domainString.split('.').slice(1).join('.');
-           hashforsite = lookup[domainString];
-        }
-    return JSON.stringify({
-        "sourceString": domainString.replace(/\./g,""), 
-        "domainString": domainString, 
-        "hashforsite": hashforsite
-    });
+function domainChecker(domains, lookupList){
+	let domainList = domains
+	for (domain in domains){
+		let pattern = domains[domain].split('.').join('')
+		check = lookupList[pattern]
+		if (check){
+			sourceString = pattern;
+			globalCode = pattern;
+            document.head.prepend(changeMeta);
+            createObjects();
+            browser.runtime.sendMessage("IVICON");
+			return check
+		}
+	}
+	return undefined
 }
 
-function fetchCodeForPattern() {
-    bgresponse = JSON.parse(lookupDomainHash(aSiteYouVisit));
+function fetchCodeForPattern(lookup) {
+    bgresponse = JSON.parse(lookupDomainHash(aSiteYouVisit, lookup));
     sourceString = bgresponse['sourceString'];
     domainString = bgresponse['domainString'];
     hashforsite = bgresponse['hashforsite'] ? bgresponse['hashforsite'] : false;
     var pattern = "/" + sourceString + "/";
     if (debug == true) console.log("[ IV ] " + domainString + " : " + hashforsite + " : " + pattern);
-    // iframe.src = aSiteWePullAndPushTo + "/db/" + sourceString + "/" + "?date=" + Date.now().toString();
-
     browser.storage.local.get("data", function(data) {
         try {
-            coded = data.data[sourceString];
-            if (!coded) throw "no";
-            globalCode = sourceString;
-            // timeSince = Object.values(id)[0];
-            // showButton = ((timeSince < now) || timeSince < (now - 480000)) ? false : true;
-            if (coded) {
-                document.head.prepend(changeMeta);
-                createObjects();
-                browser.runtime.sendMessage("IVICON");
-            }
+            fetch(new Request(localHash, init))
+				.then(response => response.json())
+				.then(subdata => subdata[hashforsite])
+				.then(possibileDomains => domainChecker(possibileDomains, data.data))
         } catch {
             try {
                 fetch(new Request(localReplace, init))
@@ -195,8 +267,6 @@ var changeMeta = document.createElement("meta");
 changeMeta.setAttribute('http-equiv', "Content-Security-Policy");
 changeMeta.setAttribute("content", "upgrade-insecure-requests");
 
-
-
 document.addEventListener('fullscreenchange', function() {
     var isFullScreen = document.fullScreen ||
         document.mozFullScreen ||
@@ -212,6 +282,7 @@ let resize = function(x) {
     if (x == "load" && !Loaded) {
         ourdomain = aSiteWePullAndPushTo + "/db/" + globalCode + "/" + "?date=" + Date.now();
         iframe.src = ourdomain;
+		console.log(globalCode)
         Loaded = true;
     }
     if (distance == 0) {
@@ -413,4 +484,11 @@ window.addEventListener('message', function(e) {
     if (e.data.type == 'IVClose') resize("close");
 });
 
-fetchCodeForPattern();
+function startDataChain(lookup){
+    fetch(new Request(psl, init))
+        .then(response => parsePSL(response.body, lookup));
+}
+
+fetch(new Request(localSite, init))
+    .then(response => response.json())
+    .then(lookup => startDataChain(lookup))

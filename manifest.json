@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
 
-    "version": "22.6.12",
+    "version": "22.6.14",
     "name": "Invisible Voice",
     "description": "This extension boycotts a website",
 
@@ -48,6 +48,7 @@
     "web_accessible_resources": [
 	    {"resources":["replacements.json"],"matches":["<all_urls>"]},
 	    {"resources":["sitetohash.json"],"matches":["<all_urls>"]},
+	    {"resources":["public_suffix_list.dat"],"matches":["<all_urls>"]},
 	    {"resources":["hashtosite.json"],"matches":["<all_urls>"]},
 	    {"resources":["blocked.html"],"matches":["<all_urls>"]},
 	    {"resources":["logoShow.png"],"matches":["<all_urls>"]},

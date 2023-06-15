@@ -8,8 +8,7 @@ var identifier = "com.morkforid.Invisible-Voice.Extension (C5N688B362)"
 var testframe = document.getElementById("testout");
 var defaultIndexURL = "https://test.reveb.la";
 var aSiteWePullAndPushTo = defaultIndexURL;
-var domainString = "";
-var sourceString = "";
+var domainString, sourceString, aSiteYouVisit;
 var debug = true;
 var graphOpen = false;
 var distance = 160;
@@ -93,8 +92,12 @@ function sendToPage(data){
     iframe.contentWindow.postMessage(message, '*');
 }
 
+// Various Lookups
+let localReplace = browser.runtime.getURL('replacements.json');
 let localHash = browser.runtime.getURL('hashtosite.json');
 let localSite = browser.runtime.getURL('sitetohash.json');
+let buttonSvg = browser.runtime.getURL('button.svg');
+let psl = browser.runtime.getURL('public_suffix_list.dat');
 let localIndex = browser.runtime.getURL('index.json');
 var IVLocalIndex;
 var lookup = {}; 
@@ -111,15 +114,98 @@ browser.storage.local.get(function(localdata) {
 });
 
 
-fetch(new Request(localSite, init))
-    .then(response => response.json())
-    .then(data => lookup = data)
+// fetch(new Request(localSite, init))
+//     .then(response => response.json())
+//     .then(data => lookup = data)
+
+// Domain handling
+// PSL 2023/06/23 updated
+async function parsePSL(pslStream, lookup, aSiteYouVisit) {
+  const decoder = new TextDecoder();
+  const reader = pslStream.getReader();
+  let chunk;
+  let pslData = '';
+
+  while (!(chunk = await reader.read()).done) {
+    const decodedChunk = decoder.decode(chunk.value, { stream: true });
+    pslData += decodedChunk;
+  }
+
+  const lines = pslData.trim().split('\n');
+  const publicSuffixes = [];
+
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+    if (trimmedLine === '' || trimmedLine.startsWith('//')) {
+      continue; // Ignore empty lines and comments
+    }
+
+    const isException = trimmedLine.startsWith('!');
+    const domainOrRule = trimmedLine.substring(isException ? 1 : 0);
+    const isWildcard = domainOrRule.startsWith('*');
+    const suffix = isWildcard ? domainOrRule.substring(1) : domainOrRule;
+
+    if (isException) {
+      const lastSuffix = publicSuffixes[publicSuffixes.length - 1];
+      if (lastSuffix && lastSuffix.exceptionRules) {
+        lastSuffix.exceptionRules.push(suffix);
+      } else {
+        console.warn('Exception rule without preceding regular rule:', trimmedLine);
+      }
+    } else {
+      publicSuffixes.push({ suffix, exceptionRules: [] });
+    }
+  }
+  domainString = aSiteYouVisit.replace(/\.m\./g, '.').replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0].replace(/^m\./g, '');
+  domainInfo = parseDomain(domainString, publicSuffixes);
+  fetchCodeForPattern(lookup);
+  return domainInfo;
+}
+
+function parseDomain(domain, publicSuffixes) {
+  const parts = domain.split('.').reverse();
+  const suffix = getSuffix(parts, publicSuffixes);
+  const suffixSize = suffix.split('.').length;
+  const suffixLessParts = parts.reverse().slice(suffixSize);
+  const subdomains = suffixLessParts.slice(1);
+  return {
+    domain: domain,
+    subdomains: subdomains,
+    suffix: suffix
+  };
+}
+
+function getSuffix(parts, publicSuffixes) {
+    let domainParts = parts.reverse();
+    let longestMatch = null;
+    for (let i = 0; i < domainParts.length; i++) {
+      const suffix = domainParts.slice(i).join('.');
+      const match = publicSuffixes.find(ps => ps.suffix == suffix);
+      if (match) {
+        if (!longestMatch || suffix.length > longestMatch.length) {
+          longestMatch = match;
+        }
+      }
+    }
+    return longestMatch.suffix;
+}
+
+var coded;
+function lookupDomainHash(domain, lookup){
+    domainString = domainInfo.domain
+    hashforsite = lookup[domainString];
+    console.log(hashforsite)
+    return JSON.stringify({
+        "sourceString": domainString.replace(/\./g,""), 
+        "domainString": domainString, 
+        "hashforsite": hashforsite
+    });
+}
 
 function fetchIndex(){
     browser.storage.local.get(function(localdata) {
         blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
         if ((localdata.time + 480000) < now) allowUpdate = true;
-        if (debug) console.log(localdata);
         if (debug && !IVLocalIndex) console.log("[ Invisible Voice ]: Set to " + aSiteWePullAndPushTo);
         if (debug && IVLocalIndex) console.log("[ Invisible Voice ]: Set to LocalIndex");
         updateJSON = (IVLocalIndex) ? new Request(aSiteWePullAndPushTo + "/index.json", init) : new Request(localIndex, init);
@@ -132,25 +218,59 @@ function fetchIndex(){
         .then(browser.storage.local.set({ "time": now }));
 }
 
-function lookupDomainHash(domain){
-    domainString = domain.replace(/\.m\./g, '.').replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0].replace(/^m\./g, '');
-    hashforsite = lookup[domainString];
-    if (hashforsite === undefined)
-        if (domainString.split('.').length > 2){
-           domainString = domainString.split('.').slice(1).join('.');
-           hashforsite = lookup[domainString];
-        }
-    return JSON.stringify({
-        "sourceString": domainString.replace(/\./g,""), 
-        "domainString": domainString, 
-        "hashforsite": hashforsite
-    });
+
+// Mode 0 is Desktop, Mode 1 is mobile
+// Bubble Mode 0 is bubble, 1 is no bubble, 2 is no bubble or bar
+function domainChecker(domains, lookupList){
+	let domainList = domains
+	for (domain in domains){
+		let pattern = domains[domain].split('.').join('')
+		check = lookupList[pattern]
+		if (check){
+			sourceString = pattern;
+			globalCode = pattern;
+            createObjects();
+			return check
+		}
+	}
+	return undefined
 }
 
+function fetchCodeForPattern(lookup) {
+    bgresponse = JSON.parse(lookupDomainHash(aSiteYouVisit, lookup));
+    sourceString = bgresponse['sourceString'];
+    domainString = bgresponse['domainString'];
+    hashforsite = bgresponse['hashforsite'] ? bgresponse['hashforsite'] : false;
+    var pattern = "/" + sourceString + "/";
+    if (debug == true) console.log("[ IV ] " + domainString + " : " + hashforsite + " : " + pattern);
+    browser.storage.local.get("data", function(data) {
+        try {
+            fetch(new Request(localHash, init))
+				.then(response => response.json())
+				.then(subdata => subdata[hashforsite])
+				.then(possibileDomains => domainChecker(possibileDomains, data.data))
+        } catch {
+            try {
+                fetch(new Request(localReplace, init))
+                    .then(response => response.json())
+                    .then(data, function(data) {
+                        if (data[pattern]) {
+                            return data[pattern]["t"].replace(/\//g, '');
+                        }
+                    });
+            } catch {
+                return;
+            }
+        }
+    });
+    return coded;
+}
+
+
 function callback(tabs) {
-    if (sourceString == "") {
+    if (sourceString === undefined) {
         currentTab = tabs[0]; // there will be only one in this array
-        var aSiteYouVisit = currentTab.url;
+        aSiteYouVisit = currentTab.url;
         console.log(currentTab.url)
         if (useBG) {
             var bgresponse;
@@ -174,23 +294,21 @@ function callback(tabs) {
                 if (mode == 1) iframe.style.height = '100vh';
             })
         } else {
-            bgresponse = JSON.parse(lookupDomainHash(aSiteYouVisit));
-            sourceString = bgresponse['sourceString'];
-            domainString = bgresponse['domainString'];
-            hashforsite = bgresponse['hashforsite'];
-            var pattern = "/" + sourceString + "/";
-            if (hashforsite === undefined)
-                hashforsite = md5(sourceString);
-            console.log(sourceString, hashforsite);
-            iframe.src = aSiteWePullAndPushTo + "/db/" + sourceString + "/" + "?date=" + Date.now().toString();
-            if (mode == 0) iframe.style.width = distance + 'px';
-            if (mode == 0) iframe.style.height = '100em';
-            if (mode == 1) iframe.style.width = '100vw';
-            if (mode == 1) iframe.style.height = '100vh';
-
+            fetch(new Request(localSite, init))
+                .then(response => response.json())
+                .then(lookup => startDataChain(lookup, aSiteYouVisit))
         }
     }
     return true
+}
+
+function createObjects(){
+    console.log(sourceString, hashforsite);
+    iframe.src = aSiteWePullAndPushTo + "/db/" + sourceString + "/" + "?date=" + Date.now().toString();
+    if (mode == 0) iframe.style.width = distance + 'px';
+    if (mode == 0) iframe.style.height = '100em';
+    if (mode == 1) iframe.style.width = '100vw';
+    if (mode == 1) iframe.style.height = '100vh';
 }
 
 var isSet = false;
@@ -310,6 +428,10 @@ function onError(e){
     console.error(`Error: ${e}`);
 };
 
+function startDataChain(lookup){
+    fetch(new Request(psl, init))
+        .then(response => parsePSL(response.body, lookup, aSiteYouVisit));
+}
+
 console.log(identifier);
-fetchIndex();
 browser.tabs.query(query).then(callback, onError);
