@@ -71,13 +71,26 @@ if (window.matchMedia && !!window.matchMedia('(prefers-color-scheme: dark)').mat
 
 function createObjects() {
     if (debug) console.log("[ Invisible Voice ]: creating " + mode);
-    if (bubbleMode == 0){
+    if (bubbleMode == 0 && mode == 1){
         bobble = document.createElement("div");
         buttonSize = 40;
         bobble.style.cssText = `bottom: 10px;left: 60px;position:fixed;padding:0;margin:0;
         border-radius:0;width:${buttonSize}px;background-color: transparent;background-image:url(${buttonSvg});object-fit:1;height:${buttonSize}px;background-size: ${buttonSize}px ${buttonSize}px;`;
         // bobble.setAttribute("onclick", this.remove());
+        bobble.id = "InvisibleVoice-bobble";
         document.documentElement.appendChild(bobble);
+        dragElement(document.getElementById("InvisibleVoice-bobble"));
+        chrome.storage.local.get('newplace', function(position) {
+            var pos = Object.values(position)[0].split(',');
+            // console.log("[ Invisible Voice ]: loading loc" + pos)
+            if (pos[0] > 1) pos[0] = 0.9;
+            if (pos[0] < 0) pos[0] = 0.1;
+            if (pos[1] > 1) pos[1] = 0.9;
+            if (pos[1] < 0) pos[1] = 0.1;
+            // console.log("[ Invisible Voice ]: loading loc" + (window.innerWidth * pos[1]) + "," + (window.innerHeight * pos[0]))
+            bobble.style.top = (window.innerHeight * pos[0]) + "px";
+            bobble.style.left = (window.innerWidth * pos[1]) + "px";
+        })
     }
     if (mode == 1) return;
     iframe = document.createElement("iframe");
@@ -503,6 +516,118 @@ window.addEventListener('message', function(e) {
 
     if (e.data.type == 'IVClose') resize("close");
 });
+// Make the DIV element draggable:
+
+function dragElement(elmnt) {
+    var pos1 = 0,
+        pos2 = 0,
+        pos3 = 0,
+        pos4 = 0;
+    if (document.getElementById(elmnt)) {
+        // if present, the header is where you move the DIV from:
+        document.getElementById(elmnt).onmousedown = dragMouseDown;
+    } else {
+        // otherwise, move the DIV from anywhere inside the DIV:
+        elmnt.onmousedown = dragMouseDown;
+    }
+
+    function dragMouseDown(e) {
+        e = e || window.event;
+        e.preventDefault();
+        // get the mouse cursor position at startup:
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+        document.onmouseup = closeDragElement;
+        // call a function whenever the cursor moves:
+        document.onmousemove = elementDrag;
+    }
+
+    function elementDrag(e) {
+        dontOpen = true;
+        e = e || window.event;
+        e.preventDefault();
+        // calculate the new cursor position:
+        pos1 = pos3 - e.clientX;
+        pos2 = pos4 - e.clientY;
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+        // console.log(pos1, pos2, pos3, pos4);
+        // set the element's new position:
+        elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+        elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+	    elmnt.style.filter = "drop-shadow(.5rem .5rem 2rem #afa)";
+	    elmnt.style.transition= "filter .5s transform .2s";
+	    elmnt.style.transform = "scale(1,1)";
+    }
+
+    var id = null;
+
+    function closeDragElement() {
+        // stop moving when mouse button is released:
+        document.onmouseup = null;
+        document.onmousemove = null;
+        clearInterval(id);
+        id = setInterval(frame, 10);
+
+        function frame() {
+	    var pos2dir = 0,
+	        pos1dir = 0;
+	    var shadowColor = "inherit";
+            if (pos2 > 0) {
+                pos2 -= 1;
+		pos2dir = 1;
+            }
+            if (pos2 < 0) {
+                pos2 += 1;
+		pos2dir = -1
+            }
+
+            if (pos1 > 0) {
+                pos1 -= 1;
+		pos1dir = 1;
+            }
+            if (pos1 < 0) {
+                pos1 += 1;
+		pos1dir = -1;
+            }
+
+            if (pos1 > 0 || pos1 < 0) elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+            if (pos2 > 0 || pos2 < 0) elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+
+	    elmnt.style.transform = "scale(" + ( (pos1dir/4) + 1 ) + "," + ( (pos2dir/4) + 1 ) + ")";
+	    elmnt.style.filter = "drop-shadow("+ pos1dir + "rem " + pos2dir + "rem 1rem" + shadowColor + ")";
+
+            if (pos1 == 0 && pos2 == 0) {
+                clearInterval(id);
+		elmnt.style.filter = "drop-shadow(.25rem .25rem 1rem #afa)";
+		elmnt.style.transform = "scale(1,1)";
+            }
+            if (elmnt.offsetTop > window.innerHeight || elmnt.offsetTop < 0) {
+                pos2 *= -1;
+	    	shadowColor = "#faa";
+            }
+            if (elmnt.offsetLeft > window.innerWidth || elmnt.offsetLeft < 0) {
+                pos1 *= -1;
+	    	shadowColor = "#faa";
+            }
+
+	    elmnt.style.transition = "filter .1s";
+        }
+        var topOffset = elmnt.offsetTop / window.innerHeight;
+        var leftOffset = elmnt.offsetLeft / window.innerWidth;
+        var placestore = {};
+            // console.log("[ Invisible Voice ]: loading loc" + pos)
+            if (topOffset > 0.95) topOffset = 0.9;
+            if (topOffset < 0) topOffset = 0.1;
+            if (leftOffset > 0.95) leftOffset = 0.9;
+            if (leftOffset < 0) leftOffset = 0.1;
+            elmnt.style.top = (window.innerHeight * topOffset) + "px";
+            elmnt.style.left = (window.innerWidth * leftOffset) + "px";
+
+        placestore['newplace'] = topOffset + "," + leftOffset;
+        chrome.storage.local.set(placestore);
+    }
+}
 
 function startDataChain(lookup){
     fetch(new Request(psl, init))
