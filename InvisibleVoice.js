@@ -1,6 +1,6 @@
 // "Simple" code that gets the job done by Orange
 //
-var debug = true;
+var debug = true; var allowUpdate = true;
 // Set up environment 
 var aSiteWePullAndPushTo = "https://test.reveb.la";
 var now = (new Date).getTime();
@@ -89,6 +89,7 @@ function createObjects() {
          background:${backgroundColor};
          height:inherit;
          height:-webkit-fill-available;
+         z-index: 2147483646;
          display:flex; right: 0; top: 0; padding: 0; border-radius: 0;
          color: ${textColor}; margin: auto; align-items:center;
          justify-content: center;`;
@@ -97,7 +98,7 @@ function createObjects() {
     iframe.style.cssText = 
         `border:${textColor} solid 1px; border-right: none;
          overflow-y: scroll; overflow-x: hidden; right: 0; width: 0px; top:0;
-         height: 100vh; z-index: 2147483647; position: fixed;
+         z-index: 2147483647; position: fixed;
          box-shadow: rgba(0, 0, 0, 0.1) 0 0 100px; 
          background-color:${backgroundColor}; transition:width .2s;`
     if (mode == 1) return;
@@ -106,7 +107,7 @@ function createObjects() {
     resize("close");
     open.style.right = "0";
     if (mode == 0) iframe.style.width = distance + 'px';
-    if (mode == 0) iframe.style.height = '100em';
+    if (mode == 0) iframe.style.height = '100dvh';
 };
 
 
@@ -204,15 +205,15 @@ function fetchIndex(){
         if (debug) console.log(localdata);
         if (debug && !IVLocalIndex) console.log("[ Invisible Voice ]: Set to " + aSiteWePullAndPushTo);
         if (debug && IVLocalIndex) console.log("[ Invisible Voice ]: Set to LocalIndex");
-        updateJSON = (IVLocalIndex) ? new Request(aSiteWePullAndPushTo + "/index.json", init) : new Request(localIndex, init);
+        updateJSON = (IVLocalIndex) ? new Request(localIndex, init) : new Request(aSiteWePullAndPushTo + "/index.json", init); 
         // Prevent page load
         blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
         blockCheck();
+        if (allowUpdate) fetch(updateJSON)
+            .then(response => response.json())
+            .then(data => browser.storage.local.set({ "data": data }))
+            .then(browser.storage.local.set({ "time": now }));
     });
-    if (allowUpdate) fetch(updateJSON)
-        .then(response => response.json())
-        .then(data => browser.storage.local.set({ "data": data }))
-        .then(browser.storage.local.set({ "time": now }));
 }
 
 
@@ -220,11 +221,20 @@ function fetchIndex(){
 // Bubble Mode 0 is bubble, 1 is no bubble, 2 is no bubble or bar
 function domainChecker(domains, lookupList){
 	let domainList = domains
-    if (lookupList[sourceString]){
-        globalCode = sourceString;
-        createObjects();
-        return lookup[sourceString];
-    };
+    try {
+        if (lookupList[sourceString]){
+            globalCode = sourceString;
+            createObjects();
+            return lookup[sourceString];
+        };
+    } catch(e){
+        fetchIndex()
+        if (lookupList[sourceString]){
+            globalCode = sourceString;
+            createObjects();
+            return lookup[sourceString];
+        };
+    }
 	for (domain in domains){
 		let pattern = domains[domain].split('.').join('')
 		check = lookupList[pattern]
