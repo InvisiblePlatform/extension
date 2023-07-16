@@ -525,41 +525,55 @@ function dragElement(elmnt) {
         pos2 = 0,
         pos3 = 0,
         pos4 = 0;
-    if (document.getElementById(elmnt)) {
+    //if (document.getElementById(elmnt)) {
         // if present, the header is where you move the DIV from:
-        document.getElementById(elmnt).onmousedown = dragMouseDown;
-        document.getElementById(elmnt).ontouchstart = dragMouseDown;
-    } else {
+     //   document.getElementById(elmnt).onmousedown = dragMouseDown;
+    //    document.getElementById(elmnt).ontouchstart = dragMouseDown;
+    //} else {
         // otherwise, move the DIV from anywhere inside the DIV:
         elmnt.onmousedown = dragMouseDown;
         elmnt.ontouchstart = dragMouseDown;
-    }
+    //}
 
     function dragMouseDown(e) {
         if (debug) console.log("bobble mousedown");
         e = e || window.event;
         e.preventDefault();
         // get the mouse cursor position at startup:
-        pos3 = e.clientX;
-        pos4 = e.clientY;
-        document.onmouseup = closeDragElement;
-        document.ontouchend = closeDragElement;
-        // call a function whenever the cursor moves:
-        document.onmousemove = elementDrag;
-        document.ontouchmove = elementDrag;
-        
+        if (debug) console.log(e);
+        if (e.type != "touchstart"){
+            document.onmouseup = closeDragElement;
+            // call a function whenever the cursor moves:
+            document.onmousemove = elementDrag;
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+        } else {
+            document.ontouchend = closeDragElement;
+            // call a function whenever the cursor moves:
+            document.ontouchmove = elementDrag;
+            console.log(e.changedTouches[0].clientX)
+            pos3 = e.changedTouches[0].clientX;
+            pos4 = e.changedTouches[0].clientY;
+        }
     }
 
     function elementDrag(e) {
         dontOpen = true;
         e = e || window.event;
-        e.preventDefault();
+        if (e.type != "touchmove"){
+            e.preventDefault();
+            pos1 = pos3 - e.clientX;
+            pos2 = pos4 - e.clientY;
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+        } else {
+            pos1 = pos3 - e.changedTouches[0].clientX;
+            pos2 = pos4 - e.changedTouches[0].clientY;
+            pos3 = e.changedTouches[0].clientX;
+            pos4 = e.changedTouches[0].clientY;
+        }
         // calculate the new cursor position:
-        pos1 = pos3 - e.clientX;
-        pos2 = pos4 - e.clientY;
-        pos3 = e.clientX;
-        pos4 = e.clientY;
-        // console.log(pos1, pos2, pos3, pos4);
+        // if (debug) console.log(pos1, pos2, pos3, pos4);
         // set the element's new position:
         elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
         elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
