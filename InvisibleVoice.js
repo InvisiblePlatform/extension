@@ -21,7 +21,7 @@ const chrRegex = /Chr/i;
 const frRegex = /Firefox/i;
 const phoneRegex = /iPhone/i;
 
-browser = chrome || broswer;
+browser = chrome || browser;
 
 if (chrRegex.test(navigator.userAgent)) identifier = "fafojfdhjlapbpafdcoggecpagohpono"
 if (frRegex.test(navigator.userAgent)) identifier = "c81358df75e512918fcefb49e12266fadd4be00f@temporary-addon"
@@ -71,7 +71,7 @@ if (window.matchMedia && !!window.matchMedia('(prefers-color-scheme: dark)').mat
 
 function createObjects() {
     if (debug) console.log("[ Invisible Voice ]: creating " + mode);
-    if (bubbleMode == 0 && mode == 1){
+    if ((bubbleMode == 0 && mode == 1) || debug == true){
         bobble = document.createElement("div");
         buttonSize = 40;
         bobble.style.cssText = `bottom: 10px;left: 60px;position:fixed;padding:0;margin:0;
@@ -519,6 +519,8 @@ window.addEventListener('message', function(e) {
 // Make the DIV element draggable:
 
 function dragElement(elmnt) {
+    if (debug) console.log(elmnt);
+    if (debug) console.log("bobble enabled");
     var pos1 = 0,
         pos2 = 0,
         pos3 = 0,
@@ -526,20 +528,26 @@ function dragElement(elmnt) {
     if (document.getElementById(elmnt)) {
         // if present, the header is where you move the DIV from:
         document.getElementById(elmnt).onmousedown = dragMouseDown;
+        document.getElementById(elmnt).ontouchstart = dragMouseDown;
     } else {
         // otherwise, move the DIV from anywhere inside the DIV:
         elmnt.onmousedown = dragMouseDown;
+        elmnt.ontouchstart = dragMouseDown;
     }
 
     function dragMouseDown(e) {
+        if (debug) console.log("bobble mousedown");
         e = e || window.event;
         e.preventDefault();
         // get the mouse cursor position at startup:
         pos3 = e.clientX;
         pos4 = e.clientY;
         document.onmouseup = closeDragElement;
+        document.ontouchend = closeDragElement;
         // call a function whenever the cursor moves:
         document.onmousemove = elementDrag;
+        document.ontouchmove = elementDrag;
+        
     }
 
     function elementDrag(e) {
@@ -565,7 +573,9 @@ function dragElement(elmnt) {
     function closeDragElement() {
         // stop moving when mouse button is released:
         document.onmouseup = null;
+        document.ontouchend = null;
         document.onmousemove = null;
+        document.ontouchmove = null;
         clearInterval(id);
         id = setInterval(frame, 10);
 
@@ -625,7 +635,7 @@ function dragElement(elmnt) {
             elmnt.style.left = (window.innerWidth * leftOffset) + "px";
 
         placestore['newplace'] = topOffset + "," + leftOffset;
-        chrome.storage.local.set(placestore);
+        browser.storage.local.set(placestore);
     }
 }
 
