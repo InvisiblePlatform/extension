@@ -297,7 +297,11 @@ function callback(tabs) {
                 if (hashforsite === undefined)
                     hashforsite = md5(sourceString);
                 console.log(sourceString, hashforsite);
-                iframe.src = aSiteWePullAndPushTo + "/db/" + sourceString + "/" + "?date=" + Date.now().toString();
+                page = aSiteWePullAndPushTo + "/db/" + sourceString + "/" + "?date=" + Date.now().toString() + "&vote=true";
+                if (mode == 1)
+                    iframe.src = page + "&app=true";
+                if (mode != 1)
+                    iframe.src = page;
                 if (mode == 0) iframe.style.width = distance + 'px';
                 if (mode == 0) iframe.style.height = '100em';
                 if (mode == 1) iframe.style.width = '100vw';
@@ -314,7 +318,11 @@ function callback(tabs) {
 
 function createObjects(){
     console.log(sourceString, hashforsite);
-    iframe.src = aSiteWePullAndPushTo + "/db/" + sourceString + "/" + "?date=" + Date.now().toString();
+    page = aSiteWePullAndPushTo + "/db/" + sourceString + "/" + "?date=" + Date.now().toString() + "&vote=true";
+    if (mode == 1)
+        iframe.src = page + "&app=true";
+    if (mode != 1)
+        iframe.src = page;
     if (mode == 0) iframe.style.width = distance + 'px';
     if (mode == 0) iframe.style.height = '100em';
     if (mode == 1) iframe.style.width = '100vw';
@@ -326,7 +334,11 @@ let resize = function(x) {
     if(typeof(x)==='undefined') x = "";
     if (mode == 0) {
     if (isSet == false) {
-        iframe.src = aSiteWePullAndPushTo + "/db/" + sourceString + "/" + "?date=" + Date.now();
+        page = aSiteWePullAndPushTo + "/db/" + sourceString + "/" + "?date=" + Date.now().toString() + "&vote=true";
+        if (mode == 1)
+            iframe.src = page + "&app=true";
+        if (mode != 1)
+            iframe.src = page;
         isSet = true;
     }
     distance = (distance == 160) ? 640 : 160;

@@ -311,7 +311,7 @@ let resize = function(x) {
     if(typeof(x)==='undefined') x = "";
     if (mode == 1) return;
     if (x == "load" && !Loaded) {
-        ourdomain = aSiteWePullAndPushTo + "/db/" + globalCode + "/" + "?date=" + Date.now();
+        ourdomain = aSiteWePullAndPushTo + "/db/" + globalCode + "/" + "?date=" + Date.now() + "&vote=true";
         iframe.src = ourdomain;
 		console.log(globalCode)
         Loaded = true;
