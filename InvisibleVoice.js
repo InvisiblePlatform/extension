@@ -302,7 +302,7 @@ document.addEventListener('fullscreenchange', function() {
     var isFullScreen = document.fullScreen ||
         document.mozFullScreen ||
         document.webkitIsFullScreen || (document.msFullscreenElement != null);
-    floating = document.getElementById("invisible-voice-floating");
+    floating = document.getElementById("invisible-voice");
     floating.style.visibility = (isFullScreen) ? 'hidden' : 'visible';
 });
 
