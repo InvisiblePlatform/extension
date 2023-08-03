@@ -70,6 +70,10 @@ if (window.matchMedia && !!window.matchMedia('(prefers-color-scheme: dark)').mat
 }
 
 function createObjects() {
+    browser.storage.local.get(function(localdata) {
+        blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
+        blockCheck();
+    });
     if (debug) console.log("[ Invisible Voice ]: creating " + mode);
     if ((bubbleMode == 0 && mode == 1) || debug == true){
         bobble = document.createElement("div");
@@ -81,15 +85,15 @@ function createObjects() {
         document.documentElement.appendChild(bobble);
         dragElement(document.getElementById("InvisibleVoice-bobble"));
         chrome.storage.local.get('newplace', function(position) {
-            var pos = Object.values(position)[0].split(',');
-            // console.log("[ Invisible Voice ]: loading loc" + pos)
-            if (pos[0] > 1) pos[0] = 0.9;
-            if (pos[0] < 0) pos[0] = 0.1;
-            if (pos[1] > 1) pos[1] = 0.9;
-            if (pos[1] < 0) pos[1] = 0.1;
-            // console.log("[ Invisible Voice ]: loading loc" + (window.innerWidth * pos[1]) + "," + (window.innerHeight * pos[0]))
-            bobble.style.top = (window.innerHeight * pos[0]) + "px";
-            bobble.style.left = (window.innerWidth * pos[1]) + "px";
+             var pos = Object.values(position)[0].split(',');
+             // console.log("[ Invisible Voice ]: loading loc" + pos)
+             if (pos[0] > 1) pos[0] = 0.9;
+             if (pos[0] < 0) pos[0] = 0.1;
+             if (pos[1] > 1) pos[1] = 0.9;
+             if (pos[1] < 0) pos[1] = 0.1;
+             // console.log("[ Invisible Voice ]: loading loc" + (window.innerWidth * pos[1]) + "," + (window.innerHeight * pos[0]))
+             bobble.style.top = (window.innerHeight * pos[0]) + "px";
+             bobble.style.left = (window.innerWidth * pos[1]) + "px";
         })
     }
     if (mode == 1) return;
@@ -220,8 +224,8 @@ function fetchIndex(){
         if (debug && IVLocalIndex) console.log("[ Invisible Voice ]: Set to LocalIndex");
         updateJSON = (IVLocalIndex) ? new Request(localIndex, init) : new Request(aSiteWePullAndPushTo + "/index.json", init); 
         // Prevent page load
-        blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
         blockCheck();
+        console.log("heythere");
         if (allowUpdate) fetch(updateJSON)
             .then(response => response.json())
             .then(data => browser.storage.local.set({ "data": data }))
@@ -651,6 +655,11 @@ function dragElement(elmnt) {
         placestore['newplace'] = topOffset + "," + leftOffset;
         browser.storage.local.set(placestore);
     }
+}
+
+function boycott() {
+    aSiteYouVisit = window.location.href;
+    window.location.replace(browser.runtime.getURL('blocked.html') + "?site=" + domainString + "&return=" + aSiteYouVisit);
 }
 
 function startDataChain(lookup){

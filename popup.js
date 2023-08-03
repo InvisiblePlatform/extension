@@ -377,7 +377,7 @@ browser.runtime.onMessageExternal.addListener(msgObj => {
 })
 
 window.addEventListener('message', function(e) {
-    console.log(voteStatus);
+    console.log(e);
     if (e.data.type == 'IVLike' && e.data.data != '') {
         if (debug == true) console.log(e.data.type + " Stub");
         if (voteStatus == "up") {
@@ -434,6 +434,14 @@ window.addEventListener('message', function(e) {
             distance = 0;
             resize();
         }
+    }
+    if (e.data.type == 'IVBoycott' && e.data.data != '') {
+        blockedHashes.push(hashforsite);
+        browser.storage.local.set({
+            "blockedHashes": blockedHashes
+        });
+        aSiteYouVisit = window.location.href;
+        currentTab.url.replace(browser.runtime.getURL('blocked.html') + "?site=" + domainString + "&return=" + aSiteYouVisit);
     }
 });
 iframe.addEventListener('load', function(e){
