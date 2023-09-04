@@ -1,6 +1,6 @@
 // "Simple" code that gets the job done by Orange
 //
-var debug = true; var allowUpdate = true;
+var debug = false; var allowUpdate = true;
 // Set up environment 
 var aSiteWePullAndPushTo = "https://test.reveb.la";
 var now = (new Date).getTime();
@@ -666,6 +666,28 @@ function startDataChain(lookup){
     fetch(new Request(psl, init))
         .then(response => parsePSL(response.body, lookup));
 }
+
+var lastScrollTop = 0;
+var showButton = true;
+window.addEventListener("scroll", function(){
+    var st = window.pageYOffset || document.documentElement.scrollTop; // Credits: "https://github.com/qeremy/so/blob/master/so.dom.js#L426"
+    if (document.getElementById("InvisibleVoice-bobble") != undefined){
+    if (st > lastScrollTop) {
+       if (showButton){
+            bobble = document.getElementById("InvisibleVoice-bobble");
+           bobble.style.display = "none";
+           showButton = false;
+       }
+    } else if (st < lastScrollTop) {
+       if (!showButton){
+            bobble = document.getElementById("InvisibleVoice-bobble");
+           showButton = true;
+           bobble.style.display = "block";
+       }
+    } 
+    }
+    lastScrollTop = st <= 0 ? 0 : st; // For Mobile or negative scrolling
+}, false);
 
 fetch(new Request(localSite, init))
     .then(response => response.json())

@@ -304,8 +304,8 @@ function callback(tabs) {
                     iframe.src = page;
                 if (mode == 0) iframe.style.width = distance + 'px';
                 if (mode == 0) iframe.style.height = '100em';
-                if (mode == 1) iframe.style.width = '100vw';
-                if (mode == 1) iframe.style.height = '100vh';
+                if (mode == 1) iframe.style.width = '100%';
+                if (mode == 1) iframe.style.height = '100%';
             })
         } else {
             fetch(new Request(localSite, init))
@@ -325,8 +325,8 @@ function createObjects(){
         iframe.src = page;
     if (mode == 0) iframe.style.width = distance + 'px';
     if (mode == 0) iframe.style.height = '100em';
-    if (mode == 1) iframe.style.width = '100vw';
-    if (mode == 1) iframe.style.height = '100vh';
+    if (mode == 1) iframe.style.width = '100%';
+    if (mode == 1) iframe.style.height = '100%';
 }
 
 var isSet = false;
