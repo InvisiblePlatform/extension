@@ -73,27 +73,37 @@ function createObjects() {
     browser.storage.local.get(function(localdata) {
         blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
         blockCheck();
+        if (localdata.bobbleMode == "true") {
+            bubbleMode = 1;
+        }
+        console.log(localdata)
     });
+    console.log(bubbleMode);
     if (debug) console.log("[ Invisible Voice ]: creating " + mode);
     if ((bubbleMode == 0 && mode == 1) || debug == true){
-        bobble = document.createElement("div");
-        buttonSize = 40;
-        bobble.style.cssText = `bottom: 10px;left: 60px;position:fixed;padding:0;margin:0;
-        border-radius:0;width:${buttonSize}px;background-color: transparent;background-image:url(${buttonSvg});object-fit:1;height:${buttonSize}px;background-size: ${buttonSize}px ${buttonSize}px;`;
-        // bobble.setAttribute("onclick", this.remove());
-        bobble.id = "InvisibleVoice-bobble";
-        document.documentElement.appendChild(bobble);
-        dragElement(document.getElementById("InvisibleVoice-bobble"));
-        chrome.storage.local.get('newplace', function(position) {
-             var pos = Object.values(position)[0].split(',');
-             // console.log("[ Invisible Voice ]: loading loc" + pos)
-             if (pos[0] > 1) pos[0] = 0.9;
-             if (pos[0] < 0) pos[0] = 0.1;
-             if (pos[1] > 1) pos[1] = 0.9;
-             if (pos[1] < 0) pos[1] = 0.1;
-             // console.log("[ Invisible Voice ]: loading loc" + (window.innerWidth * pos[1]) + "," + (window.innerHeight * pos[0]))
-             bobble.style.top = (window.innerHeight * pos[0]) + "px";
-             bobble.style.left = (window.innerWidth * pos[1]) + "px";
+        browser.storage.local.get(function(localdata) {
+            if (localdata.bobbleMode != "true") {
+                bobble = document.createElement("div");
+                buttonSize = 40;
+                bobble.style.cssText = `bottom: 10px;left: 60px;position:fixed;padding:0;margin:0;
+                border-radius:0;width:${buttonSize}px;background-color: transparent;background-image:url(${buttonSvg});object-fit:1;height:${buttonSize}px;background-size: ${buttonSize}px ${buttonSize}px;`;
+                // bobble.setAttribute("onclick", this.remove());
+                bobble.id = "InvisibleVoice-bobble";
+
+                document.documentElement.appendChild(bobble);
+                dragElement(document.getElementById("InvisibleVoice-bobble"));
+                browser.storage.local.get('newplace', function(position) {
+                     var pos = Object.values(position)[0].split(',');
+                     // console.log("[ Invisible Voice ]: loading loc" + pos)
+                     if (pos[0] > 1) pos[0] = 0.9;
+                     if (pos[0] < 0) pos[0] = 0.1;
+                     if (pos[1] > 1) pos[1] = 0.9;
+                     if (pos[1] < 0) pos[1] = 0.1;
+                     // console.log("[ Invisible Voice ]: loading loc" + (window.innerWidth * pos[1]) + "," + (window.innerHeight * pos[0]))
+                     bobble.style.top = (window.innerHeight * pos[0]) + "px";
+                     bobble.style.left = (window.innerWidth * pos[1]) + "px";
+                })
+            }
         })
     }
     if (mode == 1) return;

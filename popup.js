@@ -406,6 +406,11 @@ window.addEventListener('message', function(e) {
             })();
         }
     }
+    if (e.data.type == 'IVBobbleDisable' && e.data.data != '') {
+        browser.storage.local.set({
+            "bobbleMode": e.data.data
+        });
+    }
     if (e.data.type == 'IVClicked' && e.data.data != '') {
         if (debug == true) console.log("resize stub " + e.data.data);
         if (level2.includes(e.data.data)) {
