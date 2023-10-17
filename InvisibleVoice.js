@@ -69,16 +69,139 @@ if (window.matchMedia && !!window.matchMedia('(prefers-color-scheme: dark)').mat
     heavyTextColor = "#AAA";
 }
 
+const tagLookup = {
+    "l": "Glassdoor",
+    "b": "BCorp",
+    "P": "TOS;DR"
+}
+
+keyconversion = {
+    'bcorp_rating': "b",
+    'connections': "c",
+    'glassdoor_rating': "l",
+    'goodonyou': "g",
+    'isin': "i",
+    'mbfc': "m",
+    'osid': "o",
+    'polalignment': "a",
+    'polideology': "p",
+    'ticker': "y",
+    'tosdr': "P",
+    'wikidata_id': "w"
+}
+
+function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+}
+
+var notificationsToShow = false;
+var notificationsDismissed = false;
+function enableNotifications(){
+    if (notificationsDismissed) return;
+    notificationShade = document.createElement("section");
+    notificationShade.id = "IVNotification";
+    notificationShade.onclick = addItemToNotification;
+    notificationOverlay = document.createElement("div");
+    notificationOverlay.classList.add("IVNotOverlay");
+    notivlogo = document.createElement("img");
+    notivlogo.classList.add("IVNotLogo");
+    notivlogo.src = "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' fill='none'%3e%3ccircle cx='20' cy='20' r='18' fill='none'/%3e%3cpath fill='%231A1A1A' d='M18.201 14.181h3.657v14.536a1.823 1.823 0 0 1-1.828 1.817 1.823 1.823 0 0 1-1.829-1.817V14.181ZM18.201 10.547c0-1.003.819-1.817 1.829-1.817s1.828.814 1.828 1.817a1.823 1.823 0 0 1-1.828 1.817 1.823 1.823 0 0 1-1.829-1.817Z'/%3e%3cpath fill='%231A1A1A' d='m10.318 21.634 1.292-1.285a1.836 1.836 0 0 1 2.586 0l8.402 8.351-2.585 2.57-9.696-9.636Z'/%3e%3cpath fill='%231A1A1A' d='M25.804 20.349a1.836 1.836 0 0 1 2.586 0l1.293 1.285-9.696 9.636-2.585-2.57 8.402-8.351Z'/%3e%3cpath fill='%231A1A1A' fill-rule='evenodd' d='M40 20c0 11.046-8.954 20-20 20S0 31.046 0 20 8.954 0 20 0s20 8.954 20 20ZM20 37.46c9.643 0 17.46-7.817 17.46-17.46S29.643 2.54 20 2.54 2.54 10.357 2.54 20 10.357 37.46 20 37.46Z' clip-rule='evenodd'/%3e%3c/svg%3e"
+    notificationOverlay.appendChild(notivlogo);
+    hovernotice = document.createElement("div");
+    hovernotice.classList.add("IVHoverNotice");
+    hovernotice.innerHTML = "hover to see more";
+    notificationOverlay.appendChild(hovernotice)
+    ivnotclose = document.createElement("div");
+    ivnotclose.classList.add("IVNotClose");
+    ivnotclose.onclick = dismissNotification;
+    ivnotclose.innerHTML = "+";
+    notificationOverlay.appendChild(ivnotclose);
+    notificationShade.appendChild(notificationOverlay);
+
+    browser.storage.local.get(function(localdata){
+        const tags = localdata.notificationTags.split('').reverse().join('') || '';
+        var matchedTags = [];
+        const siteTags = localdata.data[domainString.replace(/\./g,"")]["k"];
+        for (const tag of tags) {
+           if (siteTags.includes(tag)) {
+              matchedTags += tag;
+           }
+        }
+        // Get data
+        console.log("notifications are on" + localdata.data[domainString.replace(/\./g,"")]["k"]);
+        if (matchedTags.length > 0){
+        currentState = localdata.siteData || {};
+        if (currentState[domainString.replace(/\./g, "")]){
+            data = currentState[domainString.replace(/\./g,"")];
+            for (const tag of matchedTags){
+                // Display data
+                addItemToNotification(null, tagLookup[tag], data[tag]);
+            }
+            console.log("local notification data");
+        } else {
+            requestList = [domainString.replace(/\./g,"")]
+            // Generate 8 different posabilites  
+            const indexList = localdata.data;
+            const tagArray = [...matchedTags];
+            if (typeof indexList === 'object' && indexList !== null ){
+                const filteredList = Object.keys(indexList).filter(key => {
+                    const item = indexList[key];
+                    if (typeof item.k === 'string'){
+                    return tagArray.some(substring =>
+                        item.k.includes(substring)
+                    )
+                    }
+                })
+                while (requestList.length < 9){
+                    const randomIndex = Math.floor(Math.random() * filteredList.length);
+                    if (!requestList.includes(filteredList[randomIndex])){
+                        requestList.push(filteredList[randomIndex]);
+                    }
+                }
+            }
+            shuffleArray(requestList);
+            for (const domain of requestList){
+                dataRequest = new Request(aSiteWePullAndPushTo + "/db/" + domain + "/index.json", init); 
+                fetch(dataRequest)
+                    .then(response => response.json())
+                    .then(function(data) {
+                        try {
+                            currentState = broswer.storage.local.get("siteData");
+                        } catch (e) {}
+                        currentState[domain] = data.data;
+                        browser.storage.local.set({ "siteData": currentState });
+                        if (domain == domainString.replace(/\./g,"")){
+                            for (const tag of matchedTags){
+                                // Display data
+                                addItemToNotification(null, tagLookup[tag], data.data[tag]);
+                            }
+                        }
+                    })
+                }
+            }
+        }
+    })
+    // browser.storage.local.get("siteData").then(data => console.log(data));
+    // addItemToNotification(null, "Example", "B+");
+
+}
+var notifications = false;
 function createObjects() {
+    // if (aSiteYouVisit == "http://example.com/") enableNotifications();
     browser.storage.local.get(function(localdata) {
         blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
         blockCheck();
         if (localdata.bobbleMode == "true") {
             bubbleMode = 1;
         }
-        console.log(localdata)
+        notifications = localdata.notifications;
+        if (notifications == "true") {
+            enableNotifications();
+        }
     });
-    console.log(bubbleMode);
     if (debug) console.log("[ Invisible Voice ]: creating " + mode);
     if ((bubbleMode == 0 && mode == 1) || debug == true){
         browser.storage.local.get(function(localdata) {
@@ -111,23 +234,12 @@ function createObjects() {
     open = document.createElement("div");
     open.id = "invisible-voice";
     open.style.cssText =
-        `position: fixed; width: ${buttonOffset}!important;
-         border:${textColor} solid 1px !important;
-         background:${backgroundColor};
-         height:inherit;
-         height:-webkit-fill-available;
-         z-index: 2147483646;
-         display:flex; right: 0; top: 0; padding: 0; border-radius: 0;
-         color: ${textColor}; margin: auto; align-items:center;
-         justify-content: center;`;
-    open.innerHTML = "<";
+        `width: ${buttonOffset}!important;
+         border-color:${textColor};
+         background-color:${backgroundColor};
+         color: ${textColor};`;
     iframe.id = "Invisible";
-    iframe.style.cssText = 
-        `border:${textColor} solid 1px; border-right: none;
-         overflow-y: scroll; overflow-x: hidden; right: 0; width: 0px; top:0;
-         z-index: 2147483647; position: fixed;
-         box-shadow: rgba(0, 0, 0, 0.1) 0 0 100px; 
-         background-color:${backgroundColor}; transition:width .2s;`
+    iframe.style.cssText = `border-color:${textColor};background-color:${backgroundColor};`
     if (mode == 1) return;
     document.documentElement.appendChild(iframe);
     document.documentElement.appendChild(open);
@@ -324,12 +436,9 @@ var Loaded = false;
 let resize = function(x) {
     if(typeof(x)==='undefined') x = "";
     if (mode == 1) return;
-    if (x == "load" && !Loaded) {
-        ourdomain = aSiteWePullAndPushTo + "/db/" + globalCode + "/" + "?date=" + Date.now() + "&vote=true";
-        iframe.src = ourdomain;
-		console.log(globalCode)
-        Loaded = true;
-    }
+    open.style.transform = "translateX(16px)";
+    open.style.transition = "right 0.2s";
+    iframe.style.transition = "width 0.2s";
     if (distance == 0) {
         distance = 160;
     } else if (distance == 160) {
@@ -341,12 +450,32 @@ let resize = function(x) {
         distance = 0;
         iframe.src = "about:blank";
         Loaded = false;
+        notificationShade = document.getElementById("IVNotification");
+        if (notificationShade === null){
+        }else{
+            console.log(notificationShade)
+            notificationShade.style.opacity = 1;
+        }
+        open.style.transform = "translateX(0px)";
+        open.style.transition = "transform 0.2s";
+        iframe.style.transition = "none";
+    } else {
+        if (notificationShade === null){
+        }else{
+            notificationShade.style.opacity = 0;
+        }
     }
     if (x == "network") distance = 840;
     if (iframe === undefined) return
+    open.style.right = distance + 'px';
     iframe.style.width = distance + 'px';
+    if (x == "load" && !Loaded) {
+        ourdomain = aSiteWePullAndPushTo + "/db/" + globalCode + "/" + "?date=" + Date.now() + "&vote=true";
+        iframe.src = ourdomain;
+		console.log(globalCode)
+        Loaded = true;
+    }
     if (distance > 160) browser.runtime.sendMessage({ "InvisibleVoteTotal": hashforsite });
-
 };
 
 document.addEventListener('mouseup', function(event) {
@@ -520,6 +649,29 @@ window.addEventListener('message', function(e) {
     if (e.data.type == 'IVDarkModeOverride') {
         if (debug == true) console.log("DarkMode stub", e.data.data);
     }
+    if (e.data.type == 'IVNotificationsTags') {
+        console.log("Tags stub", e.data.data);
+        browser.storage.local.set({ "notificationTags": e.data.data })
+        if (notifications == "true") dismissNotification();
+        notificationsDismissed = false;
+        enableNotifications();
+    }
+
+    if (e.data.type == 'IVNotifications') {
+        console.log("Notifications stub", e.data.data);
+        browser.storage.local.set({"notifications": e.data.data })
+        if (e.data.data == "true") {
+            notificationsDismissed = false;
+            console.log("notifications were " + notifications);
+            if(document.getElementById("IVNotification") == null){
+                enableNotifications();
+            }
+            notifications = "true";
+        } else {
+            if (notifications == "true") dismissNotification();
+            notifications = "false";
+        }
+    }
     if (e.data.type == 'IVKeepOnScreen') {
         if (debug == true) console.log("keep on screen stub", e.data.data);
         if (e.data.data == "true") {
@@ -675,6 +827,27 @@ function boycott() {
 function startDataChain(lookup){
     fetch(new Request(psl, init))
         .then(response => parsePSL(response.body, lookup));
+}
+
+
+function addItemToNotification(event, labelName = "BaddyScore" , score = "91" ){
+    if (notificationsDismissed) return;
+    try {
+        newItem = document.createElement("div");
+        newItem.classList.add("IVNotItem");
+        newItem.innerHTML = `<h1>${labelName}</h1><h2>${score}</h2>`;
+        notificationShade.appendChild(newItem);
+        if(document.getElementById("IVNotification") == null)
+                document.documentElement.appendChild(notificationShade);
+
+    } catch(e)  {
+    }
+}
+function dismissNotification(){
+    notificationsDismissed = true;
+    if (document.getElementById("IVNotification") != null)
+        document.getElementById("IVNotification").remove();
+    console.log("notification dismissed")
 }
 
 var lastScrollTop = 0;
