@@ -101,89 +101,109 @@ var notificationsToShow = false;
 var notificationsDismissed = false;
 function enableNotifications(){
     if (notificationsDismissed) return;
+
+    // Create the notification shade
     notificationShade = document.createElement("section");
     notificationShade.id = "IVNotification";
     notificationShade.onclick = addItemToNotification;
-    notificationOverlay = document.createElement("div");
+    
+    // Create the notification overlay
+    const notificationOverlay = document.createElement("div");
     notificationOverlay.classList.add("IVNotOverlay");
-    notivlogo = document.createElement("img");
+    
+    // Create the logo
+    const notivlogo = document.createElement("img");
     notivlogo.classList.add("IVNotLogo");
     notivlogo.src = "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' fill='none'%3e%3ccircle cx='20' cy='20' r='18' fill='none'/%3e%3cpath fill='%231A1A1A' d='M18.201 14.181h3.657v14.536a1.823 1.823 0 0 1-1.828 1.817 1.823 1.823 0 0 1-1.829-1.817V14.181ZM18.201 10.547c0-1.003.819-1.817 1.829-1.817s1.828.814 1.828 1.817a1.823 1.823 0 0 1-1.828 1.817 1.823 1.823 0 0 1-1.829-1.817Z'/%3e%3cpath fill='%231A1A1A' d='m10.318 21.634 1.292-1.285a1.836 1.836 0 0 1 2.586 0l8.402 8.351-2.585 2.57-9.696-9.636Z'/%3e%3cpath fill='%231A1A1A' d='M25.804 20.349a1.836 1.836 0 0 1 2.586 0l1.293 1.285-9.696 9.636-2.585-2.57 8.402-8.351Z'/%3e%3cpath fill='%231A1A1A' fill-rule='evenodd' d='M40 20c0 11.046-8.954 20-20 20S0 31.046 0 20 8.954 0 20 0s20 8.954 20 20ZM20 37.46c9.643 0 17.46-7.817 17.46-17.46S29.643 2.54 20 2.54 2.54 10.357 2.54 20 10.357 37.46 20 37.46Z' clip-rule='evenodd'/%3e%3c/svg%3e"
     notificationOverlay.appendChild(notivlogo);
-    hovernotice = document.createElement("div");
+
+    // Create the "hover to see more" element
+    const hovernotice = document.createElement("div");
     hovernotice.classList.add("IVHoverNotice");
-    hovernotice.innerHTML = "hover to see more";
-    notificationOverlay.appendChild(hovernotice)
-    ivnotclose = document.createElement("div");
+    hovernotice.textContent = "hover to see more";
+    notificationOverlay.appendChild(hovernotice);
+    
+    // Create the close button
+    const ivnotclose = document.createElement("div");
     ivnotclose.classList.add("IVNotClose");
     ivnotclose.onclick = dismissNotification;
-    ivnotclose.innerHTML = "+";
+    ivnotclose.textContent = "+";
     notificationOverlay.appendChild(ivnotclose);
+    
+    // Append the overlay to the shade
     notificationShade.appendChild(notificationOverlay);
 
-    browser.storage.local.get(function(localdata){
-        const tags = localdata.notificationTags.split('').reverse().join('') || '';
-        var matchedTags = [];
-        const siteTags = localdata.data[domainString.replace(/\./g,"")]["k"];
-        for (const tag of tags) {
-           if (siteTags.includes(tag)) {
-              matchedTags += tag;
-           }
+    browser.storage.local.get(function (localdata) {
+      const tags = (localdata.notificationTags || '').split('').reverse().join('');
+      const domainKey = domainString.replace(/\./g, "");
+      const siteTags = localdata.data[domainKey]["k"];
+      const matchedTags = [];
+    
+      // Find matched tags
+      for (const tag of tags) {
+        if (siteTags.includes(tag)) {
+          matchedTags.push(tag);
         }
-        // Get data
-        console.log("notifications are on" + localdata.data[domainString.replace(/\./g,"")]["k"]);
-        if (matchedTags.length > 0){
+      }
+    
+      // Check if notifications are on
+      console.log("notifications are on", localdata.data[domainKey]["k"]);
+    
+      if (matchedTags.length > 0) {
         currentState = localdata.siteData || {};
-        if (currentState[domainString.replace(/\./g, "")]){
-            data = currentState[domainString.replace(/\./g,"")];
-            for (const tag of matchedTags){
-                // Display data
-                addItemToNotification(null, tagLookup[tag], data[tag]);
-            }
-            console.log("local notification data");
+        if (currentState[domainKey]) {
+          data = currentState[domainKey];
+          for (const tag of matchedTags) {
+            // Display data
+            addItemToNotification(null, tagLookup[tag], data[tag]);
+          }
+          console.log("local notification data");
         } else {
-            requestList = [domainString.replace(/\./g,"")]
-            // Generate 8 different posabilites  
-            const indexList = localdata.data;
-            const tagArray = [...matchedTags];
-            if (typeof indexList === 'object' && indexList !== null ){
-                const filteredList = Object.keys(indexList).filter(key => {
-                    const item = indexList[key];
-                    if (typeof item.k === 'string'){
-                    return tagArray.some(substring =>
-                        item.k.includes(substring)
-                    )
-                    }
-                })
-                while (requestList.length < 9){
-                    const randomIndex = Math.floor(Math.random() * filteredList.length);
-                    if (!requestList.includes(filteredList[randomIndex])){
-                        requestList.push(filteredList[randomIndex]);
-                    }
-                }
+          requestList = [domainKey];
+          const indexList = localdata.data;
+          const tagArray = [...matchedTags];
+    
+          if (typeof indexList === 'object' && indexList !== null) {
+            const filteredList = Object.keys(indexList).filter(key => {
+              const item = indexList[key];
+              if (typeof item.k === 'string') {
+                return tagArray.some(substring => item.k.includes(substring));
+              }
+            });
+    
+            while (requestList.length < 9) {
+              const randomIndex = Math.floor(Math.random() * filteredList.length);
+              if (!requestList.includes(filteredList[randomIndex])) {
+                requestList.push(filteredList[randomIndex]);
+              }
             }
-            shuffleArray(requestList);
-            for (const domain of requestList){
-                dataRequest = new Request(aSiteWePullAndPushTo + "/db/" + domain + "/index.json", init); 
-                fetch(dataRequest)
-                    .then(response => response.json())
-                    .then(function(data) {
-                        try {
-                            currentState = broswer.storage.local.get("siteData");
-                        } catch (e) {}
-                        currentState[domain] = data.data;
-                        browser.storage.local.set({ "siteData": currentState });
-                        if (domain == domainString.replace(/\./g,"")){
-                            for (const tag of matchedTags){
-                                // Display data
-                                addItemToNotification(null, tagLookup[tag], data.data[tag]);
-                            }
-                        }
-                    })
+          }
+    
+          shuffleArray(requestList);
+    
+          for (const domain of requestList) {
+            dataRequest = new Request(aSiteWePullAndPushTo + "/db/" + domain + "/index.json", init);
+            fetch(dataRequest)
+              .then(response => response.json())
+              .then(function (data) {
+                try {
+                  currentState = browser.storage.local.get("siteData");
+                } catch (e) {}
+                currentState[domain] = data.data;
+                browser.storage.local.set({ "siteData": currentState });
+    
+                if (domain == domainKey) {
+                  for (const tag of matchedTags) {
+                    // Display data
+                    addItemToNotification(null, tagLookup[tag], data.data[tag]);
+                  }
                 }
-            }
+              });
+          }
         }
-    })
+      }
+    });
+
     // browser.storage.local.get("siteData").then(data => console.log(data));
     // addItemToNotification(null, "Example", "B+");
 
@@ -208,8 +228,11 @@ function createObjects() {
             if (localdata.bobbleMode != "true") {
                 bobble = document.createElement("div");
                 buttonSize = 40;
-                bobble.style.cssText = `bottom: 10px;left: 60px;position:fixed;padding:0;margin:0;
-                border-radius:0;width:${buttonSize}px;background-color: transparent;background-image:url(${buttonSvg});object-fit:1;height:${buttonSize}px;background-size: ${buttonSize}px ${buttonSize}px;`;
+                bobble.style.cssText = `
+                    width:${buttonSize}px;
+                    background-image:url(${buttonSvg});
+                    height:${buttonSize}px;
+                    background-size: ${buttonSize}px ${buttonSize}px;`;
                 // bobble.setAttribute("onclick", this.remove());
                 bobble.id = "InvisibleVoice-bobble";
 
@@ -240,7 +263,6 @@ function createObjects() {
          color: ${textColor};`;
     iframe.id = "Invisible";
     iframe.style.cssText = `border-color:${textColor};background-color:${backgroundColor};`
-    if (mode == 1) return;
     document.documentElement.appendChild(iframe);
     document.documentElement.appendChild(open);
     resize("close");
@@ -358,32 +380,27 @@ function fetchIndex(){
 
 // Mode 0 is Desktop, Mode 1 is mobile
 // Bubble Mode 0 is bubble, 1 is no bubble, 2 is no bubble or bar
+
+function processDomain(pattern) {
+  globalCode = pattern;
+  createObjects();
+  return lookup[pattern];
+}
+
 function domainChecker(domains, lookupList){
-	let domainList = domains
     try {
-        if (lookupList[sourceString]){
-            globalCode = sourceString;
-            createObjects();
-            return lookup[sourceString];
-        };
+        if (lookupList[sourceString]) return processDomain(sourceString)
     } catch(e){
         fetchIndex()
-        if (lookupList[sourceString]){
-            globalCode = sourceString;
-            createObjects();
-            return lookup[sourceString];
-        };
+        if (lookupList[sourceString]) return processDomain(sourceString)
     }
-	for (domain in domains){
-		let pattern = domains[domain].split('.').join('')
-		check = lookupList[pattern]
-		if (check){
-			sourceString = pattern;
-			globalCode = pattern;
-            createObjects();
-			return check;
-		}
-	}
+    for (const domain of domains) {
+        const pattern = domain.split('.').join('');
+        const check = lookupList[pattern];
+        if (check) {
+          return check;
+        }
+      }
 	return undefined
 }
 
@@ -434,49 +451,63 @@ document.addEventListener('fullscreenchange', function() {
 
 var Loaded = false;
 let resize = function(x) {
-    if(typeof(x)==='undefined') x = "";
-    if (mode == 1) return;
-    open.style.transform = "translateX(16px)";
-    open.style.transition = "right 0.2s";
-    iframe.style.transition = "width 0.2s";
-    if (distance == 0) {
-        distance = 160;
-    } else if (distance == 160) {
-        distance = 640;
-    } else {
-        distance = 160;
+  if (mode === 1) return;
+
+  // Set default value for x
+  if (typeof x === 'undefined') x = "";
+
+  // Transition properties
+  open.style.transition = "right 0.2s";
+  iframe.style.transition = "width 0.2s";
+  open.style.transform = "translateX(16px)";
+
+  // Handle the different distance scenarios
+  if (x === "close") {
+    distance = 0;
+    iframe.src = "about:blank";
+    Loaded = false;
+
+    // Handle notification shade if it exists
+    let notificationShade = document.getElementById("IVNotification");
+    if (notificationShade) {
+      notificationShade.style.opacity = 1;
     }
-    if (x == "close") {
-        distance = 0;
-        iframe.src = "about:blank";
-        Loaded = false;
-        notificationShade = document.getElementById("IVNotification");
-        if (notificationShade === null){
-        }else{
-            console.log(notificationShade)
-            notificationShade.style.opacity = 1;
-        }
-        open.style.transform = "translateX(0px)";
-        open.style.transition = "transform 0.2s";
-        iframe.style.transition = "none";
-    } else {
-        if (notificationShade === null){
-        }else{
-            notificationShade.style.opacity = 0;
-        }
+
+    open.style.transform = "translateX(0px)";
+    open.style.transition = "transform 0.2s";
+    iframe.style.transition = "none";
+  } else if (x === "network") {
+    distance = 840;
+  } else if (distance === 160) {
+    distance = 640;
+  } else {
+    distance = 160;
+  }
+
+  if (x !== "close") {
+    // Handle notification shade if it exists
+    let notificationShade = document.getElementById("IVNotification");
+    if (notificationShade) {
+      notificationShade.style.opacity = 0;
     }
-    if (x == "network") distance = 840;
-    if (iframe === undefined) return
-    open.style.right = distance + 'px';
-    iframe.style.width = distance + 'px';
-    if (x == "load" && !Loaded) {
-        ourdomain = aSiteWePullAndPushTo + "/db/" + globalCode + "/" + "?date=" + Date.now() + "&vote=true";
-        iframe.src = ourdomain;
-		console.log(globalCode)
-        Loaded = true;
-    }
-    if (distance > 160) browser.runtime.sendMessage({ "InvisibleVoteTotal": hashforsite });
+  }
+
+
+  if (x === "load" && !Loaded) {
+    ourdomain = aSiteWePullAndPushTo + "/db/" + globalCode + "/?date=" + Date.now() + "&vote=true";
+    iframe.src = ourdomain;
+    console.log(globalCode);
+    Loaded = true;
+  }
+  // Set the right and width values
+  open.style.right = distance + 'px';
+  iframe.style.width = distance + 'px';
+
+  if (distance > 160) {
+    browser.runtime.sendMessage({ "InvisibleVoteTotal": hashforsite });
+  }
 };
+
 
 document.addEventListener('mouseup', function(event) {
     if (dontOpen != true) {
@@ -595,93 +626,109 @@ level2 = ['wikipedia-first-frame',
 ];
 
 var graphOpen = false;
-window.addEventListener('message', function(e) {
-    if (e.data.type === undefined) return
-    if (debug == true) console.log(e.data.type + " Stub " + e.data.data);
-    if (e.data.type == 'IVLike' && e.data.data != '') {
-        if (debug == true) console.log(voteStatus);
-        if (voteStatus == "up") {
-            browser.runtime.sendMessage({
-                "InvisibleVoiceUnvote": hashforsite
-            });
-        } else {
-            browser.runtime.sendMessage({
-                "InvisibleVoiceUpvote": hashforsite
-            });
-        }
-    }
-    if (e.data.type == 'IVDislike' && e.data.data != '') {
-        if (debug == true) console.log(e.data.type + " Stub");
-        if (voteStatus == "down") {
-            browser.runtime.sendMessage({
-                "InvisibleVoiceUnvote": hashforsite
-            });
-        } else {
-            browser.runtime.sendMessage({
-                "InvisibleVoiceDownvote": hashforsite
-            });
-        }
-    }
-    if (e.data.type == 'IVBoycott' && e.data.data != '') {
+window.addEventListener('message', function (e) {
+  if (e.data.type === undefined) return;
+
+  if (debug) console.log(e.data.type + " Stub " + e.data.data);
+
+  switch (e.data.type) {
+    case 'IVLike':
+      if (e.data.data != '') {
+        if (debug) console.log(voteStatus);
+        const likeMessage = voteStatus === "up" ? "InvisibleVoiceUnvote" : "InvisibleVoiceUpvote";
+        browser.runtime.sendMessage({ [likeMessage]: hashforsite });
+      }
+      break;
+
+    case 'IVDislike':
+      if (e.data.data != '') {
+        if (debug) console.log(e.data.type + " Stub");
+        const dislikeMessage = voteStatus === "down" ? "InvisibleVoiceUnvote" : "InvisibleVoiceDownvote";
+        browser.runtime.sendMessage({ [dislikeMessage]: hashforsite });
+      }
+      break;
+
+    case 'IVBoycott':
+      if (e.data.data != '') {
         blockedHashes.push(hashforsite);
-        browser.storage.local.set({
-            "blockedHashes": blockedHashes
-        });
+        browser.storage.local.set({ "blockedHashes": blockedHashes });
         aSiteYouVisit = window.location.href;
         window.location.replace(browser.runtime.getURL('blocked.html') + "?site=" + domainString + "&return=" + aSiteYouVisit);
-    }
-    if (e.data.type == 'IVClicked' && e.data.data != '' && e.data.data != 'titlebar') {
-        if (debug == true) console.log("resize stub " + e.data.data, hashforsite);
+      }
+      break;
+
+    case 'IVClicked':
+      if (e.data.data != '' && e.data.data != 'titlebar') {
+        if (debug) console.log("resize stub " + e.data.data, hashforsite);
         if (level2.includes(e.data.data)) {
-            if (debug == true) console.log("level2 resize");
-            resize();
+          if (debug) console.log("level2 resize");
+          resize();
         }
         if (e.data.data == 'antwork' || e.data.data == 'graph-box') {
-            resize("network");
+          resize("network");
         } else {
-            if (e.data.data == 'back') {
-                resize();
-            } else {
-                if (distance == 160) resize();
-            };
-        };
-    }
-    if (e.data.type == 'IVDarkModeOverride') {
-        if (debug == true) console.log("DarkMode stub", e.data.data);
-    }
-    if (e.data.type == 'IVNotificationsTags') {
-        console.log("Tags stub", e.data.data);
-        browser.storage.local.set({ "notificationTags": e.data.data })
-        if (notifications == "true") dismissNotification();
+          if (e.data.data == 'back') {
+            resize();
+          } else {
+            if (distance === 160) resize();
+          }
+        }
+      }
+      break;
+
+    case 'IVDarkModeOverride':
+      if (debug) console.log("DarkMode stub", e.data.data);
+      break;
+
+    case 'IVNotificationsCacheClear':
+      console.log("NotCacheClear stub", e.data.data);
+      browser.storage.local.set({ "siteData": {} });
+      if (notifications == "true") dismissNotification();
+      notificationsDismissed = false;
+      enableNotifications();
+      break;
+
+    case 'IVNotificationsTags':
+      console.log("Tags stub", e.data.data);
+      browser.storage.local.set({ "notificationTags": e.data.data });
+      if (notifications == "true") dismissNotification();
+      notificationsDismissed = false;
+      enableNotifications();
+      break;
+
+    case 'IVNotifications':
+      console.log("Notifications stub", e.data.data);
+      browser.storage.local.set({ "notifications": e.data.data });
+
+      if (e.data.data == "true") {
         notificationsDismissed = false;
-        enableNotifications();
-    }
+        console.log("notifications were " + notifications);
 
-    if (e.data.type == 'IVNotifications') {
-        console.log("Notifications stub", e.data.data);
-        browser.storage.local.set({"notifications": e.data.data })
-        if (e.data.data == "true") {
-            notificationsDismissed = false;
-            console.log("notifications were " + notifications);
-            if(document.getElementById("IVNotification") == null){
-                enableNotifications();
-            }
-            notifications = "true";
-        } else {
-            if (notifications == "true") dismissNotification();
-            notifications = "false";
+        if (document.getElementById("IVNotification") === null) {
+          enableNotifications();
         }
-    }
-    if (e.data.type == 'IVKeepOnScreen') {
-        if (debug == true) console.log("keep on screen stub", e.data.data);
-        if (e.data.data == "true") {
-            distance = 0;
-            resize("load");
-        }
-    }
 
-    if (e.data.type == 'IVClose') resize("close");
+        notifications = "true";
+      } else {
+        if (notifications == "true") dismissNotification();
+        notifications = "false";
+      }
+      break;
+
+    case 'IVKeepOnScreen':
+      if (debug) console.log("keep on screen stub", e.data.data);
+      if (e.data.data == "true") {
+        distance = 0;
+        resize("load");
+      }
+      break;
+
+    case 'IVClose':
+      resize("close");
+      break;
+  }
 });
+
 // Make the DIV element draggable:
 
 function dragElement(elmnt) {
