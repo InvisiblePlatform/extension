@@ -376,78 +376,99 @@ browser.runtime.onMessageExternal.addListener(msgObj => {
     }
 })
 
-window.addEventListener('message', function(e) {
-    console.log(e);
-    if (e.data.type == 'IVLike' && e.data.data != '') {
-        if (debug == true) console.log(e.data.type + " Stub");
-        if (voteStatus == "up") {
-            (async () => {
-                const respond =  await browser.runtime.sendMessage(identifier, { "InvisibleVoteUnvote": hashforsite });
-                sendToPage(respond);
-            })();
-        } else {
-            (async () => {
-                const respond =  await browser.runtime.sendMessage(identifier, { "InvisibleVoteUpvote": hashforsite });
-                sendToPage(respond);
-            })();
-        }
-    }
-    if (e.data.type == 'IVDislike' && e.data.data != '') {
-        if (debug == true) console.log(e.data.type + " Stub");
-        if (voteStatus == "down") {
-            (async () => {
-                const respond =  await browser.runtime.sendMessage(identifier, { "InvisibleVoteUnvote": hashforsite });
-                sendToPage(respond);
-            })();
-        } else {
-            (async () => {
-                const respond =  await browser.runtime.sendMessage(identifier, { "InvisibleVoteDownvote": hashforsite });
-                sendToPage(respond);
-            })();
-        }
-    }
-    if (e.data.type == 'IVBobbleDisable' && e.data.data != '') {
-        browser.storage.local.set({
-            "bobbleMode": e.data.data
-        });
-    }
-    if (e.data.type == 'IVClicked' && e.data.data != '') {
-        if (debug == true) console.log("resize stub " + e.data.data);
+window.addEventListener('message', function (e) {
+  if (e.data.type === undefined) return;
+
+  if (debug) console.log(e.data.type + " Stub " + e.data.data);
+
+  switch (e.data.type) {
+    case 'IVLike':
+      if (e.data.data != '') {
+        if (debug) console.log(voteStatus);
+        const likeMessage = voteStatus === "up" ? "InvisibleVoiceUnvote" : "InvisibleVoiceUpvote";
+        (async () => {
+            const respond =  await browser.runtime.sendMessage(identifier, { [likeMessage]: hashforsite });
+            sendToPage(respond);
+        })();
+      }
+      break;
+
+    case 'IVDislike':
+      if (e.data.data != '') {
+        if (debug) console.log(e.data.type + " Stub");
+        const dislikeMessage = voteStatus === "down" ? "InvisibleVoiceUnvote" : "InvisibleVoiceDownvote";
+        (async () => {
+            const respond =  await browser.runtime.sendMessage(identifier, { [dislikeMessage]: hashforsite });
+            sendToPage(respond);
+        })();
+      }
+      break;
+
+    case 'IVBoycott':
+      if (e.data.data != '') {
+        blockedHashes.push(hashforsite);
+        browser.storage.local.set({ "blockedHashes": blockedHashes });
+        aSiteYouVisit = window.location.href;
+        window.location.replace(browser.runtime.getURL('blocked.html') + "?site=" + domainString + "&return=" + aSiteYouVisit);
+      }
+      break;
+
+    case 'IVClicked':
+      if (e.data.data != '' && e.data.data != 'titlebar') {
+        if (debug) console.log("resize stub " + e.data.data, hashforsite);
         if (level2.includes(e.data.data)) {
-            if (debug == true) console.log("level2 resize");
-            resize();
+          if (debug) console.log("level2 resize");
+          resize();
         }
         if (e.data.data == 'antwork' || e.data.data == 'graph-box') {
-            resize("network");
+          resize("network");
         } else {
-            if (e.data.data == 'back') {
-                resize();
-            } else {
-                if (distance == 160) resize();
-            };
-        };
-    }
-    if (e.data.type == 'IVClose') {
-        resize("close");
-    }
-    if (e.data.type == 'IVDarkModeOverride') {
-        if (debug == true) console.log("DarkMode stub", e.data.data);
-    }
-    if (e.data.type == 'IVKeepOnScreen') {
-        if (debug == true) console.log("keep on screen stub", e.data.data);
-        if (e.data.data == "true") {
-            distance = 0;
+          if (e.data.data == 'back') {
             resize();
+          } else {
+            if (distance === 160) resize();
+          }
         }
-    }
-    if (e.data.type == 'IVBoycott' && e.data.data != '') {
-        blockedHashes.push(hashforsite);
-        browser.storage.local.set({
-            "blockedHashes": blockedHashes
-        });
-        aSiteYouVisit = window.location.href;
-        currentTab.url.replace(browser.runtime.getURL('blocked.html') + "?site=" + domainString + "&return=" + aSiteYouVisit);
-    }
+      }
+      break;
+
+    case 'IVDarkModeOverride':
+      if (debug) console.log("DarkMode stub", e.data.data);
+      break;
+
+    case 'IVNotificationsCacheClear':
+      console.log("NotCacheClear stub", e.data.data);
+      browser.storage.local.set({ "siteData": {} });
+      browser.storage.local.set({ "userPreferences": defaultUserPreferences });
+      break;
+
+    case 'IVNotificationsPreferences':
+      console.log("UserPreference stub", e.data.data);
+      browser.storage.local.set({ "userPreferences": e.data.data });
+      break;
+
+    case 'IVNotificationsTags':
+      console.log("Tags stub", e.data.data);
+      browser.storage.local.set({ "notificationTags": e.data.data });
+      break;
+
+    case 'IVNotifications':
+      console.log("Notifications stub", e.data.data);
+      browser.storage.local.set({ "notifications": e.data.data });
+      break;
+
+    case 'IVKeepOnScreen':
+      if (debug) console.log("keep on screen stub", e.data.data);
+      if (e.data.data == "true") {
+        distance = 0;
+        resize("load");
+      }
+      break;
+
+    case 'IVClose':
+      resize("close");
+      break;
+  }
 });
 iframe.addEventListener('load', function(e){
     if (hashforsite === undefined) {
@@ -457,6 +478,56 @@ iframe.addEventListener('load', function(e){
         sendToPage(response);
         })();
     }
+});
+const tagLookup = {
+    "l": "Glassdoor",
+    "b": "BCorp",
+    "P": "TOS;DR",
+    "m": "MediaBiasFactCheck",
+    "t": "TrustPilot",
+    "s": "TrustScam"
+}
+
+keyconversion = {
+    'bcorp_rating': "b",
+    'connections': "c",
+    'glassdoor_rating': "l",
+    'goodonyou': "g",
+    'isin': "i",
+    'mbfc': "m",
+    'osid': "o",
+    'polalignment': "a",
+    'polideology': "p",
+    'ticker': "y",
+    'tosdr': "P",
+    'trust-pilot': "t",
+    'trustcore:': "s",
+    'wikidata_id': "w",
+}
+
+// Default user preferences with type, min, max, and labels for each tag
+const defaultUserPreferences = {
+   "l": { type: "range", min: 0, max: 10 },                                           
+   "b": { type: "range", min: 0, max: 150 },                                          
+   "P": { type: "range", min: 1, max: 6 },                                            
+   "s": { type: "range", min: 0, max: 100 },                                          
+   "t": { type: "range", min: 0, max: 100 },
+   "m": { type: "label", labels: [ "conspiracy-pseudoscience", "left",
+"left-center", "pro-science", "right", "right-center", "satire",
+"censorship", "conspiracy", "failed-fact-checks", "fake-news", "false-claims",
+"hate", "imposter", "misinformation", "plagiarism", "poor-sourcing", "propaganda", "pseudoscience"
+  ] },
+};
+
+// Step 1: Load user preferences from browser.storage.local or set defaults
+browser.storage.local.get("userPreferences", function (localdata) {
+  const loadedPreferences = localdata.userPreferences || {};
+
+  // Merge default preferences with loaded preferences
+  const mergedPreferences = { ...defaultUserPreferences, ...loadedPreferences };
+
+  // Update user preferences in browser.storage.local
+  browser.storage.local.set({ "userPreferences": mergedPreferences });
 });
 
 function onError(e){

@@ -21,6 +21,7 @@
     animation: 0.4s ease-out 0s 1 IVNotShadeDown;
     transition: opacity 0.2s;
     filter: drop-shadow(0px 2px 1px #00000030);
+    z-index: 10000;
     & .IVNotItem:last-of-type{
         & h1 {
             margin-left: 40px;

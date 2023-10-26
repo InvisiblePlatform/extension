@@ -72,7 +72,10 @@ if (window.matchMedia && !!window.matchMedia('(prefers-color-scheme: dark)').mat
 const tagLookup = {
     "l": "Glassdoor",
     "b": "BCorp",
-    "P": "TOS;DR"
+    "P": "TOS;DR",
+    "m": "MediaBiasFactCheck",
+    "t": "TrustPilot",
+    "s": "TrustScam"
 }
 
 keyconversion = {
@@ -87,14 +90,105 @@ keyconversion = {
     'polideology': "p",
     'ticker': "y",
     'tosdr': "P",
-    'wikidata_id': "w"
+    'trust-pilot': "t",
+    'trustcore:': "s",
+    'wikidata_id': "w",
 }
+
+// Default user preferences with type, min, max, and labels for each tag
+const defaultUserPreferences = {
+   "l": { type: "range", min: 0, max: 10 },                                           
+   "b": { type: "range", min: 0, max: 150 },                                          
+   "P": { type: "range", min: 1, max: 6 },                                            
+   "s": { type: "range", min: 0, max: 100 },                                          
+   "t": { type: "range", min: 0, max: 100 },
+   "m": { type: "label", labels: [ "conspiracy-pseudoscience", "left",
+"left-center", "pro-science", "right", "right-center", "satire",
+"censorship", "conspiracy", "failed-fact-checks", "fake-news", "false-claims",
+"hate", "imposter", "misinformation", "plagiarism", "poor-sourcing", "propaganda", "pseudoscience"
+  ] },
+};
+
+// Step 1: Load user preferences from browser.storage.local or set defaults
+browser.storage.local.get("userPreferences", function (localdata) {
+  const loadedPreferences = localdata.userPreferences || {};
+
+  // Merge default preferences with loaded preferences
+  const mergedPreferences = { ...defaultUserPreferences, ...loadedPreferences };
+
+  // Update user preferences in browser.storage.local
+  browser.storage.local.set({ "userPreferences": mergedPreferences });
+});
+
+function processNotification(tag, value) {
+  // Get user preferences
+  browser.storage.local.get("userPreferences", function (localdata) {
+    const preferences = localdata.userPreferences || {};
+
+    // Check if user preferences exist for the tag
+    if (preferences[tag]) {
+      const { type } = preferences[tag];
+      // Compare notification value based on the type
+      if (type === "range" && isInRange(value, preferences[tag])) {
+        // Display the notification with tag label and data
+        displayNotification(tag, value);
+      } else if (type === "label" && isMatchingLabel(value, preferences[tag])) {
+        // Display the notification with tag label and data
+        displayNotification(tag, value);
+      }
+    }
+  });
+}
+
 
 function shuffleArray(array) {
   for (let i = array.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [array[i], array[j]] = [array[j], array[i]];
   }
+}
+
+function isInRange(value, preference) {
+  const { min, max } = preference;
+
+  // Convert both numeric and letter ratings to numeric values
+  const numericValue = convertRatingToNumeric(value);
+  const numericMin = convertRatingToNumeric(min);
+  const numericMax = convertRatingToNumeric(max);
+
+  return numericValue >= numericMin && numericValue <= numericMax;
+}
+
+function convertRatingToNumeric(rating) {
+  // Check if the rating is numeric (1-6)
+  if (!isNaN(rating)) {
+    return Number(rating);
+  }
+
+  // If it's not numeric, attempt to convert it to a numeric value based on the letter ratings (A-F)
+  const ratings = ["A", "B", "C", "D", "E", "F"];
+  const index = ratings.indexOf(rating);
+  if (index !== -1) {
+    return index + 1;
+  }
+
+  // If the rating is neither numeric nor a valid letter rating, return NaN
+  return NaN;
+}
+
+
+function isMatchingLabel(value, preference) {
+  const { labels } = preference;
+  return labels.includes(value);
+}
+
+function displayNotification(tag, value) {
+  // Assuming you have a function like addItemNotification
+  // that displays notifications, pass the appropriate values
+  // to it based on the tag and value.
+  const tagLabel = tagLookup[tag]; // Get the label for the tag
+  const data = value; // Get the data for the tag
+  addItemToNotification(null, tagLabel, data);
 }
 
 var notificationsToShow = false;
@@ -105,7 +199,7 @@ function enableNotifications(){
     // Create the notification shade
     notificationShade = document.createElement("section");
     notificationShade.id = "IVNotification";
-    notificationShade.onclick = addItemToNotification;
+    // notificationShade.onclick = addItemToNotification;
     
     // Create the notification overlay
     const notificationOverlay = document.createElement("div");
@@ -155,7 +249,7 @@ function enableNotifications(){
           data = currentState[domainKey];
           for (const tag of matchedTags) {
             // Display data
-            addItemToNotification(null, tagLookup[tag], data[tag]);
+            processNotification(tag, data[tag]);
           }
           console.log("local notification data");
         } else {
@@ -181,21 +275,22 @@ function enableNotifications(){
     
           shuffleArray(requestList);
     
-          for (const domain of requestList) {
+          for (let domain of requestList) {
             dataRequest = new Request(aSiteWePullAndPushTo + "/db/" + domain + "/index.json", init);
+            currentState = localdata.siteData ? localdata.siteData : {};
             fetch(dataRequest)
               .then(response => response.json())
               .then(function (data) {
-                try {
-                  currentState = browser.storage.local.get("siteData");
-                } catch (e) {}
+                console.log(data.data)
+                console.log(currentState)
                 currentState[domain] = data.data;
+                console.log(currentState);
                 browser.storage.local.set({ "siteData": currentState });
     
                 if (domain == domainKey) {
                   for (const tag of matchedTags) {
                     // Display data
-                    addItemToNotification(null, tagLookup[tag], data.data[tag]);
+                    processNotification(tag, data[tag]);
                   }
                 }
               });
@@ -351,10 +446,15 @@ function lookupDomainHash(domain, lookup){
     if (domainInfo == null) return null
     domainString = domainInfo.domain
     hashforsite = lookup[domainString];
-    console.log(hashforsite)
+    if (hashforsite === undefined && domainInfo.subdomains.length){
+        domainString = domainInfo.domain.split('.').slice(-2).join('.');
+        hashforsite = lookup[domainString];
+    }
+    // console.log(hashforsite)
     return JSON.stringify({
         "sourceString": domainString.replace(/\./g,""), 
         "domainString": domainString, 
+        "subdomains": domainInfo.subdomains,
         "hashforsite": hashforsite
     });
 }
@@ -683,9 +783,15 @@ window.addEventListener('message', function (e) {
     case 'IVNotificationsCacheClear':
       console.log("NotCacheClear stub", e.data.data);
       browser.storage.local.set({ "siteData": {} });
+      browser.storage.local.set({ "userPreferences": defaultUserPreferences });
       if (notifications == "true") dismissNotification();
       notificationsDismissed = false;
       enableNotifications();
+      break;
+
+    case 'IVNotificationsPreferences':
+      console.log("UserPreference stub", e.data.data);
+      browser.storage.local.set({ "userPreferences": e.data.data });
       break;
 
     case 'IVNotificationsTags':
