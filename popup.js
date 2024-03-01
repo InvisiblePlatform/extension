@@ -483,7 +483,7 @@ const tagLookup = {
     "l": "Glassdoor",
     "b": "BCorp",
     "P": "TOS;DR",
-    "m": "MediaBiasFactCheck",
+    "m": "MBFC",
     "t": "TrustPilot",
     "s": "TrustScam"
 }

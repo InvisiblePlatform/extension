@@ -23,14 +23,13 @@
     filter: drop-shadow(0px 2px 1px #00000030);
     z-index: 10000;
     & .IVNotItem:last-of-type{
-        & h1 {
-            margin-left: 40px;
-        }
+       padding-left: 40px;
     }
 }
 .IVNotItem, .IVNotOverlay {
     margin: 0px;
     padding: 0px;
+    color: black;
     max-width: 200px;
     min-width: 200px;
     height: 48px;
@@ -62,6 +61,8 @@
 }
 .IVNotItem {
     top: 48px;
+    box-sizing: border-box;
+    width: 200px;
     transform: translateY(48px);
     outline: 1px solid #111;
     transition: margin-top 0.3s, border-radius 0.3s;
@@ -80,6 +81,20 @@
     & h2 {
         font-size: 32px;
         margin-right: 12px;
+    }
+}
+.IVNotItemSS {
+    display: block;
+    padding-left: 16px;
+    line-height: 1em;
+    & h1, h2 {
+        display: block;
+        margin: 0;
+        transform: translateY(10px);
+        font-size: 1em;
+    }
+    & h2 {
+        font-weight: normal;
     }
 }
 :is(.IVNotOverlay, .IVNotItem) > * {

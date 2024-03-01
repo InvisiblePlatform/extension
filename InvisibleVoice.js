@@ -73,7 +73,7 @@ const tagLookup = {
     "l": "Glassdoor",
     "b": "BCorp",
     "P": "TOS;DR",
-    "m": "MediaBiasFactCheck",
+    "m": "MBFC",
     "t": "TrustPilot",
     "s": "TrustScam"
 }
@@ -124,7 +124,6 @@ function processNotification(tag, value) {
   // Get user preferences
   browser.storage.local.get("userPreferences", function (localdata) {
     const preferences = localdata.userPreferences || {};
-
     // Check if user preferences exist for the tag
     if (preferences[tag]) {
       const { type } = preferences[tag];
@@ -132,9 +131,12 @@ function processNotification(tag, value) {
       if (type === "range" && isInRange(value, preferences[tag])) {
         // Display the notification with tag label and data
         displayNotification(tag, value);
-      } else if (type === "label" && isMatchingLabel(value, preferences[tag])) {
+      } else if (type === "label") {
         // Display the notification with tag label and data
-        displayNotification(tag, value);
+        for (label of value){
+            if (isMatchingLabel(label, preferences[tag]))
+                displayNotification(tag, label);
+        }
       }
     }
   });
@@ -188,7 +190,12 @@ function displayNotification(tag, value) {
   // to it based on the tag and value.
   const tagLabel = tagLookup[tag]; // Get the label for the tag
   const data = value; // Get the data for the tag
-  addItemToNotification(null, tagLabel, data);
+    console.log(`${tag},${value}`)
+  if (tag == 'm'){
+    addItemToNotificationSS(null, tagLabel, data);
+  } else {
+    addItemToNotification(null, tagLabel, data);
+  }
 }
 
 var notificationsToShow = false;
@@ -215,6 +222,7 @@ function enableNotifications(){
     const hovernotice = document.createElement("div");
     hovernotice.classList.add("IVHoverNotice");
     hovernotice.textContent = "hover to see more";
+    hovernotice.style.visibility = "hidden";
     notificationOverlay.appendChild(hovernotice);
     
     // Create the close button
@@ -242,6 +250,7 @@ function enableNotifications(){
     
       // Check if notifications are on
       console.log("notifications are on", localdata.data[domainKey]["k"]);
+        console.log("matched tags", matchedTags)
     
       if (matchedTags.length > 0) {
         currentState = localdata.siteData || {};
@@ -281,10 +290,7 @@ function enableNotifications(){
             fetch(dataRequest)
               .then(response => response.json())
               .then(function (data) {
-                console.log(data.data)
-                console.log(currentState)
                 currentState[domain] = data.data;
-                console.log(currentState);
                 browser.storage.local.set({ "siteData": currentState });
     
                 if (domain == domainKey) {
@@ -331,8 +337,10 @@ function createObjects() {
                 // bobble.setAttribute("onclick", this.remove());
                 bobble.id = "InvisibleVoice-bobble";
 
+
                 document.documentElement.appendChild(bobble);
                 dragElement(document.getElementById("InvisibleVoice-bobble"));
+                bobble.onclick = browser.browserAction.openPopup()
                 browser.storage.local.get('newplace', function(position) {
                      var pos = Object.values(position)[0].split(',');
                      // console.log("[ Invisible Voice ]: loading loc" + pos)
@@ -780,6 +788,10 @@ window.addEventListener('message', function (e) {
       if (debug) console.log("DarkMode stub", e.data.data);
       break;
 
+    case 'IVIndexRefresh':
+      fetchIndex();
+      break;
+
     case 'IVNotificationsCacheClear':
       console.log("NotCacheClear stub", e.data.data);
       browser.storage.local.set({ "siteData": {} });
@@ -983,6 +995,23 @@ function startDataChain(lookup){
 }
 
 
+function addItemToNotificationSS(event, labelName = "BaddyScore" , score = "91" ){
+    if (notificationsDismissed) return;
+    try {
+        newItem = document.createElement("div");
+        newItem.classList.add("IVNotItem");
+        newItem.classList.add("IVNotItemSS");
+        newItem.innerHTML = `<h1>${labelName}</h1><h2 style="font-size:1em">${score}</h2>`;
+        notificationShade.appendChild(newItem);
+        if(document.getElementById("IVNotification") == null)
+                document.documentElement.appendChild(notificationShade);
+        if(document.getElementByClassName("IVNotItem").length > 0)
+                document.getElementsByClassName("IVHoverNotice")[0].style.visibility = "visible";
+
+
+    } catch(e)  {
+    }
+}
 function addItemToNotification(event, labelName = "BaddyScore" , score = "91" ){
     if (notificationsDismissed) return;
     try {
@@ -992,6 +1021,8 @@ function addItemToNotification(event, labelName = "BaddyScore" , score = "91" ){
         notificationShade.appendChild(newItem);
         if(document.getElementById("IVNotification") == null)
                 document.documentElement.appendChild(notificationShade);
+        if(document.getElementByClassName("IVNotItem").length > 0)
+                document.getElementsByClassName("IVHoverNotice")[0].style.visibility = "visible";
 
     } catch(e)  {
     }
