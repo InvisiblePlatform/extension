@@ -78,6 +78,51 @@ function blockCheck(){
     });
 }
 
+// For voting                                                                   
+async function voteAsync(site, direction, type="domainHash"){
+   voteHeaders = new Headers({                                                  
+       'Content-Type': "application/json"                                       
+   });                                                                          
+    var data = {                                                                
+        type: "domainhash",                                                     
+        location: site,                                                         
+        direction: direction,                                                   
+    }                                                                           
+   var voteVars = {                                                             
+       method: 'POST',                                                          
+       headers: voteHeaders,                                                    
+       credentials: 'include',                                                  
+       body: JSON.stringify(data)                                               
+                                                                                
+   };                                                                           
+   console.log(site, direction);                                                
+   var data = await fetch(                                                      
+       new Request(voteUrl + "/vote", voteVars)                                 
+   ).then(response => response.json()                                           
+   ).then(data => {                                                             
+       return data;                                                             
+   }                                                                            
+   );                                                                           
+   return data;                                                                 
+}                                                                               
+                                                                                
+async function getTotalAsync(site){                                             
+   var voteHeaders = new Headers({                                              
+    'site': site                                                                
+   });                                                                          
+   var voteVars = {                                                             
+       method: 'GET',                                                           
+       headers: voteHeaders,                                                    
+   };                                                                           
+   var data = await fetch(                                                      
+       new Request(voteUrl + "/get-data", voteVars)                             
+   ).then(response => response.json()                                           
+   ).then(data => {                                                             
+       return data;                                                             
+   }                                                                            
+   );                                                                           
+    return data;                                                                
+}       
 async function vote(site, direction){
    var voteHeaders = new Headers({
    	'site': site,
@@ -86,7 +131,7 @@ async function vote(site, direction){
    var voteVars = {
        method: 'POST',
        headers: voteHeaders,
-       mode: 'cors',
+       mode: 'nocors',
    };
    console.log(site, direction);
    var data = await fetch(
@@ -106,7 +151,6 @@ async function getTotal(site){
    var voteVars = {
        method: 'GET',
        headers: voteHeaders,
-       mode: 'cors',
    };
    var data = await fetch(
        new Request(voteUrl + "/get-data", voteVars)
@@ -115,7 +159,7 @@ async function getTotal(site){
        return data;
    }
    );
-    return data;
+   return data;
 }
 
 browser.runtime.onMessage.addListener(function(msgObj, sender, sendResponse) {
@@ -124,7 +168,7 @@ browser.runtime.onMessage.addListener(function(msgObj, sender, sendResponse) {
     if (Object.keys(msgObj)[0] == "InvisibleVoteUnvote") {
     console.log("bonk!",Object.keys(msgObj)[0]);
         (async function(){
-	            var data = await vote(msgObj[Object.keys(msgObj)[0]], "un");
+	            var data = await voteAsync(msgObj[Object.keys(msgObj)[0]], "un");
                 console.log(data);
                 sendResponse(data);
         })();
@@ -133,7 +177,7 @@ browser.runtime.onMessage.addListener(function(msgObj, sender, sendResponse) {
     if (Object.keys(msgObj)[0] == "InvisibleVoteUpvote") {
     console.log("bonk!",Object.keys(msgObj)[0]);
         (async function(){
-	            var data = await vote(msgObj[Object.keys(msgObj)[0]], "up");
+	            var data = await voteAsync(msgObj[Object.keys(msgObj)[0]], "up");
                 console.log(data);
                 sendResponse(data);
             })()
@@ -142,7 +186,7 @@ browser.runtime.onMessage.addListener(function(msgObj, sender, sendResponse) {
     if (Object.keys(msgObj)[0] == "InvisibleVoteDownvote") {
     console.log("bonk!",Object.keys(msgObj)[0]);
         (async function(){
-	            var data = await vote(msgObj[Object.keys(msgObj)[0]], "down");
+	            var data = await voteAsync(msgObj[Object.keys(msgObj)[0]], "down");
                 console.log(data);
                 sendResponse(data);
             })()

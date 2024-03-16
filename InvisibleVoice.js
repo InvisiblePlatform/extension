@@ -44,6 +44,8 @@ var level = 0;
 var globalCode, code, hashforsite, domainString, sourceString, open, iframe;
 var domainInfo;
 var bgresponse;
+var username;
+var voteCode;
 
 var aSiteYouVisit = window.location.href;
 var buttonOffsetVal = 16;
@@ -60,6 +62,7 @@ var blockedHashes = [];
 
 var IVBlock = false;
 var bubbleMode = 0;
+var loggedIn;
 
 if (window.matchMedia && !!window.matchMedia('(prefers-color-scheme: dark)').matches) {
     if (debug) console.info('[ Invisible Voice ]: Dark Theme detected 🌒 ');
@@ -238,6 +241,9 @@ function enableNotifications(){
     browser.storage.local.get(function (localdata) {
       const tags = (localdata.notificationTags || '').split('').reverse().join('');
       const domainKey = domainString.replace(/\./g, "");
+      if (localdata.data[domainKey] == undefined){
+        return
+      }
       const siteTags = localdata.data[domainKey]["k"];
       const matchedTags = [];
     
@@ -502,6 +508,8 @@ function domainChecker(domains, lookupList){
         fetchIndex()
         if (lookupList[sourceString]) return processDomain(sourceString)
     }
+    try {
+
     for (const domain of domains) {
         const pattern = domain.split('.').join('');
         const check = lookupList[pattern];
@@ -509,6 +517,7 @@ function domainChecker(domains, lookupList){
           return check;
         }
       }
+    } catch(e){}
 	return undefined
 }
 
@@ -544,6 +553,44 @@ function fetchCodeForPattern(lookup) {
     return coded;
 }
 
+const loginCheck = async () => {                                                
+        try{                                                                    
+        postURL = `${voteUrl}/auth/am-i-logged-in`                            
+        headers = new Headers({                                                 
+                "content-type": 'application/json'                              
+        });                                                                     
+                                                                                
+        const dataf = await fetch(postURL, {                                    
+            method: "GET",                                                      
+            headers: headers,                                                   
+            credentials: 'include',                                             
+        })                                                                      
+        const response = await dataf.json()                                     
+        if (response.hasOwnProperty("message")){                                
+            const username = response.message;
+            console.log(`Logged in as ${username}`)
+            browser.storage.local.set({ "username": username });
+        }
+        } catch (e){                                                            
+            //console.log(e)                                                      
+            var username;
+            browser.storage.local.get("username", function(storedName) {
+                username = storedName.username;
+                if (username != undefined){
+                    browser.storage.local.remove("username")
+                    console.log(`[ IV ] "${username}" logged out of extension`)
+                } else {
+                    console.log(`not logged in`)
+                }
+            });
+        }                                                                       
+}      
+
+if (aSiteYouVisit.includes(voteUrl)){
+    console.log("[ IV ] Assets Site")
+    loginCheck();
+
+}
 
 var changeMeta = document.createElement("meta");
 changeMeta.setAttribute('http-equiv', "Content-Security-Policy");
@@ -557,8 +604,10 @@ document.addEventListener('fullscreenchange', function() {
     floating.style.visibility = (isFullScreen) ? 'hidden' : 'visible';
 });
 
+var oldNetworkDistance;
 var Loaded = false;
 let resize = function(x) {
+  if (open == undefined) return;
   if (mode === 1) return;
 
   // Set default value for x
@@ -585,7 +634,10 @@ let resize = function(x) {
     open.style.transition = "transform 0.2s";
     iframe.style.transition = "none";
   } else if (x === "network") {
+    oldNetworkDistance = distance;
     distance = 840;
+  } else if (distance === "oldnetwork"){
+    distance = oldNetworkDistance;
   } else if (distance === 160) {
     distance = 640;
   } else {
@@ -602,7 +654,10 @@ let resize = function(x) {
 
 
   if (x === "load" && !Loaded) {
-    ourdomain = aSiteWePullAndPushTo + "/db/" + globalCode + "/?date=" + Date.now() + "&vote=true";
+    ourdomain = `${aSiteWePullAndPushTo}/db/${globalCode}/`
+    ourdomain += "?date=" + Date.now() + "&vote=true";
+    if (loggedIn) ourdomain += `&loggedInAs=${username}`;
+    
     iframe.src = ourdomain;
     console.log(globalCode);
     Loaded = true;
@@ -610,10 +665,6 @@ let resize = function(x) {
   // Set the right and width values
   open.style.right = distance + 'px';
   iframe.style.width = distance + 'px';
-
-  if (distance > 160) {
-    browser.runtime.sendMessage({ "InvisibleVoteTotal": hashforsite });
-  }
 };
 
 
@@ -733,6 +784,33 @@ level2 = ['wikipedia-first-frame',
     'settings'
 ];
 
+function handleError(e){
+    console.log(e)
+}
+
+function forwardVotes(x){
+    if (debug == true) console.log(x);
+    voteStatus = x["status"];
+    var message = {
+        message: "VoteUpdate",
+        voteStatus: x["status"],
+        utotal: x["up_total"],
+        dtotal: x["down_total"]
+    };
+    iframe.contentWindow.postMessage(message, '*');
+}
+
+function forwardVote(x){
+    if (debug == true) console.log(x);
+    voteStatus = x["status"];
+    var message = {
+        message: "VoteUpdate",
+        voteStatus: x["status"],
+        utotal: x["up_total"],
+        dtotal: x["down_total"]
+    };
+    iframe.contentWindow.postMessage(message, '*');
+}
 var graphOpen = false;
 window.addEventListener('message', function (e) {
   if (e.data.type === undefined) return;
@@ -765,6 +843,32 @@ window.addEventListener('message', function (e) {
       }
       break;
 
+    case 'IVVoteStuff':
+      if (e.data.data != '') {
+          console.log(`IVVOTESTUFF ${e.data.data}`)
+          if (voteCode == undefined){
+              voteCode = e.data.data;
+              console.log("VoteCodeSet")
+              const sending = browser.runtime.sendMessage({"InvisibleVoteTotal": voteCode}) 
+              sending.then(forwardVotes, handleError)
+          } else {
+              var command;
+              if (e.data.data == "up"){
+                    command = "InvisibleVoteUpvote";
+              } else if (e.data.data == "down") {
+                    command = "InvisibleVoteDownvote";
+              } else if (e.data.data == "un"){
+                    command = "InvisibleVoteUnvote";
+              }
+              message = {}
+              message[command] = voteCode
+              const sending = browser.runtime.sendMessage(message) 
+              sending.then(forwardVote, handleError)
+              
+          }
+      }
+      break;
+
     case 'IVClicked':
       if (e.data.data != '' && e.data.data != 'titlebar') {
         if (debug) console.log("resize stub " + e.data.data, hashforsite);
@@ -777,6 +881,8 @@ window.addEventListener('message', function (e) {
         } else {
           if (e.data.data == 'back') {
             resize();
+          } else if (e.data.data == 'unwork') {
+            resize("oldnetwork");
           } else {
             if (distance === 160) resize();
           }
@@ -1055,6 +1161,12 @@ window.addEventListener("scroll", function(){
     }
     lastScrollTop = st <= 0 ? 0 : st; // For Mobile or negative scrolling
 }, false);
+
+browser.storage.local.get("username", function(data){
+    username = data.username;
+    loggedIn = (username != undefined) ? true : false;
+    if (loggedIn) console.log(`user ${username} is logged in`)
+})
 
 fetch(new Request(localSite, init))
     .then(response => response.json())
