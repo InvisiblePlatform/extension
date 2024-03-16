@@ -44,7 +44,7 @@ var level = 0;
 var globalCode, code, hashforsite, domainString, sourceString, open, iframe;
 var domainInfo;
 var bgresponse;
-var username;
+var username, pretty_name;
 var voteCode;
 
 var aSiteYouVisit = window.location.href;
@@ -566,10 +566,10 @@ const loginCheck = async () => {
             credentials: 'include',                                             
         })                                                                      
         const response = await dataf.json()                                     
-        if (response.hasOwnProperty("message")){                                
-            const username = response.message;
-            console.log(`Logged in as ${username}`)
-            browser.storage.local.set({ "username": username });
+        if (response.hasOwnProperty("username")){                                
+            const username = response.username;
+            console.log(`Logged in as ${username}/${response.pretty_name}`)
+            browser.storage.local.set({ "username": username, "pretty_name": response.pretty_name });
         }
         } catch (e){                                                            
             //console.log(e)                                                      
@@ -578,6 +578,7 @@ const loginCheck = async () => {
                 username = storedName.username;
                 if (username != undefined){
                     browser.storage.local.remove("username")
+                    browser.storage.local.remove("pretty_name")
                     console.log(`[ IV ] "${username}" logged out of extension`)
                 } else {
                     console.log(`not logged in`)
@@ -607,7 +608,7 @@ document.addEventListener('fullscreenchange', function() {
 var oldNetworkDistance;
 var Loaded = false;
 let resize = function(x) {
-  if (open == undefined) return;
+  if (typeof open == 'undefined') return;
   if (mode === 1) return;
 
   // Set default value for x
@@ -656,7 +657,7 @@ let resize = function(x) {
   if (x === "load" && !Loaded) {
     ourdomain = `${aSiteWePullAndPushTo}/db/${globalCode}/`
     ourdomain += "?date=" + Date.now() + "&vote=true";
-    if (loggedIn) ourdomain += `&loggedInAs=${username}`;
+    if (loggedIn) ourdomain += `&loggedInAs=${pretty_name}`;
     
     iframe.src = ourdomain;
     console.log(globalCode);
@@ -799,6 +800,39 @@ function forwardVotes(x){
     };
     iframe.contentWindow.postMessage(message, '*');
 }
+function forwardPosts(x){
+    if (debug == true) console.log(x);
+    voteStatus = x["status"];
+    utotal = ( x["up_total"] == undefined   ) ? x["utotal"]   : x["up_total"];
+    dtotal = ( x["down_total"] == undefined ) ? x["dtotal"] : x["down_total"];
+    ptotal = ( x["post_total"] == undefined ) ? 0 : x["post_total"];
+    var message = {
+        message: "ModuleUpdate",
+        location: x["location"],
+        voteStatus: x["status"],
+        up_total: utotal, 
+        down_total: dtotal, 
+        post_total: ptotal,
+    };
+    iframe.contentWindow.postMessage(message, '*');
+}
+function forwardPost(x){
+    if (debug == true) console.log(x);
+    utotal = ( x["up_total"] == undefined   ) ? x["utotal"]   : x["up_total"];
+    dtotal = ( x["down_total"] == undefined ) ? x["dtotal"] : x["down_total"];
+    ptotal = ( x["post_total"] == undefined ) ? 0 : x["post_total"];
+    messageType = (x["topLevel"] == true) ? "PostUpdateTL" : "PostUpdate";
+    var message = {
+        message: messageType,
+        location: x["location"],
+        up_total: utotal, 
+        down_total: dtotal, 
+        post_total: ptotal,
+        author: x["author"],
+        content: x["content"],
+    };
+    iframe.contentWindow.postMessage(message, '*');
+}
 
 function forwardVote(x){
     if (debug == true) console.log(x);
@@ -842,6 +876,37 @@ window.addEventListener('message', function (e) {
         window.location.replace(browser.runtime.getURL('blocked.html') + "?site=" + domainString + "&return=" + aSiteYouVisit);
       }
       break;
+    case 'IVGetPost':
+          if (e.data.data != ''){
+            console.log(e.data.data)
+            const sending = browser.runtime.sendMessage({"InvisibleGetPost": e.data.data}) 
+            sending.then(forwardPost, handleError)
+          }
+      break;
+    case 'IVMakePost':
+          if (e.data.data != ''){
+            console.log(e.data.data)
+            const sending = browser.runtime.sendMessage({"InvisibleMakePost": e.data.data}) 
+            sending.then(handleError, handleError)
+          }
+      break;
+    case 'IVPostStuff':
+          if (e.data.data != ''){
+            console.log(e.data.data)
+            const sending = browser.runtime.sendMessage({"InvisibleModuleInfo": e.data.data}) 
+            sending.then(forwardPosts, handleError)
+          }
+      break;
+    case 'IVPostVoteUp':
+    case 'IVPostVoteDown':
+    case 'IVPostVoteUnvote':
+          if (e.data.data != ''){
+            console.log(e.data.data)
+            const sending = browser.runtime.sendMessage({"InvisibleModuleVote": e.data.data, "type": e.data.type}) 
+            sending.then(forwardPosts, handleError)
+          }
+      break;
+
 
     case 'IVVoteStuff':
       if (e.data.data != '') {
@@ -1162,10 +1227,13 @@ window.addEventListener("scroll", function(){
     lastScrollTop = st <= 0 ? 0 : st; // For Mobile or negative scrolling
 }, false);
 
+browser.storage.local.get("pretty_name", function(data){
+    pretty_name = data.pretty_name;
+})
 browser.storage.local.get("username", function(data){
     username = data.username;
     loggedIn = (username != undefined) ? true : false;
-    if (loggedIn) console.log(`user ${username} is logged in`)
+    if (loggedIn) console.log(`user ${username}/${pretty_name} is logged in`)
 })
 
 fetch(new Request(localSite, init))

@@ -77,6 +77,99 @@ function blockCheck(){
         });
     });
 }
+async function postGet(location){
+   postHeaders = new Headers({                                                  
+       'Content-Type': "application/json"                                       
+   });                                                                          
+    var data = {                                                                
+        location: location
+    }                                                                           
+   var postVars = {                                                             
+       method: 'POST',                                                          
+       headers: postHeaders,                                                    
+       credentials: 'include',                                                  
+       body: JSON.stringify(data)                                               
+                                                                                
+   };                                                                           
+   console.log(`getting post for ${location}`)
+   var data = await fetch(                                                      
+       new Request(voteUrl + "/get-post", postVars)                                 
+   ).then(response => response.json()                                           
+   ).then(data => {                                                             
+        if (location.startsWith("db/")){
+            data["topLevel"] = true;
+        }
+       return data;                                                             
+   }                                                                            
+   );                                                                           
+   return data;                                                                 
+}                                                                               
+async function postMake(opts){
+   postHeaders = new Headers({                                                  
+       'Content-Type': "application/json"                                       
+   });                                                                          
+    var data = {                                                                
+        post_type: opts["post_type"],
+        content: opts["content"],                                                         
+        location: opts["location"]
+    }                                                                           
+   var postVars = {                                                             
+       method: 'POST',                                                          
+       headers: postHeaders,                                                    
+       credentials: 'include',                                                  
+       body: JSON.stringify(data)                                               
+                                                                                
+   };                                                                           
+   console.log(opts["location"], opts["content"], opts["post_type"]);                                                
+   var data = await fetch(                                                      
+       new Request(voteUrl + "/post", postVars)                                 
+   ).then(response => response.json()                                           
+   ).then(data => {                                                             
+       return data;                                                             
+   }                                                                            
+   );                                                                           
+   return data;                                                                 
+}                                                                               
+
+async function voteAsyncPost(site, type){
+    var direction;
+    switch (type){
+        case "IVPostVoteUp":
+            direction = "up"
+            break;
+        case "IVPostVoteDown":
+            direction = "down"
+            break;
+        case "IVPostVoteUnvote":
+            direction = "un"
+            break;
+    }
+    
+   voteHeaders = new Headers({                                                  
+       'Content-Type': "application/json"                                       
+   });                                                                          
+    var data = {                                                                
+        type: "domainhash",                                                     
+        location: site,                                                         
+        direction: direction,                                                   
+    }                                                                           
+   var voteVars = {                                                             
+       method: 'POST',                                                          
+       headers: voteHeaders,                                                    
+       credentials: 'include',                                                  
+       body: JSON.stringify(data)                                               
+                                                                                
+   };                                                                           
+   console.log(site, direction);                                                
+   var data = await fetch(                                                      
+       new Request(voteUrl + "/vote", voteVars)                                 
+   ).then(response => response.json()                                           
+   ).then(data => {                                                             
+       return data;                                                             
+   }                                                                            
+   );                                                                           
+   return data;                                                                 
+}                                                                               
 
 // For voting                                                                   
 async function voteAsync(site, direction, type="domainHash"){
@@ -105,24 +198,7 @@ async function voteAsync(site, direction, type="domainHash"){
    );                                                                           
    return data;                                                                 
 }                                                                               
-                                                                                
-async function getTotalAsync(site){                                             
-   var voteHeaders = new Headers({                                              
-    'site': site                                                                
-   });                                                                          
-   var voteVars = {                                                             
-       method: 'GET',                                                           
-       headers: voteHeaders,                                                    
-   };                                                                           
-   var data = await fetch(                                                      
-       new Request(voteUrl + "/get-data", voteVars)                             
-   ).then(response => response.json()                                           
-   ).then(data => {                                                             
-       return data;                                                             
-   }                                                                            
-   );                                                                           
-    return data;                                                                
-}       
+
 async function vote(site, direction){
    var voteHeaders = new Headers({
    	'site': site,
@@ -144,7 +220,8 @@ async function vote(site, direction){
    return data;
 }
 
-async function getTotal(site){
+async function voteTotal(site, v2=false){
+   console.log(site)
    var voteHeaders = new Headers({
    	'site': site
    });
@@ -152,10 +229,12 @@ async function getTotal(site){
        method: 'GET',
        headers: voteHeaders,
    };
+    var stub = v2 ? "/get-data-v2" : "/get-data";
    var data = await fetch(
-       new Request(voteUrl + "/get-data", voteVars)
+       new Request(voteUrl + stub, voteVars)
    ).then(response => response.json()
    ).then(data => {
+       if (v2) data["location"] = site;
        return data;
    }
    );
@@ -195,7 +274,43 @@ browser.runtime.onMessage.addListener(function(msgObj, sender, sendResponse) {
     if (Object.keys(msgObj)[0] == "InvisibleVoteTotal") {
     console.log("bonk!",Object.keys(msgObj)[0]);
         (async function(){
-	            var data = await getTotal(msgObj["InvisibleVoteTotal"]);
+	            var data = await voteTotal(msgObj["InvisibleVoteTotal"]);
+                console.log(data);
+                sendResponse(data);
+            })()
+        return true;
+    }
+    if (Object.keys(msgObj)[0] == "InvisibleGetPost") {
+    console.log("bonk!",Object.keys(msgObj)[0]);
+        (async function(){
+	            var data = await postGet(msgObj["InvisibleGetPost"]);
+                console.log(data);
+                sendResponse(data);
+            })()
+        return true;
+    }
+    if (Object.keys(msgObj)[0] == "InvisibleMakePost") {
+    console.log("bonk!",Object.keys(msgObj)[0]);
+        (async function(){
+	            var data = await postMake(msgObj["InvisibleMakePost"]);
+                console.log(data);
+                sendResponse(data);
+            })()
+        return true;
+    }
+    if (Object.keys(msgObj)[0] == "InvisibleModuleVote") {
+    console.log("bonk!",Object.keys(msgObj)[0]);
+        (async function(){
+	            var data = await voteAsyncPost(msgObj["InvisibleModuleVote"], msgObj["type"]);
+                console.log(data);
+                sendResponse(data);
+            })()
+        return true;
+    }
+    if (Object.keys(msgObj)[0] == "InvisibleModuleInfo") {
+    console.log("bonk!",Object.keys(msgObj)[0]);
+        (async function(){
+	            var data = await voteTotal(msgObj["InvisibleModuleInfo"], true);
                 console.log(data);
                 sendResponse(data);
             })()
