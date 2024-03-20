@@ -1,8 +1,9 @@
 // "Simple" code that gets the job done by Orange
 //
-var debug = false; var allowUpdate = true;
+var debug; var allowUpdate = true;
 // Set up environment 
 var aSiteWePullAndPushTo = "https://test.reveb.la";
+//var aSiteWePullAndPushTo = "http://orange-nuc.local:4000";
 var now = (new Date).getTime();
 var headers = new Headers();
 var globalCode = "";
@@ -13,7 +14,7 @@ var init = {
     cache: 'default'
 };
 var updateJSON; // Request
-var IVLocalIndex;
+var IVLocalIndex = false;
 var mode = 0
 
 // Set browser to chrome if chromium based
@@ -51,7 +52,8 @@ var aSiteYouVisit = window.location.href;
 var buttonOffsetVal = 16;
 var buttonOffset = buttonOffsetVal + "px";
 
-var darkMode = false;
+var settingsState;
+
 var backgroundColor = "#fff";
 var textColor = "#343434";
 var heavyTextColor = "#111";
@@ -79,6 +81,14 @@ const tagLookup = {
     "m": "MBFC",
     "t": "TrustPilot",
     "s": "TrustScam"
+}
+const idLookup = {
+    "Glassdoor": "glassdoor",
+    "BCorp": "bcorp",
+    "TOS;DR": "tosdr",
+    "MBFC": "mbfc",
+    "TrustPilot": "trust-pilot",
+    "TrustScam": "trust-scam"
 }
 
 keyconversion = {
@@ -181,158 +191,154 @@ function convertRatingToNumeric(rating) {
   return NaN;
 }
 
+// {
+//     "preferred_language": "en",
+//     "loggedIn": false,
+//     "debugMode": false,
+//     "darkMode": true,
+//     "keepOnScreen": true,
+//     "userPreferences": [],
+//     "bobbleOverride": false,
+//     "notifications": "true",
+//     "notificationsTags": "mtbPls",
+//     "listOrder": "",
+//     "experimentalFeatures": true
+// }
+async function processSettingsObject(){
+    settingsState = await browser.storage.local.get("settings_obj").then(function(obj){
+        return JSON.parse(obj["settings_obj"])
+    });
+    debug = settingsState["debugMode"]
+    console.log(settingsState);
+}
 
 function isMatchingLabel(value, preference) {
   const { labels } = preference;
   return labels.includes(value);
 }
 
+
 function displayNotification(tag, value) {
-  // Assuming you have a function like addItemNotification
-  // that displays notifications, pass the appropriate values
-  // to it based on the tag and value.
   const tagLabel = tagLookup[tag]; // Get the label for the tag
-  const data = value; // Get the data for the tag
-    console.log(`${tag},${value}`)
-  if (tag == 'm'){
-    addItemToNotificationSS(null, tagLabel, data);
-  } else {
-    addItemToNotification(null, tagLabel, data);
-  }
+  if (debug) console.log(`${tag},${value}`);
+
+  const isSS = tag === 'm'; // Check if it's a special case for "m" tag
+
+  addItemToNotification(null, tagLabel, value, isSS);
 }
+
+
+const ivLogoArrow = "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' fill='none'%3e%3ccircle cx='20' cy='20' r='18' fill='none'/%3e%3cpath fill='%231A1A1A' d='M18.201 14.181h3.657v14.536a1.823 1.823 0 0 1-1.828 1.817 1.823 1.823 0 0 1-1.829-1.817V14.181ZM18.201 10.547c0-1.003.819-1.817 1.829-1.817s1.828.814 1.828 1.817a1.823 1.823 0 0 1-1.828 1.817 1.823 1.823 0 0 1-1.829-1.817Z'/%3e%3cpath fill='%231A1A1A' d='m10.318 21.634 1.292-1.285a1.836 1.836 0 0 1 2.586 0l8.402 8.351-2.585 2.57-9.696-9.636Z'/%3e%3cpath fill='%231A1A1A' d='M25.804 20.349a1.836 1.836 0 0 1 2.586 0l1.293 1.285-9.696 9.636-2.585-2.57 8.402-8.351Z'/%3e%3cpath fill='%231A1A1A' fill-rule='evenodd' d='M40 20c0 11.046-8.954 20-20 20S0 31.046 0 20 8.954 0 20 0s20 8.954 20 20ZM20 37.46c9.643 0 17.46-7.817 17.46-17.46S29.643 2.54 20 2.54 2.54 10.357 2.54 20 10.357 37.46 20 37.46Z' clip-rule='evenodd'/%3e%3c/svg%3e"
 
 var notificationsToShow = false;
 var notificationsDismissed = false;
-function enableNotifications(){
-    if (notificationsDismissed) return;
 
-    // Create the notification shade
-    notificationShade = document.createElement("section");
-    notificationShade.id = "IVNotification";
-    // notificationShade.onclick = addItemToNotification;
-    
-    // Create the notification overlay
-    const notificationOverlay = document.createElement("div");
-    notificationOverlay.classList.add("IVNotOverlay");
-    
-    // Create the logo
-    const notivlogo = document.createElement("img");
-    notivlogo.classList.add("IVNotLogo");
-    notivlogo.src = "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' fill='none'%3e%3ccircle cx='20' cy='20' r='18' fill='none'/%3e%3cpath fill='%231A1A1A' d='M18.201 14.181h3.657v14.536a1.823 1.823 0 0 1-1.828 1.817 1.823 1.823 0 0 1-1.829-1.817V14.181ZM18.201 10.547c0-1.003.819-1.817 1.829-1.817s1.828.814 1.828 1.817a1.823 1.823 0 0 1-1.828 1.817 1.823 1.823 0 0 1-1.829-1.817Z'/%3e%3cpath fill='%231A1A1A' d='m10.318 21.634 1.292-1.285a1.836 1.836 0 0 1 2.586 0l8.402 8.351-2.585 2.57-9.696-9.636Z'/%3e%3cpath fill='%231A1A1A' d='M25.804 20.349a1.836 1.836 0 0 1 2.586 0l1.293 1.285-9.696 9.636-2.585-2.57 8.402-8.351Z'/%3e%3cpath fill='%231A1A1A' fill-rule='evenodd' d='M40 20c0 11.046-8.954 20-20 20S0 31.046 0 20 8.954 0 20 0s20 8.954 20 20ZM20 37.46c9.643 0 17.46-7.817 17.46-17.46S29.643 2.54 20 2.54 2.54 10.357 2.54 20 10.357 37.46 20 37.46Z' clip-rule='evenodd'/%3e%3c/svg%3e"
-    notificationOverlay.appendChild(notivlogo);
 
-    // Create the "hover to see more" element
-    const hovernotice = document.createElement("div");
-    hovernotice.classList.add("IVHoverNotice");
-    hovernotice.textContent = "hover to see more";
-    hovernotice.style.visibility = "hidden";
-    notificationOverlay.appendChild(hovernotice);
-    
-    // Create the close button
-    const ivnotclose = document.createElement("div");
-    ivnotclose.classList.add("IVNotClose");
-    ivnotclose.onclick = dismissNotification;
-    ivnotclose.textContent = "+";
-    notificationOverlay.appendChild(ivnotclose);
-    
-    // Append the overlay to the shade
-    notificationShade.appendChild(notificationOverlay);
+function enableNotifications() {
+  if (notificationsDismissed) return;
 
-    browser.storage.local.get(function (localdata) {
-      const tags = (localdata.notificationTags || '').split('').reverse().join('');
-      const domainKey = domainString.replace(/\./g, "");
-      if (localdata.data[domainKey] == undefined){
-        return
-      }
-      const siteTags = localdata.data[domainKey]["k"];
-      const matchedTags = [];
-    
-      // Find matched tags
-      for (const tag of tags) {
-        if (siteTags.includes(tag)) {
-          matchedTags.push(tag);
-        }
-      }
-    
-      // Check if notifications are on
-      console.log("notifications are on", localdata.data[domainKey]["k"]);
-        console.log("matched tags", matchedTags)
-    
-      if (matchedTags.length > 0) {
-        currentState = localdata.siteData || {};
-        if (currentState[domainKey]) {
-          data = currentState[domainKey];
-          for (const tag of matchedTags) {
-            // Display data
-            processNotification(tag, data[tag]);
-          }
-          console.log("local notification data");
-        } else {
-          requestList = [domainKey];
-          const indexList = localdata.data;
-          const tagArray = [...matchedTags];
-    
-          if (typeof indexList === 'object' && indexList !== null) {
-            const filteredList = Object.keys(indexList).filter(key => {
-              const item = indexList[key];
-              if (typeof item.k === 'string') {
-                return tagArray.some(substring => item.k.includes(substring));
-              }
-            });
-    
-            while (requestList.length < 9) {
-              const randomIndex = Math.floor(Math.random() * filteredList.length);
-              if (!requestList.includes(filteredList[randomIndex])) {
-                requestList.push(filteredList[randomIndex]);
-              }
+  notificationShade = document.createElement("section");
+  notificationShade.id = "IVNotification";
+
+  const notificationOverlay = document.createElement("div");
+  notificationOverlay.classList.add("IVNotOverlay");
+
+  const notivlogo = document.createElement("img");
+  notivlogo.classList.add("IVNotLogo");
+  notivlogo.src = ivLogoArrow;
+  notificationOverlay.appendChild(notivlogo);
+
+  const hovernotice = document.createElement("div");
+  hovernotice.classList.add("IVHoverNotice");
+  hovernotice.textContent = "hover to see more";
+  hovernotice.style.visibility = "hidden";
+  notificationOverlay.appendChild(hovernotice);
+
+  const ivnotclose = document.createElement("div");
+  ivnotclose.classList.add("IVNotClose");
+  ivnotclose.onclick = dismissNotification;
+  ivnotclose.textContent = "+";
+  notificationOverlay.appendChild(ivnotclose);
+
+  notificationShade.appendChild(notificationOverlay);
+  
+  browser.storage.local.get(localdata => {
+    const tags = (settingsState.notificationsTags || '').split('').reverse().join('');
+    const domainKey = domainString.replace(/\./g, "");
+    const siteTags = localdata.data?.[domainKey]?.k || [];
+    const matchedTags = tags.split('').filter(tag => siteTags.includes(tag));
+
+    if (debug) console.log(domainKey);
+    if (debug) console.log(tags);
+    if (debug) console.log("notifications are on", siteTags);
+    if (debug) console.log("matched tags", matchedTags);
+    if (debug) console.log(localdata.data[domainKey])
+
+    if (matchedTags.length > 0) {
+      const currentState = localdata.siteData || {};
+      if (currentState[domainKey]) {
+        const data = currentState[domainKey];
+        matchedTags.forEach(tag => processNotification(tag, data[tag]));
+        if (debug) console.log("local notification data");
+      } else {
+        let requestList = [domainKey];
+        const indexList = localdata.data;
+        const tagArray = [...matchedTags];
+
+        if (typeof indexList === 'object' && indexList !== null) {
+          const filteredList = Object.keys(indexList).filter(key => {
+            const item = indexList[key];
+            if (typeof item.k === 'string') {
+              return tagArray.some(substring => item.k.includes(substring));
+            }
+          });
+
+          while (requestList.length < 9) {
+            const randomIndex = Math.floor(Math.random() * filteredList.length);
+            if (!requestList.includes(filteredList[randomIndex])) {
+              requestList.push(filteredList[randomIndex]);
             }
           }
-    
-          shuffleArray(requestList);
-    
-          for (let domain of requestList) {
-            dataRequest = new Request(aSiteWePullAndPushTo + "/db/" + domain + "/index.json", init);
-            currentState = localdata.siteData ? localdata.siteData : {};
-            fetch(dataRequest)
-              .then(response => response.json())
-              .then(function (data) {
-                currentState[domain] = data.data;
-                browser.storage.local.set({ "siteData": currentState });
-    
-                if (domain == domainKey) {
-                  for (const tag of matchedTags) {
-                    // Display data
-                    processNotification(tag, data[tag]);
-                  }
-                }
-              });
-          }
         }
+
+        shuffleArray(requestList);
+
+        requestList.forEach(domain => {
+          const dataRequest = new Request(`${aSiteWePullAndPushTo}/db/${domain}/index.json`, init);
+          fetch(dataRequest)
+            .then(response => response.json())
+            .then(data => {
+              currentState[domain] = data.data;
+              browser.storage.local.set({ "siteData": currentState });
+
+              if (domain == domainKey) {
+                matchedTags.forEach(tag => processNotification(tag, data[tag]));
+              }
+            });
+        });
       }
-    });
-
-    // browser.storage.local.get("siteData").then(data => console.log(data));
-    // addItemToNotification(null, "Example", "B+");
-
+    }
+  });
 }
+
 var notifications = false;
 function createObjects() {
     // if (aSiteYouVisit == "http://example.com/") enableNotifications();
     browser.storage.local.get(function(localdata) {
         blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
         blockCheck();
-        if (localdata.bobbleMode == "true") {
-            bubbleMode = 1;
-        }
-        notifications = localdata.notifications;
-        if (notifications == "true") {
-            enableNotifications();
-        }
     });
+    if (settingsState.bobbleMode == "true") {
+        bubbleMode = 1;
+    }
+    notifications = settingsState.notifications;
+    if (settingsState.notifications == "true") {
+        enableNotifications();
+    }
     if (debug) console.log("[ Invisible Voice ]: creating " + mode);
     if ((bubbleMode == 0 && mode == 1) || debug == true){
         browser.storage.local.get(function(localdata) {
-            if (localdata.bobbleMode != "true") {
+            if (settingsState.bobbleMode != "true") {
                 bobble = document.createElement("div");
                 buttonSize = 40;
                 bobble.style.cssText = `
@@ -384,6 +390,12 @@ function createObjects() {
 // Domain handling
 // PSL 2023/06/23 updated
 async function parsePSL(pslStream, lookup) {
+  browser.storage.local.get(function(data){
+        pretty_name = data.pretty_name;
+        username = data.username;
+        loggedIn = (username != undefined) ? true : false;
+        if (loggedIn) console.log(`user ${username}/${pretty_name} is logged in`)
+  })
   const decoder = new TextDecoder();
   const reader = pslStream.getReader();
   let chunk;
@@ -570,6 +582,7 @@ const loginCheck = async () => {
             const username = response.username;
             console.log(`Logged in as ${username}/${response.pretty_name}`)
             browser.storage.local.set({ "username": username, "pretty_name": response.pretty_name });
+            console.log(browser.storage.local.get())
         }
         } catch (e){                                                            
             //console.log(e)                                                      
@@ -607,7 +620,9 @@ document.addEventListener('fullscreenchange', function() {
 
 var oldNetworkDistance;
 var Loaded = false;
+var addingId = '#'
 let resize = function(x) {
+    if (debug) console.log(x)
   if (typeof open == 'undefined') return;
   if (mode === 1) return;
 
@@ -637,10 +652,10 @@ let resize = function(x) {
   } else if (x === "network") {
     oldNetworkDistance = distance;
     distance = 840;
-  } else if (distance === "oldnetwork"){
-    distance = oldNetworkDistance;
   } else if (distance === 160) {
     distance = 640;
+  } else if (x === "oldnetwork"){
+    distance = oldNetworkDistance;
   } else {
     distance = 160;
   }
@@ -657,7 +672,11 @@ let resize = function(x) {
   if (x === "load" && !Loaded) {
     ourdomain = `${aSiteWePullAndPushTo}/db/${globalCode}/`
     ourdomain += "?date=" + Date.now() + "&vote=true";
-    if (loggedIn) ourdomain += `&loggedInAs=${pretty_name}`;
+    if (loggedIn) ourdomain += `&username=${pretty_name}`;
+	if (addingId != '#'){
+	  ourdomain += addingId
+	  distance = 640;
+	}
     
     iframe.src = ourdomain;
     console.log(globalCode);
@@ -666,8 +685,8 @@ let resize = function(x) {
   // Set the right and width values
   open.style.right = distance + 'px';
   iframe.style.width = distance + 'px';
+  if (debug) console.log(`${x}, ${distance}, ${oldNetworkDistance}`)
 };
-
 
 document.addEventListener('mouseup', function(event) {
     if (dontOpen != true) {
@@ -805,14 +824,15 @@ function forwardPosts(x){
     voteStatus = x["status"];
     utotal = ( x["up_total"] == undefined   ) ? x["utotal"]   : x["up_total"];
     dtotal = ( x["down_total"] == undefined ) ? x["dtotal"] : x["down_total"];
-    ptotal = ( x["post_total"] == undefined ) ? 0 : x["post_total"];
+    ptotal = ( x["comment_total"] == undefined ) ? 0 : x["comment_total"];
     var message = {
         message: "ModuleUpdate",
         location: x["location"],
         voteStatus: x["status"],
         up_total: utotal, 
         down_total: dtotal, 
-        post_total: ptotal,
+        comment_total: ptotal,
+        top_comment: x["top_comment"],
     };
     iframe.contentWindow.postMessage(message, '*');
 }
@@ -822,14 +842,17 @@ function forwardPost(x){
     dtotal = ( x["down_total"] == undefined ) ? x["dtotal"] : x["down_total"];
     ptotal = ( x["post_total"] == undefined ) ? 0 : x["post_total"];
     messageType = (x["topLevel"] == true) ? "PostUpdateTL" : "PostUpdate";
+    comment = (messageType == "PostUpdate" && x["comment"])? true : false;
     var message = {
         message: messageType,
         location: x["location"],
         up_total: utotal, 
         down_total: dtotal, 
-        post_total: ptotal,
+        comment_total: ptotal,
         author: x["author"],
         content: x["content"],
+        comment: comment,
+        uid: x["uid"]
     };
     iframe.contentWindow.postMessage(message, '*');
 }
@@ -878,21 +901,21 @@ window.addEventListener('message', function (e) {
       break;
     case 'IVGetPost':
           if (e.data.data != ''){
-            console.log(e.data.data)
+            if (debug) console.log(e.data.data)
             const sending = browser.runtime.sendMessage({"InvisibleGetPost": e.data.data}) 
             sending.then(forwardPost, handleError)
           }
       break;
     case 'IVMakePost':
           if (e.data.data != ''){
-            console.log(e.data.data)
+            if (debug) console.log(e.data.data)
             const sending = browser.runtime.sendMessage({"InvisibleMakePost": e.data.data}) 
             sending.then(handleError, handleError)
           }
       break;
     case 'IVPostStuff':
           if (e.data.data != ''){
-            console.log(e.data.data)
+            if (debug) console.log(e.data.data)
             const sending = browser.runtime.sendMessage({"InvisibleModuleInfo": e.data.data}) 
             sending.then(forwardPosts, handleError)
           }
@@ -901,7 +924,7 @@ window.addEventListener('message', function (e) {
     case 'IVPostVoteDown':
     case 'IVPostVoteUnvote':
           if (e.data.data != ''){
-            console.log(e.data.data)
+            if (debug) console.log(e.data.data)
             const sending = browser.runtime.sendMessage({"InvisibleModuleVote": e.data.data, "type": e.data.type}) 
             sending.then(forwardPosts, handleError)
           }
@@ -964,7 +987,7 @@ window.addEventListener('message', function (e) {
       break;
 
     case 'IVNotificationsCacheClear':
-      console.log("NotCacheClear stub", e.data.data);
+      if (debug) console.log("NotCacheClear stub", e.data.data);
       browser.storage.local.set({ "siteData": {} });
       browser.storage.local.set({ "userPreferences": defaultUserPreferences });
       if (notifications == "true") dismissNotification();
@@ -973,12 +996,12 @@ window.addEventListener('message', function (e) {
       break;
 
     case 'IVNotificationsPreferences':
-      console.log("UserPreference stub", e.data.data);
+      if (debug) console.log("UserPreference stub", e.data.data);
       browser.storage.local.set({ "userPreferences": e.data.data });
       break;
 
     case 'IVNotificationsTags':
-      console.log("Tags stub", e.data.data);
+      if (debug) console.log("Tags stub", e.data.data);
       browser.storage.local.set({ "notificationTags": e.data.data });
       if (notifications == "true") dismissNotification();
       notificationsDismissed = false;
@@ -986,12 +1009,12 @@ window.addEventListener('message', function (e) {
       break;
 
     case 'IVNotifications':
-      console.log("Notifications stub", e.data.data);
+      if (debug) console.log("Notifications stub", e.data.data);
       browser.storage.local.set({ "notifications": e.data.data });
 
       if (e.data.data == "true") {
         notificationsDismissed = false;
-        console.log("notifications were " + notifications);
+        if (debug) console.log("notifications were " + notifications);
 
         if (document.getElementById("IVNotification") === null) {
           enableNotifications();
@@ -1010,6 +1033,11 @@ window.addEventListener('message', function (e) {
         distance = 0;
         resize("load");
       }
+      break;
+    case 'IVSettingsChange':
+      console.log("Settings Saved")
+      browser.storage.local.set({"settings_obj": JSON.stringify(e.data.data)});
+      processSettingsObject();
       break;
 
     case 'IVClose':
@@ -1161,48 +1189,55 @@ function boycott() {
 }
 
 function startDataChain(lookup){
-    fetch(new Request(psl, init))
-        .then(response => parsePSL(response.body, lookup));
+    processSettingsObject().then(fetch(new Request(psl, init))
+        .then(response => parsePSL(response.body, lookup)));
 }
 
 
-function addItemToNotificationSS(event, labelName = "BaddyScore" , score = "91" ){
-    if (notificationsDismissed) return;
-    try {
-        newItem = document.createElement("div");
-        newItem.classList.add("IVNotItem");
-        newItem.classList.add("IVNotItemSS");
-        newItem.innerHTML = `<h1>${labelName}</h1><h2 style="font-size:1em">${score}</h2>`;
-        notificationShade.appendChild(newItem);
-        if(document.getElementById("IVNotification") == null)
-                document.documentElement.appendChild(notificationShade);
-        if(document.getElementByClassName("IVNotItem").length > 0)
-                document.getElementsByClassName("IVHoverNotice")[0].style.visibility = "visible";
-
-
-    } catch(e)  {
+function handleNotificationClick(event){
+	if ( mode == 1 ){
+		return;
+	}
+    ourNode = event.target
+    if (ourNode.classList.contains("IVNotItem")){} else{
+        ourNode = event.target.parentNode
     }
+	addingId = `#${idLookup[ourNode.getAttribute("data-infotype")]}`
+	console.log(idLookup[ourNode.getAttribute("data-infotype")])
+    var dismissData = {};
+    dismissData[globalCode] = 0;
+    browser.storage.local.set(dismissData);
+    resize("load");
 }
-function addItemToNotification(event, labelName = "BaddyScore" , score = "91" ){
-    if (notificationsDismissed) return;
-    try {
-        newItem = document.createElement("div");
-        newItem.classList.add("IVNotItem");
-        newItem.innerHTML = `<h1>${labelName}</h1><h2>${score}</h2>`;
-        notificationShade.appendChild(newItem);
-        if(document.getElementById("IVNotification") == null)
-                document.documentElement.appendChild(notificationShade);
-        if(document.getElementByClassName("IVNotItem").length > 0)
-                document.getElementsByClassName("IVHoverNotice")[0].style.visibility = "visible";
 
-    } catch(e)  {
+function addItemToNotification(event, labelName = "BaddyScore", score = "91", isSS = false) {
+  if (notificationsDismissed) return;
+
+  try {
+    const newItem = document.createElement("div");
+    newItem.classList.add("IVNotItem");
+    newItem.onclick = handleNotificationClick;
+    if (isSS) newItem.classList.add("IVNotItemSS");
+    newItem.innerHTML = `<h1>${labelName}</h1><h2${isSS ? ' style="font-size:1em"' : ''}>${score}</h2>`;
+    newItem.setAttribute("data-infotype", labelName)
+    notificationShade.appendChild(newItem);
+
+    if (!document.getElementById("IVNotification")) {
+      document.documentElement.appendChild(notificationShade);
     }
+
+    const ivNotItems = document.getElementsByClassName("IVNotItem");
+    if (ivNotItems.length > 0) {
+      document.getElementsByClassName("IVHoverNotice")[0].style.visibility = "visible";
+    }
+  } catch (e) {}
 }
+
 function dismissNotification(){
     notificationsDismissed = true;
     if (document.getElementById("IVNotification") != null)
         document.getElementById("IVNotification").remove();
-    console.log("notification dismissed")
+    if (debug) console.log("notification dismissed")
 }
 
 var lastScrollTop = 0;
@@ -1227,14 +1262,7 @@ window.addEventListener("scroll", function(){
     lastScrollTop = st <= 0 ? 0 : st; // For Mobile or negative scrolling
 }, false);
 
-browser.storage.local.get("pretty_name", function(data){
-    pretty_name = data.pretty_name;
-})
-browser.storage.local.get("username", function(data){
-    username = data.username;
-    loggedIn = (username != undefined) ? true : false;
-    if (loggedIn) console.log(`user ${username}/${pretty_name} is logged in`)
-})
+
 
 fetch(new Request(localSite, init))
     .then(response => response.json())

@@ -109,15 +109,19 @@
     position: absolute;
     background: none;
     top: 0px;
+    width: 0px;
+    height: 0px;
     margin: 0px;
     & .IVNotLogo {
         width: 24px; height: 24px;
         margin-left: 8px;
+        transform: translateY(20px);
     }
     & .IVHoverNotice {
         align-self: end;
         font-size: 8px;
         transition: opacity 0.3s;
+        transform: translateY(60px);
     }
     & .IVNotClose {
         align-self: start;
