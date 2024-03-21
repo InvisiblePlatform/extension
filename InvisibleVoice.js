@@ -218,7 +218,7 @@ function convertRatingToNumeric(rating) {
       "experimentalFeatures": false,                                                  
   }        
 async function processSettingsObject(){
-    try(){
+    try {
     settingsState = await browser.storage.local.get("settings_obj").then(function(obj){
         return JSON.parse(obj["settings_obj"])
     });
