@@ -204,10 +204,26 @@ function convertRatingToNumeric(rating) {
 //     "listOrder": "",
 //     "experimentalFeatures": true
 // }
+ var defaultSettingsState = {                                                        
+      "preferred_language": "en",                                                     
+      "loggedIn": false,                                                              
+      "debugMode": false,                                                             
+      "darkMode": false,                                                              
+      "keepOnScreen": false,                                                          
+      "userPreferences": [],                                                          
+      "bobbleOverride": false,                                                        
+      "notifications": false,                                                         
+      "notificationsTags":[],                                                         
+      "listOrder": "",                                                                
+      "experimentalFeatures": false,                                                  
+  }        
 async function processSettingsObject(){
     settingsState = await browser.storage.local.get("settings_obj").then(function(obj){
         return JSON.parse(obj["settings_obj"])
     });
+    if (typeof(settingsState) === 'undefined'){
+        settingsState = defaultSettingsState;
+    }
     debug = settingsState["debugMode"]
     console.log(settingsState);
 }
