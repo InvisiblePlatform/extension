@@ -218,12 +218,14 @@ function convertRatingToNumeric(rating) {
       "experimentalFeatures": false,                                                  
   }        
 async function processSettingsObject(){
+    try(){
     settingsState = await browser.storage.local.get("settings_obj").then(function(obj){
-        if (typeof(obj) === 'undefined'){
-            return defaultSettingsState 
-        }
         return JSON.parse(obj["settings_obj"])
     });
+    } catch(e){
+        console.log(e)
+        settingsState = defaultSettingsState;
+    }
     debug = settingsState["debugMode"]
     console.log(settingsState);
 }
