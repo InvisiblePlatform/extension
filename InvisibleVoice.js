@@ -219,11 +219,11 @@ function convertRatingToNumeric(rating) {
   }        
 async function processSettingsObject(){
     settingsState = await browser.storage.local.get("settings_obj").then(function(obj){
+        if (typeof(obj) === 'undefined'){
+            return defaultSettingsState 
+        }
         return JSON.parse(obj["settings_obj"])
     });
-    if (typeof(settingsState) === 'undefined'){
-        settingsState = defaultSettingsState;
-    }
     debug = settingsState["debugMode"]
     console.log(settingsState);
 }
