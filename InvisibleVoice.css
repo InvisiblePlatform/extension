@@ -83,6 +83,12 @@
         margin-right: 12px;
     }
 }
+.IVNotItem:hover {
+  & .IVDismissForever{
+      display: block!important;
+  }
+}
+
 .IVNotItemSS {
     display: block;
     padding-left: 16px;
@@ -104,6 +110,20 @@
         height: unset;
         background-color: unset;
 }
+
+.IVDismissForever {
+    display: none;
+    position: absolute;
+    bottom: -7px;
+    left: 0px;
+    text-align: center;
+    background-color: #08D735; 
+    font-size: 0.75em;
+	width: 75%;
+	margin: 0 12.5%;
+	transition: background-color 1s;
+}
+
 .IVNotOverlay {
     z-index: 10;
     position: absolute;

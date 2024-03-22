@@ -243,6 +243,10 @@ async function voteTotal(site, v2=false){
 
 browser.runtime.onMessage.addListener(function(msgObj, sender, sendResponse) {
 	console.log(msgObj);
+    if (Object.keys(msgObj)[0] == "InvisibleOpenPopup") {
+        browser.action.openPopup()
+        return true;
+    }
     // objectkey = (Object.keys(msgObj)[0] != "") ? Object.keys(msgObj)[0] : false ;
     if (Object.keys(msgObj)[0] == "InvisibleVoteUnvote") {
     console.log("bonk!",Object.keys(msgObj)[0]);
@@ -285,7 +289,10 @@ browser.runtime.onMessage.addListener(function(msgObj, sender, sendResponse) {
         (async function(){
 	            var data = await postGet(msgObj["InvisibleGetPost"]);
                 console.log(data);
-                sendResponse(data);
+                if ("error" in data){
+                } else {
+                    sendResponse(data);
+                }
             })()
         return true;
     }

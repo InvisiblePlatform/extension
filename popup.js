@@ -297,11 +297,12 @@ function callback(tabs) {
                 if (hashforsite === undefined)
                     hashforsite = md5(sourceString);
                 console.log(sourceString, hashforsite);
-                page = aSiteWePullAndPushTo + "/db/" + sourceString + "/" + "?date=" + Date.now().toString() + "&vote=true";
-                if (mode == 1)
-                    iframe.src = page + "&app=true";
-                if (mode != 1)
-                    iframe.src = page;
+                if (settingsState["loggedin"]) ourdomain += `&username=${pretty_name}`;
+	            if (addingid != '#'){
+	              ourdomain += addingid
+	              distance = 640;
+	            }
+                iframe.src = ourdomain + "&app=true";
                 if (mode == 0) iframe.style.width = distance + 'px';
                 if (mode == 0) iframe.style.height = '100em';
                 if (mode == 1) iframe.style.width = '100%';
@@ -318,27 +319,36 @@ function callback(tabs) {
 
 function createObjects(){
     console.log(sourceString, hashforsite);
-    page = aSiteWePullAndPushTo + "/db/" + sourceString + "/" + "?date=" + Date.now().toString() + "&vote=true";
-    if (mode == 1)
-        iframe.src = page + "&app=true";
-    if (mode != 1)
-        iframe.src = page;
+    ourdomain = `${asitewepullandpushto}/db/${globalcode}/`
+    ourdomain += "?date=" + Date.now() + "&vote=true";
+    if (settingsState["loggedin"]) ourdomain += `&username=${pretty_name}`;
+	if (addingid != '#'){
+	  ourdomain += addingid
+	  distance = 640;
+	}
+    iframe.src = ourdomain + "&app=true";
+
     if (mode == 0) iframe.style.width = distance + 'px';
     if (mode == 0) iframe.style.height = '100em';
     if (mode == 1) iframe.style.width = '100%';
     if (mode == 1) iframe.style.height = '100%';
 }
 
+var addingId = '#';
 var isSet = false;
 let resize = function(x) {
     if(typeof(x)==='undefined') x = "";
     if (mode == 0) {
     if (isSet == false) {
-        page = aSiteWePullAndPushTo + "/db/" + sourceString + "/" + "?date=" + Date.now().toString() + "&vote=true";
-        if (mode == 1)
-            iframe.src = page + "&app=true";
-        if (mode != 1)
-            iframe.src = page;
+        ourdomain = `${asitewepullandpushto}/db/${globalcode}/`
+        ourdomain += "?date=" + Date.now() + "&vote=true";
+        if (settingsState["loggedin"]) ourdomain += `&username=${pretty_name}`;
+	    if (addingid != '#'){
+	      ourdomain += addingid
+	      distance = 640;
+	    }
+    
+        iframe.src = ourdomain + "&app=true";
         isSet = true;
     }
     distance = (distance == 160) ? 640 : 160;
@@ -375,6 +385,75 @@ browser.runtime.onMessageExternal.addListener(msgObj => {
         if (debug == true) console.log(msgObj[objectkey]);
     }
 })
+function sendMessageToPage(message){
+    if (typeof(iframe) !== 'undefined'){
+        iframe.contentWindow.postMessage(message, '*');
+    } else {
+        window.postMessage(message, '*');
+    }
+	console.log(`sent ${message.message}`)
+}
+
+function forwardVotes(x){
+    if (debug == true) console.log(x);
+    voteStatus = x["status"];
+    var message = {
+        message: "VoteUpdate",
+        voteStatus: x["status"],
+        utotal: x["up_total"],
+        dtotal: x["down_total"]
+    };
+    sendMessageToPage(message);
+}
+function forwardPosts(x){
+    if (debug == true) console.log(x);
+    voteStatus = x["status"];
+    utotal = ( x["up_total"] == undefined   ) ? x["utotal"]   : x["up_total"];
+    dtotal = ( x["down_total"] == undefined ) ? x["dtotal"] : x["down_total"];
+    ptotal = ( x["comment_total"] == undefined ) ? 0 : x["comment_total"];
+    var message = {
+        message: "ModuleUpdate",
+        location: x["location"],
+        voteStatus: x["status"],
+        up_total: utotal, 
+        down_total: dtotal, 
+        comment_total: ptotal,
+        top_comment: x["top_comment"],
+    };
+    sendMessageToPage(message)
+}
+function forwardPost(x){
+    if (debug == true) console.log(x);
+    utotal = ( x["up_total"] == undefined   ) ? x["utotal"]   : x["up_total"];
+    dtotal = ( x["down_total"] == undefined ) ? x["dtotal"] : x["down_total"];
+    ptotal = ( x["post_total"] == undefined ) ? 0 : x["post_total"];
+    messageType = (x["topLevel"] == true) ? "PostUpdateTL" : "PostUpdate";
+    comment = (messageType == "PostUpdate" && x["comment"])? true : false;
+    var message = {
+        message: messageType,
+        location: x["location"],
+        up_total: utotal, 
+        down_total: dtotal, 
+        comment_total: ptotal,
+        author: x["author"],
+        content: x["content"],
+        comment: comment,
+        uid: x["uid"]
+    };
+    sendMessageToPage(message);
+}
+
+function forwardVote(x){
+    if (debug == true) console.log(x);
+    voteStatus = x["status"];
+    var message = {
+        message: "VoteUpdate",
+        voteStatus: x["status"],
+        utotal: x["up_total"],
+        dtotal: x["down_total"]
+    };
+    sendMessageToPage(message);
+}
 
 window.addEventListener('message', function (e) {
   if (e.data.type === undefined) return;
@@ -382,14 +461,18 @@ window.addEventListener('message', function (e) {
   if (debug) console.log(e.data.type + " Stub " + e.data.data);
 
   switch (e.data.type) {
+	case 'IVSettingsReq':
+	   const message = {
+			message: "SettingsUpdate",
+			data: settingsState
+	   }
+       sendMessageToPage(message)
+	   break;
     case 'IVLike':
       if (e.data.data != '') {
         if (debug) console.log(voteStatus);
         const likeMessage = voteStatus === "up" ? "InvisibleVoiceUnvote" : "InvisibleVoiceUpvote";
-        (async () => {
-            const respond =  await browser.runtime.sendMessage(identifier, { [likeMessage]: hashforsite });
-            sendToPage(respond);
-        })();
+        browser.runtime.sendMessage({ [likeMessage]: hashforsite });
       }
       break;
 
@@ -397,10 +480,7 @@ window.addEventListener('message', function (e) {
       if (e.data.data != '') {
         if (debug) console.log(e.data.type + " Stub");
         const dislikeMessage = voteStatus === "down" ? "InvisibleVoiceUnvote" : "InvisibleVoiceDownvote";
-        (async () => {
-            const respond =  await browser.runtime.sendMessage(identifier, { [dislikeMessage]: hashforsite });
-            sendToPage(respond);
-        })();
+        browser.runtime.sendMessage({ [dislikeMessage]: hashforsite });
       }
       break;
 
@@ -410,6 +490,63 @@ window.addEventListener('message', function (e) {
         browser.storage.local.set({ "blockedHashes": blockedHashes });
         aSiteYouVisit = window.location.href;
         window.location.replace(browser.runtime.getURL('blocked.html') + "?site=" + domainString + "&return=" + aSiteYouVisit);
+      }
+      break;
+    case 'IVGetPost':
+          if (e.data.data != ''){
+            if (debug) console.log(e.data.data)
+            const sending = browser.runtime.sendMessage({"InvisibleGetPost": e.data.data}) 
+            sending.then(forwardPost, handleError)
+          }
+      break;
+    case 'IVMakePost':
+          if (e.data.data != ''){
+            if (debug) console.log(e.data.data)
+            const sending = browser.runtime.sendMessage({"InvisibleMakePost": e.data.data}) 
+            sending.then(handleError, handleError)
+          }
+      break;
+    case 'IVPostStuff':
+          if (e.data.data != ''){
+            if (debug) console.log(e.data.data)
+            const sending = browser.runtime.sendMessage({"InvisibleModuleInfo": e.data.data}) 
+            sending.then(forwardPosts, handleError)
+          }
+      break;
+    case 'IVPostVoteUp':
+    case 'IVPostVoteDown':
+    case 'IVPostVoteUnvote':
+          if (e.data.data != ''){
+            if (debug) console.log(e.data.data)
+            const sending = browser.runtime.sendMessage({"InvisibleModuleVote": e.data.data, "type": e.data.type}) 
+            sending.then(forwardPosts, handleError)
+          }
+      break;
+
+
+    case 'IVVoteStuff':
+      if (e.data.data != '') {
+          console.log(`IVVOTESTUFF ${e.data.data}`)
+          if (voteCode == undefined){
+              voteCode = e.data.data;
+              console.log("VoteCodeSet")
+              const sending = browser.runtime.sendMessage({"InvisibleVoteTotal": voteCode}) 
+              sending.then(forwardVotes, handleError)
+          } else {
+              var command;
+              if (e.data.data == "up"){
+                    command = "InvisibleVoteUpvote";
+              } else if (e.data.data == "down") {
+                    command = "InvisibleVoteDownvote";
+              } else if (e.data.data == "un"){
+                    command = "InvisibleVoteUnvote";
+              }
+              message = {}
+              message[command] = voteCode
+              const sending = browser.runtime.sendMessage(message) 
+              sending.then(forwardVote, handleError)
+              
+          }
       }
       break;
 
@@ -425,6 +562,8 @@ window.addEventListener('message', function (e) {
         } else {
           if (e.data.data == 'back') {
             resize();
+          } else if (e.data.data == 'unwork') {
+            resize("oldnetwork");
           } else {
             if (distance === 160) resize();
           }
@@ -436,25 +575,49 @@ window.addEventListener('message', function (e) {
       if (debug) console.log("DarkMode stub", e.data.data);
       break;
 
+    case 'IVIndexRefresh':
+      fetchIndex();
+      break;
+
     case 'IVNotificationsCacheClear':
-      console.log("NotCacheClear stub", e.data.data);
+      if (debug) console.log("NotCacheClear stub", e.data.data);
       browser.storage.local.set({ "siteData": {} });
       browser.storage.local.set({ "userPreferences": defaultUserPreferences });
+      if (notifications == "true") dismissNotification();
+      notificationsDismissed = false;
+      enableNotifications();
       break;
 
     case 'IVNotificationsPreferences':
-      console.log("UserPreference stub", e.data.data);
+      if (debug) console.log("UserPreference stub", e.data.data);
       browser.storage.local.set({ "userPreferences": e.data.data });
       break;
 
     case 'IVNotificationsTags':
-      console.log("Tags stub", e.data.data);
+      if (debug) console.log("Tags stub", e.data.data);
       browser.storage.local.set({ "notificationTags": e.data.data });
+      if (notifications == "true") dismissNotification();
+      notificationsDismissed = false;
+      enableNotifications();
       break;
 
     case 'IVNotifications':
-      console.log("Notifications stub", e.data.data);
+      if (debug) console.log("Notifications stub", e.data.data);
       browser.storage.local.set({ "notifications": e.data.data });
+
+      if (e.data.data == "true") {
+        notificationsDismissed = false;
+        if (debug) console.log("notifications were " + notifications);
+
+        if (document.getElementById("IVNotification") === null) {
+          enableNotifications();
+        }
+
+        notifications = "true";
+      } else {
+        if (notifications == "true") dismissNotification();
+        notifications = "false";
+      }
       break;
 
     case 'IVKeepOnScreen':
@@ -464,12 +627,34 @@ window.addEventListener('message', function (e) {
         resize("load");
       }
       break;
+    case 'IVSettingsChange':
+      console.log("Settings Saved")
+      browser.storage.local.set({"settings_obj": JSON.stringify(e.data.data)});
+      processSettingsObject();
+      break;
 
     case 'IVClose':
       resize("close");
       break;
   }
 });
+
+async function processSettingsObject(){
+    try {
+    settingsState = await browser.storage.local.get("settings_obj").then(function(obj){
+        return JSON.parse(obj["settings_obj"])
+    });
+    } catch(e){
+        console.log(e)
+        settingsState = defaultSettingsState;
+    }
+    debug = settingsState["debugMode"]
+    console.log(settingsState);
+	if (settingsState["notifications"])
+		enableNotifications()
+}
+
+
 iframe.addEventListener('load', function(e){
     if (hashforsite === undefined) {
     } else if (voting == true) {

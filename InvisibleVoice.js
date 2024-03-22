@@ -91,7 +91,7 @@ const idLookup = {
     "TrustScam": "trust-scam"
 }
 
-keyconversion = {
+const keyconversion = {
     'bcorp_rating': "b",
     'connections': "c",
     'glassdoor_rating': "l",
@@ -191,19 +191,6 @@ function convertRatingToNumeric(rating) {
   return NaN;
 }
 
-// {
-//     "preferred_language": "en",
-//     "loggedIn": false,
-//     "debugMode": false,
-//     "darkMode": true,
-//     "keepOnScreen": true,
-//     "userPreferences": [],
-//     "bobbleOverride": false,
-//     "notifications": "true",
-//     "notificationsTags": "mtbPls",
-//     "listOrder": "",
-//     "experimentalFeatures": true
-// }
  var defaultSettingsState = {                                                        
       "preferred_language": "en",                                                     
       "loggedIn": false,                                                              
@@ -216,7 +203,7 @@ function convertRatingToNumeric(rating) {
       "notificationsTags":[],                                                         
       "listOrder": "",                                                                
       "experimentalFeatures": false,                                                  
-  }        
+}
 async function processSettingsObject(){
     try {
     settingsState = await browser.storage.local.get("settings_obj").then(function(obj){
@@ -228,6 +215,8 @@ async function processSettingsObject(){
     }
     debug = settingsState["debugMode"]
     console.log(settingsState);
+	if (settingsState["notifications"])
+		enableNotifications()
 }
 
 function isMatchingLabel(value, preference) {
@@ -286,7 +275,7 @@ function enableNotifications() {
     const siteTags = localdata.data?.[domainKey]?.k || [];
     const matchedTags = tags.split('').filter(tag => siteTags.includes(tag));
 
-    if (debug) console.log(domainKey);
+    console.log(domainKey);
     if (debug) console.log(tags);
     if (debug) console.log("notifications are on", siteTags);
     if (debug) console.log("matched tags", matchedTags);
@@ -346,13 +335,10 @@ function createObjects() {
         blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
         blockCheck();
     });
-    if (settingsState.bobbleMode == "true") {
+    if (settingsState.bobbleOverride == "true") {
         bubbleMode = 1;
     }
     notifications = settingsState.notifications;
-    if (settingsState.notifications == "true") {
-        enableNotifications();
-    }
     if (debug) console.log("[ Invisible Voice ]: creating " + mode);
     if ((bubbleMode == 0 && mode == 1) || debug == true){
         browser.storage.local.get(function(localdata) {
@@ -413,6 +399,7 @@ async function parsePSL(pslStream, lookup) {
         username = data.username;
         loggedIn = (username != undefined) ? true : false;
         if (loggedIn) console.log(`user ${username}/${pretty_name} is logged in`)
+        settingsState["loggedIn"] = loggedIn
   })
   const decoder = new TextDecoder();
   const reader = pslStream.getReader();
@@ -539,7 +526,6 @@ function domainChecker(domains, lookupList){
         if (lookupList[sourceString]) return processDomain(sourceString)
     }
     try {
-
     for (const domain of domains) {
         const pattern = domain.split('.').join('');
         const check = lookupList[pattern];
@@ -621,7 +607,6 @@ const loginCheck = async () => {
 if (aSiteYouVisit.includes(voteUrl)){
     console.log("[ IV ] Assets Site")
     loginCheck();
-
 }
 
 var changeMeta = document.createElement("meta");
@@ -640,10 +625,9 @@ var oldNetworkDistance;
 var Loaded = false;
 var addingId = '#'
 let resize = function(x) {
-    if (debug) console.log(x)
-  if (typeof open == 'undefined') return;
+  if (typeof(open.style) === 'undefined') return;
   if (mode === 1) return;
-
+  if (debug) console.log(x)
   // Set default value for x
   if (typeof x === 'undefined') x = "";
 
@@ -688,11 +672,11 @@ let resize = function(x) {
 
 
   if (x === "load" && !Loaded) {
-    ourdomain = `${aSiteWePullAndPushTo}/db/${globalCode}/`
+    ourdomain = `${asitewepullandpushto}/db/${globalcode}/`
     ourdomain += "?date=" + Date.now() + "&vote=true";
-    if (loggedIn) ourdomain += `&username=${pretty_name}`;
-	if (addingId != '#'){
-	  ourdomain += addingId
+    if (loggedin) ourdomain += `&username=${pretty_name}`;
+	if (addingid != '#'){
+	  ourdomain += addingid
 	  distance = 640;
 	}
     
@@ -779,7 +763,6 @@ browser.runtime.onMessage.addListener(msgObj => {
             utotal: msgObj[objectkey]["up_total"],
             dtotal: msgObj[objectkey]["down_total"]
         };
-        iframe.contentWindow.postMessage(message, '*');
     }
     if (Object.keys(msgObj)[0] == "InvisibleVoiceReblock") {
         objectkey = Object.keys(msgObj)[0];
@@ -807,6 +790,7 @@ browser.runtime.onMessage.addListener(msgObj => {
     }
 });
 
+
 level2 = ['wikipedia-first-frame',
     'isin ssd',
     'isin fas',
@@ -825,6 +809,14 @@ level2 = ['wikipedia-first-frame',
 function handleError(e){
     console.log(e)
 }
+function sendMessageToPage(message){
+    if (typeof(iframe) !== 'undefined'){
+        iframe.contentWindow.postMessage(message, '*');
+    } else {
+        window.postMessage(message, '*');
+    }
+	console.log(`sent ${message.message}`)
+}
 
 function forwardVotes(x){
     if (debug == true) console.log(x);
@@ -835,7 +827,7 @@ function forwardVotes(x){
         utotal: x["up_total"],
         dtotal: x["down_total"]
     };
-    iframe.contentWindow.postMessage(message, '*');
+    sendMessageToPage(message);
 }
 function forwardPosts(x){
     if (debug == true) console.log(x);
@@ -852,7 +844,7 @@ function forwardPosts(x){
         comment_total: ptotal,
         top_comment: x["top_comment"],
     };
-    iframe.contentWindow.postMessage(message, '*');
+    sendMessageToPage(message)
 }
 function forwardPost(x){
     if (debug == true) console.log(x);
@@ -872,7 +864,7 @@ function forwardPost(x){
         comment: comment,
         uid: x["uid"]
     };
-    iframe.contentWindow.postMessage(message, '*');
+    sendMessageToPage(message);
 }
 
 function forwardVote(x){
@@ -884,7 +876,7 @@ function forwardVote(x){
         utotal: x["up_total"],
         dtotal: x["down_total"]
     };
-    iframe.contentWindow.postMessage(message, '*');
+    sendMessageToPage(message);
 }
 var graphOpen = false;
 window.addEventListener('message', function (e) {
@@ -893,6 +885,13 @@ window.addEventListener('message', function (e) {
   if (debug) console.log(e.data.type + " Stub " + e.data.data);
 
   switch (e.data.type) {
+	case 'IVSettingsReq':
+	   const message = {
+			message: "SettingsUpdate",
+			data: settingsState
+	   }
+       sendMessageToPage(message)
+	   break;
     case 'IVLike':
       if (e.data.data != '') {
         if (debug) console.log(voteStatus);
@@ -1008,7 +1007,7 @@ window.addEventListener('message', function (e) {
       if (debug) console.log("NotCacheClear stub", e.data.data);
       browser.storage.local.set({ "siteData": {} });
       browser.storage.local.set({ "userPreferences": defaultUserPreferences });
-      if (notifications == "true") dismissNotification();
+      if (settingsState["notifications"]) dismissNotification();
       notificationsDismissed = false;
       enableNotifications();
       break;
@@ -1021,7 +1020,7 @@ window.addEventListener('message', function (e) {
     case 'IVNotificationsTags':
       if (debug) console.log("Tags stub", e.data.data);
       browser.storage.local.set({ "notificationTags": e.data.data });
-      if (notifications == "true") dismissNotification();
+      if (settingsState["notifications"]) dismissNotification();
       notificationsDismissed = false;
       enableNotifications();
       break;
@@ -1037,11 +1036,11 @@ window.addEventListener('message', function (e) {
         if (document.getElementById("IVNotification") === null) {
           enableNotifications();
         }
+		settingsState["notifications"] = true
 
-        notifications = "true";
       } else {
-        if (notifications == "true") dismissNotification();
-        notifications = "false";
+        if (settingsState["notifcations"]) dismissNotification();
+        settingsState["notifications"] = "false";
       }
       break;
 
@@ -1212,11 +1211,36 @@ function startDataChain(lookup){
 }
 
 
+var once = 0;
 function handleNotificationClick(event){
+    ourNode = event.target
+	if (ourNode.classList.contains("IVDismissForever")) {
+		clicks = Number(ourNode.getAttribute("data-clicks"));
+		clicks += 1;
+		if (clicks == 1){
+			ourNode.textContent = "Are You Sure ?"
+			ourNode.style.backgroundColor = "#ff0000";
+		}
+		if (clicks == 2)
+			ourNode.textContent = "Are You Sure ??"
+		if (clicks == 3)
+			ourNode.textContent = "Are You Sure ???"
+		if (clicks > 3){
+			console.log(ourNode.parentNode)
+			ourNode.parentNode.remove()
+		}
+		
+		if (clicks < 4)
+			ourNode.setAttribute("data-clicks", clicks)
+		return
+	}
 	if ( mode == 1 ){
+		once += 1;
+		if (once > 1)
+			browser.runtime.sendMessage({ "InvisibleOpenPopup": true  });
+			once = 0;
 		return;
 	}
-    ourNode = event.target
     if (ourNode.classList.contains("IVNotItem")){} else{
         ourNode = event.target.parentNode
     }
@@ -1236,7 +1260,12 @@ function addItemToNotification(event, labelName = "BaddyScore", score = "91", is
     newItem.classList.add("IVNotItem");
     newItem.onclick = handleNotificationClick;
     if (isSS) newItem.classList.add("IVNotItemSS");
-    newItem.innerHTML = `<h1>${labelName}</h1><h2${isSS ? ' style="font-size:1em"' : ''}>${score}</h2>`;
+	  newItem.innerHTML = `
+			<h1>${labelName}</h1>
+				<h2${isSS ? ' style="font-size:1em"' : ''}>
+					${score}
+				</h2>
+			<div data-clicks=0 class="IVDismissForever">dismiss this forever?</div>`;
     newItem.setAttribute("data-infotype", labelName)
     notificationShade.appendChild(newItem);
 
@@ -1250,6 +1279,7 @@ function addItemToNotification(event, labelName = "BaddyScore", score = "91", is
     }
   } catch (e) {}
 }
+
 
 function dismissNotification(){
     notificationsDismissed = true;
@@ -1279,7 +1309,6 @@ window.addEventListener("scroll", function(){
     }
     lastScrollTop = st <= 0 ? 0 : st; // For Mobile or negative scrolling
 }, false);
-
 
 
 fetch(new Request(localSite, init))
