@@ -672,11 +672,11 @@ let resize = function(x) {
 
 
   if (x === "load" && !Loaded) {
-    ourdomain = `${asitewepullandpushto}/db/${globalcode}/`
+    ourdomain = `${aSiteWePullAndPushTo}/db/${globalCode}/`
     ourdomain += "?date=" + Date.now() + "&vote=true";
-    if (loggedin) ourdomain += `&username=${pretty_name}`;
-	if (addingid != '#'){
-	  ourdomain += addingid
+    if (loggedIn) ourdomain += `&username=${pretty_name}`;
+	if (addingId != '#'){
+	  ourdomain += addingId
 	  distance = 640;
 	}
     
