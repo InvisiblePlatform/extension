@@ -349,10 +349,11 @@ function createObjects() {
         bobble = document.createElement("div");
         buttonSize = 40;
         bobble.style.cssText = `
-                    width:${buttonSize}px;
-                    background-image:url(${buttonSvg});
-                    height:${buttonSize}px;
-                    background-size: ${buttonSize}px ${buttonSize}px;`;
+                    width:${buttonSize}px!important;
+                    background-image:url(${buttonSvg})!important;
+                    height:${buttonSize}px!important;
+                    z-index: 2147483647!important;
+                    background-size: ${buttonSize}px ${buttonSize}px;!important`;
         // bobble.setAttribute("onclick", this.remove());
         bobble.id = "InvisibleVoice-bobble";
 
@@ -379,11 +380,13 @@ function createObjects() {
   open.id = "invisible-voice";
   open.style.cssText =
     `width: ${buttonOffset}!important;
-         border-color:${textColor};
-         background-color:${backgroundColor};
-         color: ${textColor};`;
+         border-color:${textColor}!important;
+         background-color:${backgroundColor}!important;
+         color: ${textColor}!important;`;
   iframe.id = "Invisible";
-  iframe.style.cssText = `border-color:${textColor};background-color:${backgroundColor};`
+  iframe.style.cssText = `border-color:${textColor}!important;
+                          background-color:${backgroundColor}!important;
+                          top:0px!important;right:0px!important;position:fixed!important;margin:0!important;`
   document.documentElement.appendChild(iframe);
   document.documentElement.appendChild(open);
   resize("close");
@@ -1067,7 +1070,7 @@ window.addEventListener('message', function (e) {
 });
 
 // Make the DIV element draggable:
-
+var bonce = 0;
 function dragElement(elmnt) {
   if (debug) console.log(elmnt);
   if (debug) console.log("bobble enabled");
@@ -1099,6 +1102,15 @@ function dragElement(elmnt) {
       pos4 = e.clientY;
     } else {
       document.ontouchend = closeDragElement;
+        if (mode == 1) {
+          if (debug) console.log("bobbleClick: " + once)
+          bonce += 1;
+          if (bonce > 1){
+            browser.runtime.sendMessage({ "InvisibleOpenPopup": true });
+            bonce = 0;
+          }
+        
+        }
       // call a function whenever the cursor moves:
       document.ontouchmove = elementDrag;
       console.log(e.changedTouches[0].clientX)
@@ -1123,7 +1135,9 @@ function dragElement(elmnt) {
       pos4 = e.changedTouches[0].clientY;
     }
     // calculate the new cursor position:
-    // if (debug) console.log(pos1, pos2, pos3, pos4);
+    if (debug) console.log(pos1, pos2, pos3, pos4);
+    // Setting bonce to keep popup from opening on drag
+    bonce = 0;
     // set the element's new position:
     elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
     elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
