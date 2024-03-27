@@ -9,10 +9,13 @@ var testframe = document.getElementById("testout");
 var defaultIndexURL = "https://test.reveb.la";
 var aSiteWePullAndPushTo = defaultIndexURL;
 var domainString, sourceString, aSiteYouVisit;
+var notifcations;
+var voteCode;
 var debug = true;
 var graphOpen = false;
 var distance = 160;
 var voting = false;
+var settingsState;
 var mode = 0
 var useBG = false;
 var allowUpdate;
@@ -121,6 +124,13 @@ browser.storage.local.get(function(localdata) {
 // Domain handling
 // PSL 2023/06/23 updated
 async function parsePSL(pslStream, lookup, aSiteYouVisit) {
+  browser.storage.local.get(function(data){
+        pretty_name = data.pretty_name;
+        username = data.username;
+        loggedIn = (username != undefined) ? true : false;
+        if (loggedIn) console.log(`user ${username}/${pretty_name} is logged in`)
+        settingsState["loggedIn"] = loggedIn
+  })
   const decoder = new TextDecoder();
   const reader = pslStream.getReader();
   let chunk;
@@ -297,9 +307,10 @@ function callback(tabs) {
                 if (hashforsite === undefined)
                     hashforsite = md5(sourceString);
                 console.log(sourceString, hashforsite);
-                if (settingsState["loggedin"]) ourdomain += `&username=${pretty_name}`;
-	            if (addingid != '#'){
-	              ourdomain += addingid
+                ourdomain = `${aSiteWePullAndPushTo}/db/${sourceString}/`
+                if (settingsState["loggedIn"]) ourdomain += `&username=${pretty_name}`;
+	            if (addingId != '#'){
+	              ourdomain += addingId
 	              distance = 640;
 	            }
                 iframe.src = ourdomain + "&app=true";
@@ -319,11 +330,11 @@ function callback(tabs) {
 
 function createObjects(){
     console.log(sourceString, hashforsite);
-    ourdomain = `${asitewepullandpushto}/db/${globalcode}/`
+    ourdomain = `${aSiteWePullAndPushTo}/db/${globalCode}/`
     ourdomain += "?date=" + Date.now() + "&vote=true";
-    if (settingsState["loggedin"]) ourdomain += `&username=${pretty_name}`;
-	if (addingid != '#'){
-	  ourdomain += addingid
+    if (settingsState["loggedIn"]) ourdomain += `&username=${pretty_name}`;
+	if (addingId != '#'){
+	  ourdomain += addingId
 	  distance = 640;
 	}
     iframe.src = ourdomain + "&app=true";
@@ -340,14 +351,13 @@ let resize = function(x) {
     if(typeof(x)==='undefined') x = "";
     if (mode == 0) {
     if (isSet == false) {
-        ourdomain = `${asitewepullandpushto}/db/${globalcode}/`
+        ourdomain = `${aSiteWePullAndPushTo}/db/${globalCode}/`
         ourdomain += "?date=" + Date.now() + "&vote=true";
-        if (settingsState["loggedin"]) ourdomain += `&username=${pretty_name}`;
-	    if (addingid != '#'){
-	      ourdomain += addingid
-	      distance = 640;
-	    }
-    
+        if (settingsState["loggedIn"]) ourdomain += `&username=${pretty_name}`;
+	      if (addingId != '#'){
+	        ourdomain += addingId
+	        distance = 640;
+	      }
         iframe.src = ourdomain + "&app=true";
         isSet = true;
     }
@@ -424,9 +434,10 @@ function forwardPosts(x){
 }
 function forwardPost(x){
     if (debug == true) console.log(x);
-    utotal = ( x["up_total"] == undefined   ) ? x["utotal"]   : x["up_total"];
-    dtotal = ( x["down_total"] == undefined ) ? x["dtotal"] : x["down_total"];
-    ptotal = ( x["post_total"] == undefined ) ? 0 : x["post_total"];
+    if (typeof(x) == 'undefined') return;
+    utotal = ( 'up_total' in x ) ? x["up_total"] : x["utotal"];
+    dtotal = ( "down_total" in x ) ? x["down_total"] : x["dtotal"] ;
+    ptotal = ( "post_total" in x ) ? x["post_total"] : 0;
     messageType = (x["topLevel"] == true) ? "PostUpdateTL" : "PostUpdate";
     comment = (messageType == "PostUpdate" && x["comment"])? true : false;
     var message = {
@@ -496,21 +507,21 @@ window.addEventListener('message', function (e) {
           if (e.data.data != ''){
             if (debug) console.log(e.data.data)
             const sending = browser.runtime.sendMessage({"InvisibleGetPost": e.data.data}) 
-            sending.then(forwardPost, handleError)
+            sending.then(forwardPost, onError)
           }
       break;
     case 'IVMakePost':
           if (e.data.data != ''){
             if (debug) console.log(e.data.data)
             const sending = browser.runtime.sendMessage({"InvisibleMakePost": e.data.data}) 
-            sending.then(handleError, handleError)
+            sending.then(onError, onError)
           }
       break;
     case 'IVPostStuff':
           if (e.data.data != ''){
             if (debug) console.log(e.data.data)
             const sending = browser.runtime.sendMessage({"InvisibleModuleInfo": e.data.data}) 
-            sending.then(forwardPosts, handleError)
+            sending.then(forwardPosts, onError)
           }
       break;
     case 'IVPostVoteUp':
@@ -519,7 +530,7 @@ window.addEventListener('message', function (e) {
           if (e.data.data != ''){
             if (debug) console.log(e.data.data)
             const sending = browser.runtime.sendMessage({"InvisibleModuleVote": e.data.data, "type": e.data.type}) 
-            sending.then(forwardPosts, handleError)
+            sending.then(forwardPosts, onError)
           }
       break;
 
@@ -531,7 +542,7 @@ window.addEventListener('message', function (e) {
               voteCode = e.data.data;
               console.log("VoteCodeSet")
               const sending = browser.runtime.sendMessage({"InvisibleVoteTotal": voteCode}) 
-              sending.then(forwardVotes, handleError)
+              sending.then(forwardVotes, onError)
           } else {
               var command;
               if (e.data.data == "up"){
@@ -544,7 +555,7 @@ window.addEventListener('message', function (e) {
               message = {}
               message[command] = voteCode
               const sending = browser.runtime.sendMessage(message) 
-              sending.then(forwardVote, handleError)
+              sending.then(forwardVote, onError)
               
           }
       }
@@ -639,6 +650,20 @@ window.addEventListener('message', function (e) {
   }
 });
 
+ var defaultSettingsState = {                                                        
+      "preferred_language": "en",                                                     
+      "loggedIn": false,                                                              
+      "debugMode": false,                                                             
+      "darkMode": false,                                                              
+      "keepOnScreen": false,                                                          
+      "userPreferences": [],                                                          
+      "bobbleOverride": false,                                                        
+      "notifications": false,                                                         
+      "notificationsTags":[],                                                         
+      "listOrder": "",                                                                
+      "experimentalFeatures": false,                                                  
+}
+
 async function processSettingsObject(){
     try {
     settingsState = await browser.storage.local.get("settings_obj").then(function(obj){
@@ -650,8 +675,6 @@ async function processSettingsObject(){
     }
     debug = settingsState["debugMode"]
     console.log(settingsState);
-	if (settingsState["notifications"])
-		enableNotifications()
 }
 
 
@@ -721,8 +744,8 @@ function onError(e){
 
 function startDataChain(lookup){
     console.log("chain")
-    fetch(new Request(psl, init))
-        .then(response => parsePSL(response.body, lookup, aSiteYouVisit));
+    processSettingsObject().then(fetch(new Request(psl, init))
+        .then(response => parsePSL(response.body, lookup, aSiteYouVisit)));
 }
 
 console.log(identifier);

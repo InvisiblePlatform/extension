@@ -92,10 +92,12 @@ async function postGet(location){
                                                                                 
    };                                                                           
    console.log(`getting post for ${location}`)
+   console.log(postVars)
    var data = await fetch(                                                      
        new Request(voteUrl + "/get-post", postVars)                                 
    ).then(response => response.json()                                           
    ).then(data => {                                                             
+        console.log(data)
         if (location.startsWith("db/")){
             data["topLevel"] = true;
         }
@@ -287,6 +289,7 @@ browser.runtime.onMessage.addListener(function(msgObj, sender, sendResponse) {
     if (Object.keys(msgObj)[0] == "InvisibleGetPost") {
     console.log("bonk!",Object.keys(msgObj)[0]);
         (async function(){
+                console.log(msgObj)
 	            var data = await postGet(msgObj["InvisibleGetPost"]);
                 console.log(data);
                 if ("error" in data){
