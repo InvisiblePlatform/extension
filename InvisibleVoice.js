@@ -829,6 +829,12 @@ level2 = ['wikipedia-first-frame',
   'settings'
 ];
 
+function getNewPost(e) {
+  console.log(e)
+  console.log("sending new post")
+  const sending = browser.runtime.sendMessage({ "InvisibleGetPost": e.post_uid })
+  sending.then(forwardPost, handleError)
+}
 function handleError(e) {
   console.log(e)
 }
@@ -951,7 +957,7 @@ window.addEventListener('message', function (e) {
       if (e.data.data != '') {
         if (debug) console.log(e.data.data)
         const sending = browser.runtime.sendMessage({ "InvisibleMakePost": e.data.data })
-        sending.then(handleError, handleError)
+        sending.then(getNewPost, handleError)
       }
       break;
     case 'IVPostStuff':
