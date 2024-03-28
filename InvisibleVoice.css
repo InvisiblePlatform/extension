@@ -83,10 +83,9 @@
         margin-right: 12px;
     }
 }
-.IVNotItem:hover {
-  & .IVDismissForever{
-      display: block!important;
-  }
+
+.IVNotLogo:hover + .IVDismissForever {
+    display: block!important;
 }
 
 .IVNotItemSS {

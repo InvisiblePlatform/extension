@@ -66,6 +66,7 @@ var blockedHashes = [];
 var IVBlock = false;
 var bubbleMode = 0;
 var loggedIn;
+var dismissForever;
 
 if (window.matchMedia && !!window.matchMedia('(prefers-color-scheme: dark)').matches) {
   if (debug) console.info('[ Invisible Voice ]: Dark Theme detected 🌒 ');
@@ -206,15 +207,19 @@ var defaultSettingsState = {
   "notificationsTags": [],
   "listOrder": "",
   "experimentalFeatures": false,
+  "dissmissedNotifications": [],
 }
 async function processSettingsObject() {
+  settingsState = defaultSettingsState;
   try {
-    settingsState = await browser.storage.local.get("settings_obj").then(function (obj) {
+    tempSettingsState = await browser.storage.local.get("settings_obj").then(function (obj) {
       return JSON.parse(obj["settings_obj"])
     });
+  for (item in tempSettingsState){
+      settingsState[item] = tempSettingsState[item];
+  }
   } catch (e) {
     console.log(e)
-    settingsState = defaultSettingsState;
   }
   debug = settingsState["debugMode"]
   console.log(settingsState);
@@ -255,8 +260,16 @@ function enableNotifications() {
 
   const notivlogo = document.createElement("img");
   notivlogo.classList.add("IVNotLogo");
+  notivlogo.onclick = handleNotificationClick;
   notivlogo.src = ivLogoArrow;
   notificationOverlay.appendChild(notivlogo);
+
+  const hoverRemove = document.createElement("div");
+  hoverRemove.classList.add("IVDismissForever");
+  hoverRemove.textContent = "click 3 times to dismiss forever";
+  hoverRemove.setAttribute("data-clicks", 0);
+  notificationOverlay.appendChild(hoverRemove);
+  dismissForever = hoverRemove
 
   const hovernotice = document.createElement("div");
   hovernotice.classList.add("IVHoverNotice");
@@ -277,8 +290,13 @@ function enableNotifications() {
     const domainKey = domainString.replace(/\./g, "");
     const siteTags = localdata.data?.[domainKey]?.k || [];
     const matchedTags = tags.split('').filter(tag => siteTags.includes(tag));
+    if (settingsState["dissmissedNotifications"].indexOf(domainKey) != -1) {
+        console.log("dismissed on this domain")
+        return;
+    }
 
-    console.log(domainKey);
+
+    if (debug) console.log(domainKey);
     if (debug) console.log(tags);
     if (debug) console.log("notifications are on", siteTags);
     if (debug) console.log("matched tags", matchedTags);
@@ -956,10 +974,10 @@ window.addEventListener('message', function (e) {
 
     case 'IVVoteStuff':
       if (e.data.data != '') {
-        console.log(`IVVOTESTUFF ${e.data.data}`)
+        if (debug) console.log(`IVVOTESTUFF ${e.data.data}`)
         if (voteCode == undefined) {
           voteCode = e.data.data;
-          console.log("VoteCodeSet")
+          if (debug) console.log("VoteCodeSet")
           const sending = browser.runtime.sendMessage({ "InvisibleVoteTotal": voteCode })
           sending.then(forwardVotes, handleError)
         } else {
@@ -1144,6 +1162,7 @@ function dragElement(elmnt) {
     elmnt.style.filter = "drop-shadow(.5rem .5rem 2rem #afa)";
     elmnt.style.transition = "filter .5s transform .2s";
     elmnt.style.transform = "scale(1,1)";
+    elmnt.innerHTML = ""
   }
 
   var id = null;
@@ -1213,6 +1232,39 @@ function dragElement(elmnt) {
     elmnt.style.left = (window.innerWidth * leftOffset) + "px";
 
     placestore['newplace'] = topOffset + "," + leftOffset;
+    elmnt.style.backgroundColor = "";
+    const links = document.getElementsByTagName("a");
+    posY = 40 + Number(elmnt.style.top.replace("px",""))
+    posX = 20 + Number(elmnt.style.left.replace("px",""))
+    console.log(posY)
+    for (const link in links){
+        var linkBB;
+        try {
+          linkBB = links[link].getBoundingClientRect()
+        } catch(e){}
+        upperBound = linkBB.top;
+        lowerBound = upperBound + linkBB.height
+        if ( upperBound < posY && lowerBound > posY){
+          upperLimit = linkBB.left;
+          lowerLimit = upperLimit + linkBB.width;
+          if ( upperLimit < posX && lowerLimit > posX){
+
+              if (typeof(links[link].href) != 'undefined'){
+              elmnt.style.backgroundColor = "red";
+              elmnt.style.borderRadius = "200px";
+              elmnt.innerHTML = `
+                <span id="IVHoverGo" style="text-align: center;
+                transform-origin: center;
+                transform: translate(-50%, 40px);
+                position: inherit;
+                background-color:white;"> ${links[link].href.replace(/\.m\./g, '.').replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0].replace(/^m\./g, '')} </span>
+              `
+              }
+
+          }
+        console.log("X " + posX + " Y " + posY + " B " + upperLimit + "LB" + lowerLimit)
+        }
+    }
     browser.storage.local.set(placestore);
   }
 }
@@ -1229,28 +1281,53 @@ function startDataChain(lookup) {
 
 
 var once = 0;
+
 function handleNotificationClick(event) {
   ourNode = event.target
-  if (ourNode.classList.contains("IVDismissForever")) {
-    clicks = Number(ourNode.getAttribute("data-clicks"));
+  if (ourNode.classList.contains("IVNotLogo")) {
+    dismissForever = document.getElementsByClassName("IVDismissForever")[0]
+    console.log(dismissForever)
+    clicks = Number(dismissForever.getAttribute("data-clicks"));
     clicks += 1;
     if (clicks == 1) {
-      ourNode.textContent = "Are You Sure ?"
-      ourNode.style.backgroundColor = "#ff0000";
+      dismissForever.textContent = "Are You Sure ?"
+      dismissForever.style.backgroundColor = "#ff0000";
     }
     if (clicks == 2)
-      ourNode.textContent = "Are You Sure ??"
-    if (clicks == 3)
-      ourNode.textContent = "Are You Sure ???"
-    if (clicks > 3) {
-      console.log(ourNode.parentNode)
-      ourNode.parentNode.remove()
+      dismissForever.textContent = "Are You Sure ??"
+    if (clicks > 2) {
+      console.log(`dismissFor ${domainString.replace(/\./g, "")}`)
+      document.getElementById("IVNotification").remove()
+      settingsState["dissmissedNotifications"].push(domainString.replace(/\./g,""))
+      browser.storage.local.set({ "settings_obj": JSON.stringify(settingsState) });
     }
 
-    if (clicks < 4)
-      ourNode.setAttribute("data-clicks", clicks)
+    if (clicks < 3)
+      dismissForever.setAttribute("data-clicks", clicks)
     return
   }
+
+  // Older individual implementation
+  // if (ourNode.classList.contains("IVDismissForever")) {
+  //   clicks = Number(ourNode.getAttribute("data-clicks"));
+  //   clicks += 1;
+  //   if (clicks == 1) {
+  //     ourNode.textContent = "Are You Sure ?"
+  //     ourNode.style.backgroundColor = "#ff0000";
+  //   }
+  //   if (clicks == 2)
+  //     ourNode.textContent = "Are You Sure ??"
+  //   if (clicks == 3)
+  //     ourNode.textContent = "Are You Sure ???"
+  //   if (clicks > 3) {
+  //     console.log(ourNode.parentNode)
+  //     ourNode.parentNode.remove()
+  //   }
+
+  //   if (clicks < 4)
+  //     ourNode.setAttribute("data-clicks", clicks)
+  //   return
+  // }
   if (mode == 1) {
     console.log("notificationClick: " + once)
     once += 1;
@@ -1283,8 +1360,8 @@ function addItemToNotification(event, labelName = "BaddyScore", score = "91", is
 			<h1>${labelName}</h1>
 				<h2${isSS ? ' style="font-size:1em"' : ''}>
 					${score}
-				</h2>
-			<div data-clicks=0 class="IVDismissForever">dismiss this forever?</div>`;
+				</h2>`
+			// <div data-clicks=0 class="IVDismissForever">dismiss this forever?</div>`;// Older Implementation
     newItem.setAttribute("data-infotype", labelName)
     notificationShade.appendChild(newItem);
 
