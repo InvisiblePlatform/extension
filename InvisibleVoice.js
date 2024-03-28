@@ -891,6 +891,7 @@ function forwardPost(x) {
     author: x["author"],
     content: x["content"],
     top_comment: x["top_comment"],
+    status: x["status"],
     comment: comment,
     uid: x["uid"]
   };
