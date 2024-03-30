@@ -16,24 +16,21 @@ var graphOpen = false;
 var distance = 160;
 var voting = false;
 var settingsState;
-var mode = 0
 var useBG = false;
 var allowUpdate;
-const phoneRegex = /iPhone/i;
+var voteStatus, hashforsite, currentTab;
+var phoneMode = true;
+
+// Set browser to chrome if chromium based
 const chrRegex = /Chr/i;
 const frRegex = /Firefox/i;
-var voteStatus, hashforsite, currentTab;
+const phoneRegex = /iPhone/i;
 
-if (phoneRegex.test(navigator.userAgent))
-    mode = 1;
+browser = chrome || browser;
 
-if (chrRegex.test(navigator.userAgent)){
-    browser = chrome;
-    identifier = "fafojfdhjlapbpafdcoggecpagohpono"
-
-}
-if (frRegex.test(navigator.userAgent))
-    identifier = "c81358df75e512918fcefb49e12266fadd4be00f@temporary-addon"
+if (chrRegex.test(navigator.userAgent)) identifier = "fafojfdhjlapbpafdcoggecpagohpono"
+if (frRegex.test(navigator.userAgent)) identifier = "c81358df75e512918fcefb49e12266fadd4be00f@temporary-addon"
+if (phoneRegex.test(navigator.userAgent)) phoneMode = true;
 
 //  Formatted version of a popular md5 implementation
 //  Original copyright (c) Paul Johnston & Greg Holt.
@@ -314,10 +311,10 @@ function callback(tabs) {
 	              distance = 640;
 	            }
                 iframe.src = ourdomain + "&app=true";
-                if (mode == 0) iframe.style.width = distance + 'px';
-                if (mode == 0) iframe.style.height = '100em';
-                if (mode == 1) iframe.style.width = '100%';
-                if (mode == 1) iframe.style.height = '100%';
+                if (!phoneMode) iframe.style.width = distance + 'px';
+                if (!phoneMode) iframe.style.height = '100em';
+                if (phoneMode) iframe.style.width = '100%';
+                if (phoneMode) iframe.style.height = '100%';
             })
         } else {
             fetch(new Request(localSite, init))
@@ -339,17 +336,17 @@ function createObjects(){
 	}
     iframe.src = ourdomain + "&app=true";
 
-    if (mode == 0) iframe.style.width = distance + 'px';
-    if (mode == 0) iframe.style.height = '100em';
-    if (mode == 1) iframe.style.width = '100%';
-    if (mode == 1) iframe.style.height = '100%';
+    if (!phoneMode) iframe.style.width = distance + 'px';
+    if (!phoneMode) iframe.style.height = '100em';
+    if (phoneMode) iframe.style.width = '100%';
+    if (phoneMode) iframe.style.height = '100%';
 }
 
 var addingId = '#';
 var isSet = false;
 let resize = function(x) {
     if(typeof(x)==='undefined') x = "";
-    if (mode == 0) {
+    if (!phoneMode) {
     if (isSet == false) {
         ourdomain = `${aSiteWePullAndPushTo}/db/${globalCode}/`
         ourdomain += "?date=" + Date.now() + "&vote=true";
@@ -688,43 +685,62 @@ iframe.addEventListener('load', function(e){
     }
 });
 const tagLookup = {
-    "l": "Glassdoor",
-    "b": "BCorp",
-    "P": "TOS;DR",
-    "m": "MBFC",
-    "t": "TrustPilot",
-    "s": "TrustScam"
+  "l": "Glassdoor",
+  "b": "BCorp",
+  "p": "TOS;DR",
+  "m": "MBFC",
+  "t": "TrustPilot",
+  "s": "TrustScam",
+  "g": "GoodOnYou",
+  "w": "WorldBenchMark",
+  "e": "LobbyEU",
+}
+const idLookup = {
+  "Glassdoor": "glassdoor",
+  "BCorp": "bcorp",
+  "TOS;DR": "tosdr",
+  "MBFC": "mbfc",
+  "TrustPilot": "trust-pilot",
+  "TrustScam": "trust-scam",
+  "WorldBenchMark": "wbm",
+  "LobbyEU": "lobbyeu",
 }
 
-keyconversion = {
-    'bcorp_rating': "b",
-    'connections': "c",
-    'glassdoor_rating': "l",
-    'goodonyou': "g",
-    'isin': "i",
-    'mbfc': "m",
-    'osid': "o",
-    'polalignment': "a",
-    'polideology': "p",
-    'ticker': "y",
-    'tosdr': "P",
-    'trust-pilot': "t",
-    'trustcore:': "s",
-    'wikidata_id': "w",
+const keyconversion = {
+  'bcorp_rating': "b",
+  'connections': "c",
+  'glassdoor_rating': "l",
+  'goodonyou': "g",
+  'isin': "i",
+  'mbfc': "m",
+  'osid': "o",
+  'polalignment': "a",
+  'polideology': "q",
+  'ticker': "y",
+  'tosdr': "p",
+  'trust-pilot': "t",
+  'trustcore:': "s",
+  'wikidata_id': "z",
+  'wbm': "w",
+  'lobbyeu': "e",
 }
 
 // Default user preferences with type, min, max, and labels for each tag
 const defaultUserPreferences = {
-   "l": { type: "range", min: 0, max: 10 },                                           
-   "b": { type: "range", min: 0, max: 150 },                                          
-   "P": { type: "range", min: 1, max: 6 },                                            
-   "s": { type: "range", min: 0, max: 100 },                                          
-   "t": { type: "range", min: 0, max: 100 },
-   "m": { type: "label", labels: [ "conspiracy-pseudoscience", "left",
-"left-center", "pro-science", "right", "right-center", "satire",
-"censorship", "conspiracy", "failed-fact-checks", "fake-news", "false-claims",
-"hate", "imposter", "misinformation", "plagiarism", "poor-sourcing", "propaganda", "pseudoscience"
-  ] },
+  "l": { type: "range", min: 0, max: 10 },
+  "w": { type: "range", min: 0, max: 100 },
+  "g": { type: "range", min: 0, max: 5 },
+  "b": { type: "range", min: 0, max: 150 },
+  "p": { type: "range", min: 1, max: 6 },
+  "s": { type: "range", min: 0, max: 100 },
+  "t": { type: "range", min: 0, max: 100 },
+  "m": {
+    type: "label", labels: ["conspiracy-pseudoscience", "left",
+      "left-center", "pro-science", "right", "right-center", "satire",
+      "censorship", "conspiracy", "failed-fact-checks", "fake-news", "false-claims",
+      "hate", "imposter", "misinformation", "plagiarism", "poor-sourcing", "propaganda", "pseudoscience"
+    ]
+  },
 };
 
 // Step 1: Load user preferences from browser.storage.local or set defaults

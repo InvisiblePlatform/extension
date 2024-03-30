@@ -33,7 +33,6 @@
     max-width: 200px;
     min-width: 200px;
     height: 48px;
-    display: flex;
     justify-content: space-between;
     align-items: center;
 }
@@ -64,7 +63,12 @@
     box-sizing: border-box;
     width: 200px;
     transform: translateY(48px);
+    overflow: hidden;
+    display:grid;
+    grid-template-areas: "title title" "source score";
+    grid-template-columns: 50% 50%;
     outline: 1px solid #111;
+    padding: 4px;
     transition: margin-top 0.3s, border-radius 0.3s;
     border: black solid 0px;
     border-radius: 8px;
@@ -75,12 +79,29 @@
         display: inline;
     }
     & h1 {
-        font-size: 20px;
-        margin-left: 12px;
+        font-size: 18px;
+        grid-area: title;
+        white-space: nowrap;
     }
     & h2 {
+        grid-area: score;
         font-size: 32px;
-        margin-right: 12px;
+        position: absolute;
+        right: -4px;
+        bottom: -4px;
+        height: 48px;
+        padding: 4px;
+        padding-left: 48px;
+        box-sizing: border-box;
+        background:linear-gradient(90deg, transparent, #eee, #eee) ;
+        opacity: 0.9;
+    }
+    & h3 {
+        font-size: 16px;
+        font-style: italic;
+        grid-area: source;
+        white-space: nowrap;
+        opacity: 0.7;
     }
 }
 
@@ -124,6 +145,7 @@
 }
 
 .IVNotOverlay {
+    display: flex;
     z-index: 10;
     position: absolute;
     background: none;

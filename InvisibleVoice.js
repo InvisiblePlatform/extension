@@ -17,6 +17,7 @@ var init = {
 var updateJSON; // Request
 var IVLocalIndex = false;
 var mode = 0
+var phoneMode = false;
 
 // Set browser to chrome if chromium based
 const chrRegex = /Chr/i;
@@ -27,7 +28,7 @@ browser = chrome || browser;
 
 if (chrRegex.test(navigator.userAgent)) identifier = "fafojfdhjlapbpafdcoggecpagohpono"
 if (frRegex.test(navigator.userAgent)) identifier = "c81358df75e512918fcefb49e12266fadd4be00f@temporary-addon"
-if (phoneRegex.test(navigator.userAgent)) mode = 1;
+if (phoneRegex.test(navigator.userAgent)) phoneMode = true;
 
 // Various Lookups
 let localReplace = browser.runtime.getURL('replacements.json');
@@ -79,10 +80,13 @@ if (window.matchMedia && !!window.matchMedia('(prefers-color-scheme: dark)').mat
 const tagLookup = {
   "l": "Glassdoor",
   "b": "BCorp",
-  "P": "TOS;DR",
+  "p": "TOS;DR",
   "m": "MBFC",
   "t": "TrustPilot",
-  "s": "TrustScam"
+  "s": "TrustScam",
+  "g": "GoodOnYou",
+  "w": "WorldBenchMark",
+  "e": "LobbyEU",
 }
 const idLookup = {
   "Glassdoor": "glassdoor",
@@ -90,7 +94,9 @@ const idLookup = {
   "TOS;DR": "tosdr",
   "MBFC": "mbfc",
   "TrustPilot": "trust-pilot",
-  "TrustScam": "trust-scam"
+  "TrustScam": "trust-scam",
+  "WorldBenchMark": "wbm",
+  "LobbyEU": "lobbyeu",
 }
 
 const keyconversion = {
@@ -102,19 +108,23 @@ const keyconversion = {
   'mbfc': "m",
   'osid': "o",
   'polalignment': "a",
-  'polideology': "p",
+  'polideology': "q",
   'ticker': "y",
-  'tosdr': "P",
+  'tosdr': "p",
   'trust-pilot': "t",
   'trustcore:': "s",
-  'wikidata_id': "w",
+  'wikidata_id': "z",
+  'wbm': "w",
+  'lobbyeu': "e",
 }
 
 // Default user preferences with type, min, max, and labels for each tag
 const defaultUserPreferences = {
   "l": { type: "range", min: 0, max: 10 },
-  "b": { type: "range", min: 0, max: 150 },
-  "P": { type: "range", min: 1, max: 6 },
+  "w": { type: "multiRange", min: 0, max: 100 },
+  "g": { type: "range", min: 0, max: 5 },
+  "b": { type: "range", min: 0, max: 300 },
+  "p": { type: "range", min: 1, max: 6 },
   "s": { type: "range", min: 0, max: 100 },
   "t": { type: "range", min: 0, max: 100 },
   "m": {
@@ -137,26 +147,41 @@ browser.storage.local.get("userPreferences", function (localdata) {
   browser.storage.local.set({ "userPreferences": mergedPreferences });
 });
 
-function processNotification(tag, value) {
+function processNotification(tag, dataObj) {
   // Get user preferences
-  browser.storage.local.get("userPreferences", function (localdata) {
-    const preferences = localdata.userPreferences || {};
-    // Check if user preferences exist for the tag
-    if (preferences[tag]) {
-      const { type } = preferences[tag];
-      // Compare notification value based on the type
-      if (type === "range" && isInRange(value, preferences[tag])) {
-        // Display the notification with tag label and data
-        displayNotification(tag, value);
-      } else if (type === "label") {
-        // Display the notification with tag label and data
-        for (label of value) {
-          if (isMatchingLabel(label, preferences[tag]))
-            displayNotification(tag, label);
-        }
+  const value = dataObj[tag]
+
+  source = false
+  if (tag != "m")
+    source = dataObj[`_${tag}`]
+  //console.log(tag)
+  const preferences = settingsState["userPreferences"] || defaultUserPreferences;
+  // Check if user preferences exist for the tag
+  if (preferences[tag]) {
+    const { type } = preferences[tag];
+    // Compare notification value based on the type
+    if (type === "range" && isInRange(value, preferences[tag])) {
+      // Display the notification with tag label and data
+      displayNotification(tag, value, false, source);
+    } else if (type === "label") {
+      // Display the notification with tag label and data
+      for (label of value) {
+        if (isMatchingLabel(label, preferences[tag]), source)
+          displayNotification(tag, label, false, source);
       }
+    } else if (type === "multiRange") {
+      for (item in value) {
+        source = value[item]["s"]
+        modules = value[item]["m"]
+        for (mod in modules) {
+          data = modules[mod]
+          displayNotification(tag, data.r, data.s.replaceAll("_", " ").slice(5), source);
+        }
+
+      }
+
     }
-  });
+  }
 }
 
 
@@ -201,7 +226,7 @@ var defaultSettingsState = {
   "debugMode": false,
   "darkMode": false,
   "keepOnScreen": false,
-  "userPreferences": [],
+  "userPreferences": defaultUserPreferences,
   "bobbleOverride": false,
   "notifications": false,
   "notificationsTags": [],
@@ -215,9 +240,9 @@ async function processSettingsObject() {
     tempSettingsState = await browser.storage.local.get("settings_obj").then(function (obj) {
       return JSON.parse(obj["settings_obj"])
     });
-  for (item in tempSettingsState){
+    for (item in tempSettingsState) {
       settingsState[item] = tempSettingsState[item];
-  }
+    }
   } catch (e) {
     console.log(e)
   }
@@ -232,22 +257,16 @@ function isMatchingLabel(value, preference) {
   return labels.includes(value);
 }
 
-
-function displayNotification(tag, value) {
+function displayNotification(tag, value, alttitle, source) {
+  if (debug) console.log(`${tag},${value},${source}`);
   const tagLabel = tagLookup[tag]; // Get the label for the tag
-  if (debug) console.log(`${tag},${value}`);
-
   const isSS = tag === 'm'; // Check if it's a special case for "m" tag
-
-  addItemToNotification(null, tagLabel, value, isSS);
+  addItemToNotification(null, tagLabel, value, isSS, alttitle, source);
 }
 
-
 const ivLogoArrow = "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' fill='none'%3e%3ccircle cx='20' cy='20' r='18' fill='none'/%3e%3cpath fill='%231A1A1A' d='M18.201 14.181h3.657v14.536a1.823 1.823 0 0 1-1.828 1.817 1.823 1.823 0 0 1-1.829-1.817V14.181ZM18.201 10.547c0-1.003.819-1.817 1.829-1.817s1.828.814 1.828 1.817a1.823 1.823 0 0 1-1.828 1.817 1.823 1.823 0 0 1-1.829-1.817Z'/%3e%3cpath fill='%231A1A1A' d='m10.318 21.634 1.292-1.285a1.836 1.836 0 0 1 2.586 0l8.402 8.351-2.585 2.57-9.696-9.636Z'/%3e%3cpath fill='%231A1A1A' d='M25.804 20.349a1.836 1.836 0 0 1 2.586 0l1.293 1.285-9.696 9.636-2.585-2.57 8.402-8.351Z'/%3e%3cpath fill='%231A1A1A' fill-rule='evenodd' d='M40 20c0 11.046-8.954 20-20 20S0 31.046 0 20 8.954 0 20 0s20 8.954 20 20ZM20 37.46c9.643 0 17.46-7.817 17.46-17.46S29.643 2.54 20 2.54 2.54 10.357 2.54 20 10.357 37.46 20 37.46Z' clip-rule='evenodd'/%3e%3c/svg%3e"
-
 var notificationsToShow = false;
 var notificationsDismissed = false;
-
 
 function enableNotifications() {
   if (notificationsDismissed) return;
@@ -266,7 +285,7 @@ function enableNotifications() {
 
   const hoverRemove = document.createElement("div");
   hoverRemove.classList.add("IVDismissForever");
-  hoverRemove.textContent = "click 3 times to dismiss forever";
+  hoverRemove.textContent = "dismiss all on site?";
   hoverRemove.setAttribute("data-clicks", 0);
   notificationOverlay.appendChild(hoverRemove);
   dismissForever = hoverRemove
@@ -291,8 +310,8 @@ function enableNotifications() {
     const siteTags = localdata.data?.[domainKey]?.k || [];
     const matchedTags = tags.split('').filter(tag => siteTags.includes(tag));
     if (settingsState["dissmissedNotifications"].indexOf(domainKey) != -1) {
-        console.log("dismissed on this domain")
-        return;
+      console.log("dismissed on this domain")
+      return;
     }
 
 
@@ -306,8 +325,9 @@ function enableNotifications() {
       const currentState = localdata.siteData || {};
       if (currentState[domainKey]) {
         const data = currentState[domainKey];
-        matchedTags.forEach(tag => processNotification(tag, data[tag]));
+        matchedTags.forEach(tag => processNotification(tag, data));
         if (debug) console.log("local notification data");
+        if (debug) console.log(data)
       } else {
         let requestList = [domainKey];
         const indexList = localdata.data;
@@ -340,7 +360,7 @@ function enableNotifications() {
               browser.storage.local.set({ "siteData": currentState });
 
               if (domain == domainKey) {
-                matchedTags.forEach(tag => processNotification(tag, data[tag]));
+                matchedTags.forEach(tag => processNotification(tag, data));
               }
             });
         });
@@ -361,7 +381,7 @@ function createObjects() {
   }
   notifications = settingsState.notifications;
   if (debug) console.log("[ Invisible Voice ]: creating " + mode);
-  if ((bubbleMode == 0 && mode == 1) || debug == true) {
+  if ((bubbleMode == 0 && phoneMode) || debug == true) {
     browser.storage.local.get(function (localdata) {
       if (settingsState.bobbleMode != "true") {
         bobble = document.createElement("div");
@@ -392,7 +412,7 @@ function createObjects() {
       }
     })
   }
-  if (mode == 1) return;
+  if (phoneMode) return;
   iframe = document.createElement("iframe");
   open = document.createElement("div");
   open.id = "invisible-voice";
@@ -409,8 +429,8 @@ function createObjects() {
   document.documentElement.appendChild(open);
   resize("close");
   open.style.right = "0";
-  if (mode == 0) iframe.style.width = distance + 'px';
-  if (mode == 0) iframe.style.height = '100dvh';
+  if (!phoneMode) iframe.style.width = distance + 'px';
+  if (!phoneMode) iframe.style.height = '100dvh';
 };
 
 
@@ -464,6 +484,7 @@ async function parsePSL(pslStream, lookup) {
   fetchCodeForPattern(lookup);
   return domainInfo;
 }
+
 
 function parseDomain(domain, publicSuffixes) {
   const parts = domain.split('.').reverse();
@@ -649,7 +670,7 @@ var Loaded = false;
 var addingId = '#'
 let resize = function (x) {
   if (typeof (open.style) === 'undefined') return;
-  if (mode === 1) return;
+  if (phoneMode) return;
   if (debug) console.log(x)
   // Set default value for x
   if (typeof x === 'undefined') x = "";
@@ -749,72 +770,38 @@ function blockCheck() {
   browser.storage.local.get(function (localdata) {
     blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
   });
-  // console.log(domainString);
   if (blockedHashes.includes(hashforsite)) {
-    // lookup hash
     fetch(new Request(localHash, init))
       .then(response => response.json())
       .then(data => data[hashforsite]);
-    // .then(global => console.log(global));
-    // console.log(domainString);
     window.location.replace(browser.runtime.getURL('blocked.html') + "?site=" + domainString + "&return=" + aSiteYouVisit);
   };
 }
 
 browser.runtime.onMessage.addListener(msgObj => {
-  if (msgObj == "InvisibleVoiceBlockCheck") {
-    if (aSiteYouVisit != window.location.href) blockCheck();
+  if (msgObj === "InvisibleVoiceBlockCheck" && aSiteYouVisit !== window.location.href) {
+    blockCheck();
   } else {
-    if (debug == true) console.log(msgObj);
+    if (debug) console.log(msgObj);
   }
-  if (msgObj == "InvisibleVoiceRefresh") {
-    ["invisible-voice-floating"].forEach(function (id) {
-      try {
-        document.getElementById(id).remove();
-      } catch (e) {
-        if (debug == true) console.log("[ Invisible Voice ]: errorOnMessage" + e);
-      };
-    });
-  }
-  if (Object.keys(msgObj)[0] == "InvisibleVote") {
-    objectkey = Object.keys(msgObj)[0];
-    if (debug == true) console.log(msgObj[objectkey]);
-    voteStatus = msgObj[objectkey]["status"];
-    var message = {
-      message: "VoteUpdate",
-      voteStatus: msgObj[objectkey]["status"],
-      utotal: msgObj[objectkey]["up_total"],
-      dtotal: msgObj[objectkey]["down_total"]
-    };
-  }
-  if (Object.keys(msgObj)[0] == "InvisibleVoiceReblock") {
-    objectkey = Object.keys(msgObj)[0];
-    setTimeout(function () {
-      hashtoadd = msgObj[objectkey];
-      browser.storage.local.get(function (localdata) {
-        blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
+  const firstKey = Object.keys(msgObj)[0];
+  if (firstKey === "InvisibleVoiceReblock") {
+    const hashtoadd = msgObj[firstKey];
+    setTimeout(() => {
+      browser.storage.local.get(({ blockedHashes }) => {
+        blockedHashes = blockedHashes || [];
+        blockedHashes.push(hashtoadd);
+        browser.storage.local.set({ "blockedHashes": blockedHashes });
+        if (debug) console.log("block: ", hashtoadd);
+        if (debug) console.log("block: ", blockedHashes);
       });
-      blockedHashes.push(hashtoadd);
-      browser.storage.local.set({
-        "blockedHashes": blockedHashes
-      });
-      if (debug == true) console.log("block: ", hashtoadd);
-      if (debug == true) console.log("block: ", blockedHashes);
     }, 1000);
-  }
-  if (msgObj == "InvisibleVoiceOff") {
-    ["Invisible", "invisible-voice-floating"].forEach(function (id) {
-      try {
-        document.getElementById(id).remove();
-      } catch (e) {
-        if (debug == true) console.log("[ Invisible Voice ]: errorOnMessage" + e);
-      };
-    });
   }
 });
 
 
-level2 = ['wikipedia-first-frame',
+level2 = [
+  'wikipedia-first-frame',
   'isin ssd',
   'isin fas',
   'mbfc-header',
@@ -847,17 +834,6 @@ function sendMessageToPage(message) {
   console.log(`sent ${message.message}`)
 }
 
-function forwardVotes(x) {
-  if (debug == true) console.log(x);
-  voteStatus = x["status"];
-  var message = {
-    message: "VoteUpdate",
-    voteStatus: x["status"],
-    utotal: x["up_total"],
-    dtotal: x["down_total"]
-  };
-  sendMessageToPage(message);
-}
 function forwardPosts(x) {
   if (debug == true) console.log(x);
   voteStatus = x["status"];
@@ -910,12 +886,29 @@ function forwardVote(x) {
   sendMessageToPage(message);
 }
 var graphOpen = false;
+const actionLookup = {
+  "IVLike": "InvisibleUpvote",
+  "IVDislike": "InvisibleDownvote",
+  "IVSiteDataUpdate": "InvisibleSiteDataUpdate",
+  "IVGetPost": "InvisibleGetPost",
+  "IVMakePost": "InvisibleMakePost",
+  "IVPostStuff": "InvisibleModuleInfo",
+}
+const actionLookupCallBack = {
+  "IVGetPost": forwardPost,
+  "IVMakePost": getNewPost,
+  "IVPostStuff": forwardPosts,
+}
+const updown = {
+  "IVLike": "up",
+  "IVDislike": "down",
+}
 window.addEventListener('message', function (e) {
-  if (e.data.type === undefined) return;
+  const { type, data } = e.data;
+  if (type === undefined) return;
+  if (debug) console.log(`${type} Stub ${data}`);
 
-  if (debug) console.log(e.data.type + " Stub " + e.data.data);
-
-  switch (e.data.type) {
+  switch (type) {
     case 'IVSettingsReq':
       const message = {
         message: "SettingsUpdate",
@@ -923,119 +916,77 @@ window.addEventListener('message', function (e) {
       }
       sendMessageToPage(message)
       break;
-    case 'IVLike':
-      if (e.data.data != '') {
-        if (debug) console.log(voteStatus);
-        const likeMessage = voteStatus === "up" ? "InvisibleVoiceUnvote" : "InvisibleVoiceUpvote";
-        browser.runtime.sendMessage({ [likeMessage]: hashforsite });
-      }
+    case 'IVSiteDataUpdate':
+      browser.runtime.sendMessage({ [actionLookup[type]]: data });
       break;
 
+    case 'IVNotificationsPreferences':
+      if (debug) console.log("UserPreference stub", data);
+      browser.storage.local.set({ "userPreferences": data });
+      break;
+
+
+    case 'IVLike':
     case 'IVDislike':
-      if (e.data.data != '') {
-        if (debug) console.log(e.data.type + " Stub");
-        const dislikeMessage = voteStatus === "down" ? "InvisibleVoiceUnvote" : "InvisibleVoiceDownvote";
-        browser.runtime.sendMessage({ [dislikeMessage]: hashforsite });
+      if (data != '') {
+        const messageType = voteStatus === updown[type] ? "InvisibleVoiceUnvote" : actionLookup[type];
+        browser.runtime.sendMessage({ [messageType]: hashforsite });
       }
       break;
 
     case 'IVBoycott':
-      if (e.data.data != '') {
+      if (data != '') {
         blockedHashes.push(hashforsite);
         browser.storage.local.set({ "blockedHashes": blockedHashes });
         aSiteYouVisit = window.location.href;
         window.location.replace(browser.runtime.getURL('blocked.html') + "?site=" + domainString + "&return=" + aSiteYouVisit);
       }
       break;
+
     case 'IVGetPost':
-      if (e.data.data != '') {
-        if (debug) console.log(e.data.data)
-        const sending = browser.runtime.sendMessage({ "InvisibleGetPost": e.data.data })
-        sending.then(forwardPost, handleError)
-      }
-      break;
     case 'IVMakePost':
-      if (e.data.data != '') {
-        if (debug) console.log(e.data.data)
-        const sending = browser.runtime.sendMessage({ "InvisibleMakePost": e.data.data })
-        sending.then(getNewPost, handleError)
-      }
-      break;
     case 'IVPostStuff':
-      if (e.data.data != '') {
+      if (data != '') {
         if (debug) console.log(e.data.data)
-        const sending = browser.runtime.sendMessage({ "InvisibleModuleInfo": e.data.data })
-        sending.then(forwardPosts, handleError)
+        const sending = browser.runtime.sendMessage({ [actionLookup[type]]: data })
+        sending.then(actionLookupCallBack[type], handleError)
       }
       break;
     case 'IVPostVoteUp':
     case 'IVPostVoteDown':
     case 'IVPostVoteUnvote':
       if (e.data.data != '') {
-        if (debug) console.log(e.data.data)
-        const sending = browser.runtime.sendMessage({ "InvisibleModuleVote": e.data.data, "type": e.data.type })
+        if (debug) console.log(data)
+        const sending = browser.runtime.sendMessage({ "InvisibleModuleVote": data, "type": type })
         sending.then(forwardPosts, handleError)
       }
       break;
 
-
     case 'IVVoteStuff':
-      if (e.data.data != '') {
-        if (debug) console.log(`IVVOTESTUFF ${e.data.data}`)
-        if (voteCode == undefined) {
-          voteCode = e.data.data;
-          if (debug) console.log("VoteCodeSet")
-          const sending = browser.runtime.sendMessage({ "InvisibleVoteTotal": voteCode })
-          sending.then(forwardVotes, handleError)
+      if (data != '') {
+        if (!voteCode) {
+          voteCode = data;
+          const sending = browser.runtime.sendMessage({ "InvisibleVoteTotal": voteCode });
+          sending.then(forwardVote, handleError);
         } else {
-          var command;
-          if (e.data.data == "up") {
-            command = "InvisibleVoteUpvote";
-          } else if (e.data.data == "down") {
-            command = "InvisibleVoteDownvote";
-          } else if (e.data.data == "un") {
-            command = "InvisibleVoteUnvote";
-          }
-          let message = {}
-          message[command] = voteCode
-          const sending = browser.runtime.sendMessage(message)
-          sending.then(forwardVote, handleError)
-
+          const command = `InvisibleVote${toTitleCase(data)}vote`;
+          const message = { [command]: voteCode };
+          const sending = browser.runtime.sendMessage(message);
+          sending.then(forwardVote, handleError);
         }
       }
       break;
-
     case 'IVClicked':
-      if (e.data.data != '' && e.data.data != 'titlebar') {
-        if (debug) console.log("resize stub " + e.data.data, hashforsite);
-        if (level2.includes(e.data.data)) {
-          if (debug) console.log("level2 resize");
-          resize();
-        }
-        if (e.data.data == 'antwork' || e.data.data == 'graph-box') {
-          resize("network");
-        } else {
-          if (e.data.data == 'back') {
-            resize();
-          } else if (e.data.data == 'unwork') {
-            resize("oldnetwork");
-          } else {
-            if (distance === 160) resize();
-          }
-        }
+      if (data && data !== 'titlebar' && data !== 'settings') {
+        if (level2.includes(data)) resize();
+        else if (['antwork', 'graph-box'].includes(data)) resize("network");
+        else if (data === 'back') resize();
+        else if (data === 'unwork') resize("oldnetwork");
+        else if (distance === 160) resize();
       }
       break;
-
-    case 'IVDarkModeOverride':
-      if (debug) console.log("DarkMode stub", e.data.data);
-      break;
-
-    case 'IVIndexRefresh':
-      fetchIndex();
-      break;
-
     case 'IVNotificationsCacheClear':
-      if (debug) console.log("NotCacheClear stub", e.data.data);
+      if (debug) console.log("NotCacheClear stub", data);
       browser.storage.local.set({ "siteData": {} });
       browser.storage.local.set({ "userPreferences": defaultUserPreferences });
       if (settingsState["notifications"]) dismissNotification();
@@ -1043,32 +994,23 @@ window.addEventListener('message', function (e) {
       enableNotifications();
       break;
 
-    case 'IVNotificationsPreferences':
-      if (debug) console.log("UserPreference stub", e.data.data);
-      browser.storage.local.set({ "userPreferences": e.data.data });
-      break;
-
     case 'IVNotificationsTags':
       if (debug) console.log("Tags stub", e.data.data);
-      browser.storage.local.set({ "notificationTags": e.data.data });
+      browser.storage.local.set({ "notificationTags": data });
       if (settingsState["notifications"]) dismissNotification();
       notificationsDismissed = false;
       enableNotifications();
       break;
 
     case 'IVNotifications':
-      if (debug) console.log("Notifications stub", e.data.data);
-      browser.storage.local.set({ "notifications": e.data.data });
+      if (debug) console.log("Notifications stub", data);
+      browser.storage.local.set({ "notifications": data });
 
-      if (e.data.data == "true") {
+      if (data == "true") {
         notificationsDismissed = false;
         if (debug) console.log("notifications were " + notifications);
-
-        if (document.getElementById("IVNotification") === null) {
-          enableNotifications();
-        }
+        if (document.getElementById("IVNotification") === null) enableNotifications();
         settingsState["notifications"] = true
-
       } else {
         if (settingsState["notifcations"]) dismissNotification();
         settingsState["notifications"] = "false";
@@ -1076,7 +1018,7 @@ window.addEventListener('message', function (e) {
       break;
 
     case 'IVKeepOnScreen':
-      if (debug) console.log("keep on screen stub", e.data.data);
+      if (debug) console.log("keep on screen stub", data);
       if (e.data.data == "true") {
         distance = 0;
         resize("load");
@@ -1084,10 +1026,15 @@ window.addEventListener('message', function (e) {
       break;
     case 'IVSettingsChange':
       console.log("Settings Saved")
-      browser.storage.local.set({ "settings_obj": JSON.stringify(e.data.data) });
+      browser.storage.local.set({ "settings_obj": JSON.stringify(data) });
       processSettingsObject();
       break;
-
+    case 'IVDarkModeOverride':
+      if (debug) console.log("DarkMode stub", data);
+      break;
+    case 'IVIndexRefresh':
+      fetchIndex();
+      break;
     case 'IVClose':
       resize("close");
       break;
@@ -1099,71 +1046,42 @@ var bonce = 0;
 function dragElement(elmnt) {
   if (debug) console.log(elmnt);
   if (debug) console.log("bobble enabled");
-  var pos1 = 0,
-    pos2 = 0,
-    pos3 = 0,
-    pos4 = 0;
-  //if (document.getElementById(elmnt)) {
-  // if present, the header is where you move the DIV from:
-  //   document.getElementById(elmnt).onmousedown = dragMouseDown;
-  //    document.getElementById(elmnt).ontouchstart = dragMouseDown;
-  //} else {
-  // otherwise, move the DIV from anywhere inside the DIV:
-  elmnt.onmousedown = dragMouseDown;
-  elmnt.ontouchstart = dragMouseDown;
-  //}
+  var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+
+  elmnt.addEventListener("mousedown", dragMouseDown);
+  elmnt.addEventListener("touchstart", dragMouseDown);
 
   function dragMouseDown(e) {
     if (debug) console.log("bobble mousedown");
-    e = e || window.event;
     e.preventDefault();
-    // get the mouse cursor position at startup:
+    pos3 = e.clientX || e.changedTouches[0].clientX;
+    pos4 = e.clientY || e.changedTouches[0].clientY;
+
+    document.addEventListener("mouseup", closeDragElement);
+    document.addEventListener("touchend", closeDragElement);
+    document.addEventListener("mousemove", elementDrag);
+    document.addEventListener("touchmove", elementDrag);
     if (debug) console.log(e);
-    if (e.type != "touchstart") {
-      document.onmouseup = closeDragElement;
-      // call a function whenever the cursor moves:
-      document.onmousemove = elementDrag;
-      pos3 = e.clientX;
-      pos4 = e.clientY;
-    } else {
-      document.ontouchend = closeDragElement;
-        if (mode == 1) {
-          if (debug) console.log("bobbleClick: " + once)
-          bonce += 1;
-          if (bonce > 1){
-            browser.runtime.sendMessage({ "InvisibleOpenPopup": true });
-            bonce = 0;
-          }
-        
-        }
-      // call a function whenever the cursor moves:
-      document.ontouchmove = elementDrag;
-      console.log(e.changedTouches[0].clientX)
-      pos3 = e.changedTouches[0].clientX;
-      pos4 = e.changedTouches[0].clientY;
+    if (phoneMode) {
+      if (debug) console.log("bobbleClick: " + once)
+      bonce += 1;
+      if (bonce > 1) {
+        browser.runtime.sendMessage({ "InvisibleOpenPopup": true });
+        bonce = 0;
+      }
     }
   }
 
   function elementDrag(e) {
     dontOpen = true;
-    e = e || window.event;
-    if (e.type != "touchmove") {
-      e.preventDefault();
-      pos1 = pos3 - e.clientX;
-      pos2 = pos4 - e.clientY;
-      pos3 = e.clientX;
-      pos4 = e.clientY;
-    } else {
-      pos1 = pos3 - e.changedTouches[0].clientX;
-      pos2 = pos4 - e.changedTouches[0].clientY;
-      pos3 = e.changedTouches[0].clientX;
-      pos4 = e.changedTouches[0].clientY;
-    }
-    // calculate the new cursor position:
-    if (debug) console.log(pos1, pos2, pos3, pos4);
-    // Setting bonce to keep popup from opening on drag
-    bonce = 0;
-    // set the element's new position:
+    e.preventDefault();
+    var eX = e.clientX || e.changedTouches[0].clientX;
+    var eY = e.clientY || e.changedTouches[0].clientY;
+    pos1 = pos3 - eX;
+    pos2 = pos4 - eY;
+    pos3 = eX;
+    pos4 = eY;
+
     elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
     elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
     elmnt.style.filter = "drop-shadow(.5rem .5rem 2rem #afa)";
@@ -1176,103 +1094,74 @@ function dragElement(elmnt) {
 
   function closeDragElement() {
     // stop moving when mouse button is released:
-    document.onmouseup = null;
-    document.ontouchend = null;
-    document.onmousemove = null;
-    document.ontouchmove = null;
+    document.removeEventListener("mouseup", closeDragElement);
+    document.removeEventListener("touchend", closeDragElement);
+    document.removeEventListener("mousemove", elementDrag);
+    document.removeEventListener("touchmove", elementDrag);
+
     clearInterval(id);
     id = setInterval(frame, 10);
-
     function frame() {
-      var pos2dir = 0,
-        pos1dir = 0;
-      var shadowColor = "inherit";
-      if (pos2 > 0) {
-        pos2 -= 1;
-        pos2dir = 1;
-      }
-      if (pos2 < 0) {
-        pos2 += 1;
-        pos2dir = -1
-      }
-
-      if (pos1 > 0) {
-        pos1 -= 1;
-        pos1dir = 1;
-      }
-      if (pos1 < 0) {
-        pos1 += 1;
-        pos1dir = -1;
-      }
-
-      if (pos1 > 0 || pos1 < 0) elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
-      if (pos2 > 0 || pos2 < 0) elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
-
-      elmnt.style.transform = "scale(" + ((pos1dir / 4) + 1) + "," + ((pos2dir / 4) + 1) + ")";
-      elmnt.style.filter = "drop-shadow(" + pos1dir + "rem " + pos2dir + "rem 1rem" + shadowColor + ")";
-
-      if (pos1 == 0 && pos2 == 0) {
+      const step = (num) => (num > 0 ? 1 : num < 0 ? -1 : 0);
+      const shadowColor = (pos) => (pos !== 0 ? "#faa" : "inherit");
+      const pos1dir = step(pos1);
+      const pos2dir = step(pos2);
+      pos1 -= pos1dir;
+      pos2 -= pos2dir;
+      if (pos1 !== 0) elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+      if (pos2 !== 0) elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+      elmnt.style.transform = `scale(${pos1dir / 4 + 1}, ${pos2dir / 4 + 1})`;
+      elmnt.style.filter = `drop-shadow(${pos1dir}rem ${pos2dir}rem 1rem ${shadowColor(pos1dir)})`;
+      if (pos1 === 0 && pos2 === 0) {
         clearInterval(id);
         elmnt.style.filter = "drop-shadow(.25rem .25rem 1rem #afa)";
         elmnt.style.transform = "scale(1,1)";
       }
-      if (elmnt.offsetTop > window.innerHeight || elmnt.offsetTop < 0) {
-        pos2 *= -1;
-        shadowColor = "#faa";
-      }
-      if (elmnt.offsetLeft > window.innerWidth || elmnt.offsetLeft < 0) {
-        pos1 *= -1;
-        shadowColor = "#faa";
-      }
-
+      if (elmnt.offsetTop > window.innerHeight || elmnt.offsetTop < 0) pos2 *= -1;
+      if (elmnt.offsetLeft > window.innerWidth || elmnt.offsetLeft < 0) pos1 *= -1;
       elmnt.style.transition = "filter .1s";
     }
-    var topOffset = elmnt.offsetTop / window.innerHeight;
-    var leftOffset = elmnt.offsetLeft / window.innerWidth;
-    var placestore = {};
-    // console.log("[ Invisible Voice ]: loading loc" + pos)
-    if (topOffset > 0.95) topOffset = 0.9;
-    if (topOffset < 0) topOffset = 0.1;
-    if (leftOffset > 0.95) leftOffset = 0.9;
-    if (leftOffset < 0) leftOffset = 0.1;
+
+    var topOffset = Math.max(Math.min(elmnt.offsetTop / window.innerHeight, 0.9), 0.1);
+    var leftOffset = Math.max(Math.min(elmnt.offsetLeft / window.innerWidth, 0.9), 0.1);
+
     elmnt.style.top = (window.innerHeight * topOffset) + "px";
     elmnt.style.left = (window.innerWidth * leftOffset) + "px";
-
-    placestore['newplace'] = topOffset + "," + leftOffset;
     elmnt.style.backgroundColor = "";
-    const links = document.getElementsByTagName("a");
-    posY = 40 + Number(elmnt.style.top.replace("px",""))
-    posX = 20 + Number(elmnt.style.left.replace("px",""))
-    console.log(posY)
-    for (const link in links){
-        var linkBB;
-        try {
-          linkBB = links[link].getBoundingClientRect()
-        } catch(e){}
-        upperBound = linkBB.top;
-        lowerBound = upperBound + linkBB.height
-        if ( upperBound < posY && lowerBound > posY){
-          upperLimit = linkBB.left;
-          lowerLimit = upperLimit + linkBB.width;
-          if ( upperLimit < posX && lowerLimit > posX){
 
-              if (typeof(links[link].href) != 'undefined'){
-              elmnt.style.backgroundColor = "red";
-              elmnt.style.borderRadius = "200px";
-              elmnt.innerHTML = `
+    const links = document.getElementsByTagName("a");
+    posY = 40 + Number(elmnt.style.top.replace("px", ""))
+    posX = 20 + Number(elmnt.style.left.replace("px", ""))
+    console.log(posY)
+    for (const link in links) {
+      var linkBB;
+      try {
+        linkBB = links[link].getBoundingClientRect()
+      } catch (e) { }
+      upperBound = linkBB.top;
+      lowerBound = upperBound + linkBB.height
+      if (upperBound < posY && lowerBound > posY) {
+        upperLimit = linkBB.left;
+        lowerLimit = upperLimit + linkBB.width;
+        if (upperLimit < posX && lowerLimit > posX) {
+
+          if (typeof (links[link].href) != 'undefined') {
+            elmnt.style.backgroundColor = "red";
+            elmnt.style.borderRadius = "200px";
+            elmnt.innerHTML = `
                 <span id="IVHoverGo" style="text-align: center;
                 transform-origin: center;
                 transform: translate(-50%, 40px);
                 position: inherit;
                 background-color:white;"> ${links[link].href.replace(/\.m\./g, '.').replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0].replace(/^m\./g, '')} </span>
               `
-              }
-
           }
-        console.log("X " + posX + " Y " + posY + " B " + upperLimit + "LB" + lowerLimit)
+
         }
+        console.log("X " + posX + " Y " + posY + " B " + upperLimit + "LB" + lowerLimit)
+      }
     }
-    browser.storage.local.set(placestore);
+    browser.storage.local.set({ 'newplace': topOffset + "," + leftOffset });
   }
 }
 
@@ -1286,102 +1175,83 @@ function startDataChain(lookup) {
     .then(response => parsePSL(response.body, lookup)));
 }
 
-
 var once = 0;
-
 function handleNotificationClick(event) {
-  ourNode = event.target
-  if (ourNode.classList.contains("IVNotLogo")) {
-    dismissForever = document.getElementsByClassName("IVDismissForever")[0]
-    console.log(dismissForever)
-    clicks = Number(dismissForever.getAttribute("data-clicks"));
-    clicks += 1;
-    if (clicks == 1) {
-      dismissForever.textContent = "Are You Sure ?"
+  const clickedElement = event.target;
+  if (clickedElement.classList.contains("IVNotLogo")) {
+    const dismissForever = document.querySelector(".IVDismissForever");
+    let clicks = parseInt(dismissForever.getAttribute("data-clicks")) || 0;
+
+    clicks++;
+    if (clicks <= 2) {
+      dismissForever.textContent = `Are You Sure${'?'.repeat(clicks)}`;
       dismissForever.style.backgroundColor = "#ff0000";
     }
-    if (clicks == 2)
-      dismissForever.textContent = "Are You Sure ??"
     if (clicks > 2) {
-      console.log(`dismissFor ${domainString.replace(/\./g, "")}`)
-      document.getElementById("IVNotification").remove()
-      settingsState["dissmissedNotifications"].push(domainString.replace(/\./g,""))
-      browser.storage.local.set({ "settings_obj": JSON.stringify(settingsState) });
+      const domainKey = domainString.replace(/\./g, "");
+      const notification = document.getElementById("IVNotification");
+      if (notification) {
+        notification.remove();
+        settingsState["dismissedNotifications"].push(domainKey);
+        browser.storage.local.set({ "settings_obj": JSON.stringify(settingsState) });
+      }
     }
 
-    if (clicks < 3)
-      dismissForever.setAttribute("data-clicks", clicks)
-    return
+    dismissForever.setAttribute("data-clicks", clicks);
+    return;
   }
 
-  // Older individual implementation
-  // if (ourNode.classList.contains("IVDismissForever")) {
-  //   clicks = Number(ourNode.getAttribute("data-clicks"));
-  //   clicks += 1;
-  //   if (clicks == 1) {
-  //     ourNode.textContent = "Are You Sure ?"
-  //     ourNode.style.backgroundColor = "#ff0000";
-  //   }
-  //   if (clicks == 2)
-  //     ourNode.textContent = "Are You Sure ??"
-  //   if (clicks == 3)
-  //     ourNode.textContent = "Are You Sure ???"
-  //   if (clicks > 3) {
-  //     console.log(ourNode.parentNode)
-  //     ourNode.parentNode.remove()
-  //   }
-
-  //   if (clicks < 4)
-  //     ourNode.setAttribute("data-clicks", clicks)
-  //   return
-  // }
-  if (mode == 1) {
-    console.log("notificationClick: " + once)
-    once += 1;
-    if (once > 1){
+  if (phoneMode) {
+    if (once > 0) {
       browser.runtime.sendMessage({ "InvisibleOpenPopup": true });
       once = 0;
     }
+    once++;
     return;
   }
-  if (ourNode.classList.contains("IVNotItem")) { } else {
-    ourNode = event.target.parentNode
+
+  let node = clickedElement;
+  if (!node.classList.contains("IVNotItem")) {
+    node = clickedElement.parentNode;
   }
-  addingId = `#${idLookup[ourNode.getAttribute("data-infotype")]}`
-  console.log(idLookup[ourNode.getAttribute("data-infotype")])
-  var dismissData = {};
+  const dataInfotype = node.getAttribute("data-infotype");
+  const addingId = `#${idLookup[dataInfotype]}`;
+
+  const dismissData = {};
   dismissData[globalCode] = 0;
   browser.storage.local.set(dismissData);
+
   resize("load");
 }
 
-function addItemToNotification(event, labelName = "BaddyScore", score = "91", isSS = false) {
+function addItemToNotification(event, labelName = "BaddyScore", score = "91", isSS = false, alttitle = false, source = false) {
   if (notificationsDismissed) return;
 
-  try {
-    const newItem = document.createElement("div");
-    newItem.classList.add("IVNotItem");
-    newItem.onclick = handleNotificationClick;
-    if (isSS) newItem.classList.add("IVNotItemSS");
-    newItem.innerHTML = `
-			<h1>${labelName}</h1>
-				<h2${isSS ? ' style="font-size:1em"' : ''}>
-					${score}
-				</h2>`
-			// <div data-clicks=0 class="IVDismissForever">dismiss this forever?</div>`;// Older Implementation
-    newItem.setAttribute("data-infotype", labelName)
-    notificationShade.appendChild(newItem);
+  const name = (alttitle) ? alttitle : labelName;
+  const sourceString = (source) ? `<h3>${source}</h3>` : '';
 
-    if (!document.getElementById("IVNotification")) {
-      document.documentElement.appendChild(notificationShade);
-    }
+  const newItem = document.createElement("div");
+  newItem.classList.add("IVNotItem");
+  newItem.onclick = handleNotificationClick;
+  if (isSS) newItem.classList.add("IVNotItemSS");
+  newItem.innerHTML = `
+    <h1>${name}</h1>
+    <h2${isSS ? ' style="font-size:1em"' : ''}>${score}</h2>
+    ${sourceString}
+  `;
+  newItem.setAttribute("data-infotype", labelName);
+  notificationShade.appendChild(newItem);
 
-    const ivNotItems = document.getElementsByClassName("IVNotItem");
-    if (ivNotItems.length > 0) {
-      document.getElementsByClassName("IVHoverNotice")[0].style.visibility = "visible";
-    }
-  } catch (e) { }
+  if (!document.getElementById("IVNotification")) {
+    document.documentElement.appendChild(notificationShade);
+  }
+
+  const ivNotItems = document.getElementsByClassName("IVNotItem");
+  if (ivNotItems.length > 0) {
+    document.getElementsByClassName("IVHoverNotice")[0].style.visibility = "visible";
+  }
 }
+
 
 function dismissNotification() {
   notificationsDismissed = true;
@@ -1390,16 +1260,25 @@ function dismissNotification() {
   if (debug) console.log("notification dismissed")
 }
 
-function bobbleClick(){
-  if (mode == 1) {
+function bobbleClick() {
+  if (phoneMode) {
     console.log("notificationClick: " + once)
     once += 1;
-    if (once > 1){
+    if (once > 1) {
       browser.runtime.sendMessage({ "InvisibleOpenPopup": true });
       once = 0;
     }
     return;
   }
+}
+
+function toTitleCase(str) {
+  return str.replace(
+    /\w\S*/g,
+    function (txt) {
+      return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
+    }
+  );
 }
 
 var lastScrollTop = 0;
