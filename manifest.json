@@ -1,72 +1,70 @@
 {
-    "manifest_version": 3,
+  "manifest_version": 3,
 
-    "version": "2024.3.27",
-    "name": "Invisible Voice",
-    "description": "This extension boycotts a website",
+  "version": "2024.3.27",
+  "name": "Invisible Voice",
+  "description": "This extension boycotts a website",
 
-    "permissions": [
-        "tabs",
-        "storage",
-        "activeTab",
-        "scripting",
-        "webRequest",
-        "unlimitedStorage"
-    ],
-    "host_permissions":[
-        "https://invisible-voice.com/*",
-        "https://test.reveb.la/*",
-        "https://assets.reveb.la/*"
-    ],
-    "optional_host_permissions": [
-    	"*://*/*"
-    ],
+  "permissions": [
+    "tabs",
+    "storage",
+    "activeTab",
+    "scripting",
+    "webRequest",
+    "unlimitedStorage"
+  ],
+  "host_permissions": [
+    "https://invisible-voice.com/*",
+    "https://test.reveb.la/*",
+    "https://assets.reveb.la/*"
+  ],
+  "optional_host_permissions": ["*://*/*"],
 
-    "action": {
-    	"default_icon": "icon128.png",
-	"default_title": "invisible voice",
-    	"default_icons": {
-    	    "16" : "icon16.png",
-    	    "24" : "icon24.png",
-    	    "32" : "icon32.png",
-    	    "48" : "icon48.png",
-    	    "96" : "icon96.png",
-    	    "128" : "icon128.png"
-    	},
-	"browser_style": true,
-	"default_popup": "popup.html"
+  "action": {
+    "default_icon": "icon128.png",
+    "default_title": "invisible voice",
+    "default_icons": {
+      "16": "icon16.png",
+      "24": "icon24.png",
+      "32": "icon32.png",
+      "48": "icon48.png",
+      "96": "icon96.png",
+      "128": "icon128.png"
     },
+    "browser_style": true,
+    "default_popup": "popup.html"
+  },
 
-    	"icons": {
-    	    "16" : "icon16.png",
-    	    "24" : "icon24.png",
-    	    "32" : "icon32.png",
-    	    "48" : "icon48.png",
-    	    "96" : "icon96.png",
-    	    "128" : "icon128.png"
-    	},
+  "icons": {
+    "16": "icon16.png",
+    "24": "icon24.png",
+    "32": "icon32.png",
+    "48": "icon48.png",
+    "96": "icon96.png",
+    "128": "icon128.png"
+  },
 
+  "web_accessible_resources": [
+    { "resources": ["replacements.json"], "matches": ["<all_urls>"] },
+    { "resources": ["sitetohash.json"], "matches": ["<all_urls>"] },
+    { "resources": ["public_suffix_list.dat"], "matches": ["<all_urls>"] },
+    { "resources": ["hashtosite.json"], "matches": ["<all_urls>"] },
+    { "resources": ["blocked.html"], "matches": ["<all_urls>"] },
+    { "resources": ["logoShow.png"], "matches": ["<all_urls>"] },
+    { "resources": ["button.svg"], "matches": ["<all_urls>"] }
+  ],
 
-    "web_accessible_resources": [
-	    {"resources":["replacements.json"],"matches":["<all_urls>"]},
-	    {"resources":["sitetohash.json"],"matches":["<all_urls>"]},
-	    {"resources":["public_suffix_list.dat"],"matches":["<all_urls>"]},
-	    {"resources":["hashtosite.json"],"matches":["<all_urls>"]},
-	    {"resources":["blocked.html"],"matches":["<all_urls>"]},
-	    {"resources":["logoShow.png"],"matches":["<all_urls>"]},
-	    {"resources":["button.svg"],"matches":["<all_urls>"]}
-    ],
+  "background": {
+    "service_worker": "background.js",
+    "persistant": false
+  },
 
-    "background":{
-    	"service_worker": "background.js",
-        "persistant": false
-    },
-
-    "content_scripts": [{
-	    "matches": ["<all_urls>"],
-        "js": ["InvisibleVoice.js"],
-        "css": ["InvisibleVoice.css"],
-	    "run_at": "document_start"
-    }]
-
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["helper.js", "InvisibleVoice.js"],
+      "css": ["InvisibleVoice.css"],
+      "run_at": "document_start"
+    }
+  ]
 }

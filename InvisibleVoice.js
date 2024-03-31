@@ -1,11 +1,5 @@
 // "Simple" code that gets the job done by Orange
-//
-var debug; var allowUpdate = true;
 // Set up environment 
-var aSiteWePullAndPushTo = "https://test.reveb.la";
-//var aSiteWePullAndPushTo = "http://orange-nuc.local:4000";
-var settingsState;
-var now = (new Date).getTime();
 var headers = new Headers();
 var globalCode = "";
 var init = {
@@ -15,175 +9,51 @@ var init = {
   cache: 'default'
 };
 var updateJSON; // Request
-var IVLocalIndex = false;
-var mode = 0
-var phoneMode = false;
-
-// Set browser to chrome if chromium based
-const chrRegex = /Chr/i;
-const frRegex = /Firefox/i;
-const phoneRegex = /iPhone/i;
-
-browser = chrome || browser;
-
-if (chrRegex.test(navigator.userAgent)) identifier = "fafojfdhjlapbpafdcoggecpagohpono"
-if (frRegex.test(navigator.userAgent)) identifier = "c81358df75e512918fcefb49e12266fadd4be00f@temporary-addon"
-if (phoneRegex.test(navigator.userAgent)) phoneMode = true;
-
-// Various Lookups
-let localReplace = browser.runtime.getURL('replacements.json');
-let localHash = browser.runtime.getURL('hashtosite.json');
-let localSite = browser.runtime.getURL('sitetohash.json');
-let buttonSvg = browser.runtime.getURL('button.svg');
-let psl = browser.runtime.getURL('public_suffix_list.dat');
-let localIndex = browser.runtime.getURL('index.json');
-
-var lookup = {};
-
-var dontOpen = false;
-var level = 0;
-
 // The Elements we inject
-var globalCode, code, hashforsite, domainString, sourceString, open, iframe;
+var iframe;
+var domainString, sourceString;
+var aSiteYouVisit = window.location.href;
+
+var voteCode;
+var allowUpdate = true;
+var voteStatus, hashforsite;
+
+var debug;
+var phoneMode = false;
+var distance = 0;
+
+var oldNetworkDistance;
+
+var open;
 var domainInfo;
 var bgresponse;
 var username, pretty_name;
-var voteCode;
 
-var aSiteYouVisit = window.location.href;
 var buttonOffsetVal = 16;
 var buttonOffset = buttonOffsetVal + "px";
 
-var settingsState;
+var Loaded = false;
+var addingId = '#'
+var IVLocalIndex = false;
 
 var backgroundColor = "#fff";
 var textColor = "#343434";
 var heavyTextColor = "#111";
 
 var voteUrl = "https://assets.reveb.la";
-var voteStatus;
-var blockedHashes = [];
+
+var globalCode, code;
 
 var IVBlock = false;
 var bubbleMode = 0;
 var loggedIn;
 var dismissForever;
 
-if (window.matchMedia && !!window.matchMedia('(prefers-color-scheme: dark)').matches) {
-  if (debug) console.info('[ Invisible Voice ]: Dark Theme detected 🌒 ');
-  darkMode = true;
-  backgroundColor = "#343434";
-  textColor = "#fff";
-  heavyTextColor = "#AAA";
-}
-
-const tagLookup = {
-  "l": "Glassdoor",
-  "b": "BCorp",
-  "p": "TOS;DR",
-  "m": "MBFC",
-  "t": "TrustPilot",
-  "s": "TrustScam",
-  "g": "GoodOnYou",
-  "w": "WorldBenchMark",
-  "e": "LobbyEU",
-}
-const idLookup = {
-  "Glassdoor": "glassdoor",
-  "BCorp": "bcorp",
-  "TOS;DR": "tosdr",
-  "MBFC": "mbfc",
-  "TrustPilot": "trust-pilot",
-  "TrustScam": "trust-scam",
-  "WorldBenchMark": "wbm",
-  "LobbyEU": "lobbyeu",
-}
-
-const keyconversion = {
-  'bcorp_rating': "b",
-  'connections': "c",
-  'glassdoor_rating': "l",
-  'goodonyou': "g",
-  'isin': "i",
-  'mbfc': "m",
-  'osid': "o",
-  'polalignment': "a",
-  'polideology': "q",
-  'ticker': "y",
-  'tosdr': "p",
-  'trust-pilot': "t",
-  'trustcore:': "s",
-  'wikidata_id': "z",
-  'wbm': "w",
-  'lobbyeu': "e",
-}
-
-// Default user preferences with type, min, max, and labels for each tag
-const defaultUserPreferences = {
-  "l": { type: "range", min: 0, max: 10 },
-  "w": { type: "multiRange", min: 0, max: 100 },
-  "g": { type: "range", min: 0, max: 5 },
-  "b": { type: "range", min: 0, max: 300 },
-  "p": { type: "range", min: 1, max: 6 },
-  "s": { type: "range", min: 0, max: 100 },
-  "t": { type: "range", min: 0, max: 100 },
-  "m": {
-    type: "label", labels: ["conspiracy-pseudoscience", "left",
-      "left-center", "pro-science", "right", "right-center", "satire",
-      "censorship", "conspiracy", "failed-fact-checks", "fake-news", "false-claims",
-      "hate", "imposter", "misinformation", "plagiarism", "poor-sourcing", "propaganda", "pseudoscience"
-    ]
-  },
-};
-
-// Step 1: Load user preferences from browser.storage.local or set defaults
 browser.storage.local.get("userPreferences", function (localdata) {
   const loadedPreferences = localdata.userPreferences || {};
-
-  // Merge default preferences with loaded preferences
   const mergedPreferences = { ...defaultUserPreferences, ...loadedPreferences };
-
-  // Update user preferences in browser.storage.local
   browser.storage.local.set({ "userPreferences": mergedPreferences });
 });
-
-function processNotification(tag, dataObj) {
-  // Get user preferences
-  const value = dataObj[tag]
-
-  source = false
-  if (tag != "m")
-    source = dataObj[`_${tag}`]
-  //console.log(tag)
-  const preferences = settingsState["userPreferences"] || defaultUserPreferences;
-  // Check if user preferences exist for the tag
-  if (preferences[tag]) {
-    const { type } = preferences[tag];
-    // Compare notification value based on the type
-    if (type === "range" && isInRange(value, preferences[tag])) {
-      // Display the notification with tag label and data
-      displayNotification(tag, value, false, source);
-    } else if (type === "label") {
-      // Display the notification with tag label and data
-      for (label of value) {
-        if (isMatchingLabel(label, preferences[tag]), source)
-          displayNotification(tag, label, false, source);
-      }
-    } else if (type === "multiRange") {
-      for (item in value) {
-        source = value[item]["s"]
-        modules = value[item]["m"]
-        for (mod in modules) {
-          data = modules[mod]
-          displayNotification(tag, data.r, data.s.replaceAll("_", " ").slice(5), source);
-        }
-
-      }
-
-    }
-  }
-}
-
 
 function shuffleArray(array) {
   for (let i = array.length - 1; i > 0; i--) {
@@ -194,46 +64,25 @@ function shuffleArray(array) {
 
 function isInRange(value, preference) {
   const { min, max } = preference;
-
   // Convert both numeric and letter ratings to numeric values
   const numericValue = convertRatingToNumeric(value);
   const numericMin = convertRatingToNumeric(min);
   const numericMax = convertRatingToNumeric(max);
-
   return numericValue >= numericMin && numericValue <= numericMax;
 }
 
 function convertRatingToNumeric(rating) {
   // Check if the rating is numeric (1-6)
-  if (!isNaN(rating)) {
-    return Number(rating);
-  }
-
+  if (!isNaN(rating)) return Number(rating);
   // If it's not numeric, attempt to convert it to a numeric value based on the letter ratings (A-F)
   const ratings = ["A", "B", "C", "D", "E", "F"];
   const index = ratings.indexOf(rating);
-  if (index !== -1) {
-    return index + 1;
-  }
-
+  if (index !== -1) return index + 1;
   // If the rating is neither numeric nor a valid letter rating, return NaN
   return NaN;
 }
 
-var defaultSettingsState = {
-  "preferred_language": "en",
-  "loggedIn": false,
-  "debugMode": false,
-  "darkMode": false,
-  "keepOnScreen": false,
-  "userPreferences": defaultUserPreferences,
-  "bobbleOverride": false,
-  "notifications": false,
-  "notificationsTags": [],
-  "listOrder": "",
-  "experimentalFeatures": false,
-  "dissmissedNotifications": [],
-}
+
 async function processSettingsObject() {
   settingsState = defaultSettingsState;
   try {
@@ -257,8 +106,54 @@ function isMatchingLabel(value, preference) {
   return labels.includes(value);
 }
 
+function processNotification(tag, dataObj) {
+  const value = dataObj[tag];
+  const preferences = settingsState["userPreferences"] || defaultUserPreferences;
+  if (!preferences[tag]) return;
+  const { type } = preferences[tag];
+  const repeat = tagsDuplicatable.includes(tag);
+  let repeatCount = 1;
+  let items = [tag]
+  if (repeat) {
+    items = Object.keys(dataObj).filter(dataTag => dataTag.startsWith(tag));
+    repeatCount = items.length;
+  }
+  for (let i = 0; i < repeatCount; i++) {
+    const currentItem = repeat ? dataObj[items[i]] : value;
+    let source = (tag !== "m") ? dataObj[`_${items[i]}`] : false;
+
+    switch (type) {
+      case "range":
+        if (isInRange(currentItem, preferences[tag])) {
+          displayNotification(tag, currentItem, false, source);
+        }
+        break;
+      case "label":
+        for (const place in currentItem) {
+          const label = currentItem[place];
+          if (isMatchingLabel(label, preferences[tag])) {
+            displayNotification(tag, label, false, source);
+          }
+        }
+        break;
+      case "multiRange":
+        for (const item in currentItem) {
+          const { s: source, m: modules } = currentItem[item];
+          for (const mod in modules) {
+            const data = modules[mod];
+            displayNotification(tag, data.r, data.s.replaceAll("_", " ").slice(5), source);
+          }
+        }
+        break;
+      default:
+        break;
+    }
+  }
+}
+
+
 function displayNotification(tag, value, alttitle, source) {
-  if (debug) console.log(`${tag},${value},${source}`);
+  // if (debug) console.log(`${tag},${value},${source}`);
   const tagLabel = tagLookup[tag]; // Get the label for the tag
   const isSS = tag === 'm'; // Check if it's a special case for "m" tag
   addItemToNotification(null, tagLabel, value, isSS, alttitle, source);
@@ -267,7 +162,7 @@ function displayNotification(tag, value, alttitle, source) {
 const ivLogoArrow = "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' fill='none'%3e%3ccircle cx='20' cy='20' r='18' fill='none'/%3e%3cpath fill='%231A1A1A' d='M18.201 14.181h3.657v14.536a1.823 1.823 0 0 1-1.828 1.817 1.823 1.823 0 0 1-1.829-1.817V14.181ZM18.201 10.547c0-1.003.819-1.817 1.829-1.817s1.828.814 1.828 1.817a1.823 1.823 0 0 1-1.828 1.817 1.823 1.823 0 0 1-1.829-1.817Z'/%3e%3cpath fill='%231A1A1A' d='m10.318 21.634 1.292-1.285a1.836 1.836 0 0 1 2.586 0l8.402 8.351-2.585 2.57-9.696-9.636Z'/%3e%3cpath fill='%231A1A1A' d='M25.804 20.349a1.836 1.836 0 0 1 2.586 0l1.293 1.285-9.696 9.636-2.585-2.57 8.402-8.351Z'/%3e%3cpath fill='%231A1A1A' fill-rule='evenodd' d='M40 20c0 11.046-8.954 20-20 20S0 31.046 0 20 8.954 0 20 0s20 8.954 20 20ZM20 37.46c9.643 0 17.46-7.817 17.46-17.46S29.643 2.54 20 2.54 2.54 10.357 2.54 20 10.357 37.46 20 37.46Z' clip-rule='evenodd'/%3e%3c/svg%3e"
 var notificationsToShow = false;
 var notificationsDismissed = false;
-
+var notificationShade;
 function enableNotifications() {
   if (notificationsDismissed) return;
 
@@ -277,110 +172,104 @@ function enableNotifications() {
   const notificationOverlay = document.createElement("div");
   notificationOverlay.classList.add("IVNotOverlay");
 
-  const notivlogo = document.createElement("img");
-  notivlogo.classList.add("IVNotLogo");
-  notivlogo.onclick = handleNotificationClick;
-  notivlogo.src = ivLogoArrow;
+  const notivlogo = createNotificationElement("img", "IVNotLogo", ivLogoArrow, handleNotificationClick);
   notificationOverlay.appendChild(notivlogo);
 
-  const hoverRemove = document.createElement("div");
-  hoverRemove.classList.add("IVDismissForever");
-  hoverRemove.textContent = "dismiss all on site?";
+  const hoverRemove = createNotificationElement("div", "IVDismissForever", "dismiss all on site?", handleNotificationClick);
   hoverRemove.setAttribute("data-clicks", 0);
   notificationOverlay.appendChild(hoverRemove);
-  dismissForever = hoverRemove
+  dismissForever = hoverRemove;
 
-  const hovernotice = document.createElement("div");
-  hovernotice.classList.add("IVHoverNotice");
-  hovernotice.textContent = "hover to see more";
+  const hovernotice = createNotificationElement("div", "IVHoverNotice", "hover to see more");
   hovernotice.style.visibility = "hidden";
   notificationOverlay.appendChild(hovernotice);
 
-  const ivnotclose = document.createElement("div");
-  ivnotclose.classList.add("IVNotClose");
-  ivnotclose.onclick = dismissNotification;
-  ivnotclose.textContent = "+";
+  const ivnotclose = createNotificationElement("div", "IVNotClose", "+", dismissNotification);
   notificationOverlay.appendChild(ivnotclose);
 
   notificationShade.appendChild(notificationOverlay);
 
-  browser.storage.local.get(localdata => {
-    const tags = (settingsState.notificationsTags || '').split('').reverse().join('');
+
+  browser.storage.local.get( ({data, siteData})  => {
+    const tags = (settingsState.notificationsTags || '');
     const domainKey = domainString.replace(/\./g, "");
-    const siteTags = localdata.data?.[domainKey]?.k || [];
-    const matchedTags = tags.split('').filter(tag => siteTags.includes(tag));
-    if (settingsState["dissmissedNotifications"].indexOf(domainKey) != -1) {
-      console.log("dismissed on this domain")
+    if (settingsState["dissmissedNotifications"].includes(domainKey)) {
+      console.log("dismissed on this domain");
       return;
     }
-
-
-    if (debug) console.log(domainKey);
-    if (debug) console.log(tags);
-    if (debug) console.log("notifications are on", siteTags);
-    if (debug) console.log("matched tags", matchedTags);
-    if (debug) console.log(localdata.data[domainKey])
-
+    const siteTags = data?.[domainKey]?.k || '';
+    const matchedTags = tags.split('').filter(tag => siteTags.includes(tag));
+    console.log(matchedTags)
     if (matchedTags.length > 0) {
-      const currentState = localdata.siteData || {};
-      if (currentState[domainKey]) {
-        const data = currentState[domainKey];
-        matchedTags.forEach(tag => processNotification(tag, data));
-        if (debug) console.log("local notification data");
-        if (debug) console.log(data)
-      } else {
-        let requestList = [domainKey];
-        const indexList = localdata.data;
-        const tagArray = [...matchedTags];
+      const currentState = siteData || {};
+      const requestList = generateNotificationRequestList(matchedTags, currentState, domainKey);
 
-        if (typeof indexList === 'object' && indexList !== null) {
-          const filteredList = Object.keys(indexList).filter(key => {
-            const item = indexList[key];
-            if (typeof item.k === 'string') {
-              return tagArray.some(substring => item.k.includes(substring));
+      if (currentState[domainKey]){
+        const domainObj = currentState[domainKey]
+        matchedTags.forEach(tag => processNotification(tag, domainObj))
+        console.log(domainObj)
+        return
+      }
+      console.log(requestList)
+      requestList.forEach(domain => {
+        fetch(`${aSiteWePullAndPushTo}/db/${domain}/index.json`, init)
+          .then(response => response.json())
+          .then(data => {
+            currentState[domain] = data.data;
+            browser.storage.local.set({ "siteData": currentState });
+
+            if (domain === domainKey) {
+              matchedTags.forEach(tag => processNotification(tag, data));
             }
           });
-
-          while (requestList.length < 9) {
-            const randomIndex = Math.floor(Math.random() * filteredList.length);
-            if (!requestList.includes(filteredList[randomIndex])) {
-              requestList.push(filteredList[randomIndex]);
-            }
-          }
-        }
-
-        shuffleArray(requestList);
-
-        requestList.forEach(domain => {
-          const dataRequest = new Request(`${aSiteWePullAndPushTo}/db/${domain}/index.json`, init);
-          fetch(dataRequest)
-            .then(response => response.json())
-            .then(data => {
-              currentState[domain] = data.data;
-              browser.storage.local.set({ "siteData": currentState });
-
-              if (domain == domainKey) {
-                matchedTags.forEach(tag => processNotification(tag, data));
-              }
-            });
-        });
-      }
+      });
     }
   });
 }
 
-var notifications = false;
+function createNotificationElement(tagName, className, textContent, clickHandler) {
+  const element = document.createElement(tagName);
+  element.classList.add(className);
+  if (tagName == "img"){
+    element.src = textContent;
+  }else{
+    element.textContent = textContent;
+  }
+  if (clickHandler)
+    element.onclick = clickHandler;
+  return element;
+}
+
+function generateNotificationRequestList(matchedTags, currentState, domainKey) {
+  const requestList = [domainKey];
+  const indexList = currentState;
+
+  if (typeof indexList === 'object' && indexList !== null) {
+    const tagArray = [...matchedTags];
+    const filteredList = Object.keys(indexList).filter(key => {
+      const item = indexList[key];
+      if (typeof item.k === 'string') {
+        return tagArray.some(substring => item.k.includes(substring));
+      }
+    });
+    while (requestList.length < 9) {
+      const randomIndex = Math.floor(Math.random() * filteredList.length);
+      if (!requestList.includes(filteredList[randomIndex])) {
+        requestList.push(filteredList[randomIndex]);
+      }
+    }
+  }
+  return requestList;
+}
+
+
 function createObjects() {
   // if (aSiteYouVisit == "http://example.com/") enableNotifications();
-  browser.storage.local.get(function (localdata) {
-    blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
-    blockCheck();
-  });
+  blockCheck();
   if (settingsState.bobbleOverride == "true") {
     bubbleMode = 1;
   }
-  notifications = settingsState.notifications;
-  if (debug) console.log("[ Invisible Voice ]: creating " + mode);
+  if (debug) console.log("[ Invisible Voice ]: creating ");
   if ((bubbleMode == 0 && phoneMode) || debug == true) {
     browser.storage.local.get(function (localdata) {
       if (settingsState.bobbleMode != "true") {
@@ -552,10 +441,6 @@ function fetchIndex() {
   });
 }
 
-
-// Mode 0 is Desktop, Mode 1 is mobile
-// Bubble Mode 0 is bubble, 1 is no bubble, 2 is no bubble or bar
-
 function processDomain(pattern) {
   globalCode = pattern;
   createObjects();
@@ -665,9 +550,6 @@ document.addEventListener('fullscreenchange', function () {
   floating.style.visibility = (isFullScreen) ? 'hidden' : 'visible';
 });
 
-var oldNetworkDistance;
-var Loaded = false;
-var addingId = '#'
 let resize = function (x) {
   if (typeof (open.style) === 'undefined') return;
   if (phoneMode) return;
@@ -745,26 +627,15 @@ document.addEventListener('mouseup', function (event) {
     };
     // If the clicked element doesn't have the right selector, bail
     if (!event.target.matches('#invisible-voice-button')) return;
-
-    var timeNow = new Date;
-    now = timeNow.getTime();
     // Don't follow the link
-    event.preventDefault();
 
-    // Log the clicked element in the console
-    // console.log(event.target);
-    var dismissData = {};
-    distance = 0;
-    dismissData[globalCode] = now;
-    browser.storage.local.set(dismissData);
-    // console.log("[ Invisible Voice ]: Dismiss id ", globalCode);
+    event.preventDefault();
     resize();
     open.style.right = distance + buttonOffsetVal + 'px';
   }
   dontOpen = false;
 });
 
-var distance = 0;
 function blockCheck() {
   if (debug) console.log("Block Check");
   browser.storage.local.get(function (localdata) {
@@ -799,32 +670,15 @@ browser.runtime.onMessage.addListener(msgObj => {
   }
 });
 
-
-level2 = [
-  'wikipedia-first-frame',
-  'isin ssd',
-  'isin fas',
-  'mbfc-header',
-  'yahoo',
-  'similar-site-wrapper',
-  'glassdoor',
-  'social-wikidata',
-  'small-wikidata',
-  'trust-pilot',
-  'wikipedia-infocard-frame',
-  'disclaimer',
-  'settings'
-];
-
 function getNewPost(e) {
-  console.log(e)
-  console.log("sending new post")
+  if (debug) console.log("sending new post")
   const sending = browser.runtime.sendMessage({ "InvisibleGetPost": e.post_uid })
   sending.then(forwardPost, handleError)
 }
 function handleError(e) {
   console.log(e)
 }
+
 function sendMessageToPage(message) {
   if (typeof (iframe) !== 'undefined') {
     iframe.contentWindow.postMessage(message, '*');
@@ -885,7 +739,6 @@ function forwardVote(x) {
   };
   sendMessageToPage(message);
 }
-var graphOpen = false;
 const actionLookup = {
   "IVLike": "InvisibleUpvote",
   "IVDislike": "InvisibleDownvote",
@@ -1008,7 +861,7 @@ window.addEventListener('message', function (e) {
 
       if (data == "true") {
         notificationsDismissed = false;
-        if (debug) console.log("notifications were " + notifications);
+        if (debug) console.log("notifications were " + settingsState["notifications"]);
         if (document.getElementById("IVNotification") === null) enableNotifications();
         settingsState["notifications"] = true
       } else {
