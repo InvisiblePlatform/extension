@@ -292,8 +292,8 @@ function sendMessageToPage(message) {
 }
 
 function forwardPost(x) {
-    if (debug == true) console.log(x);
     if (typeof (x) == 'undefined') return;
+    if (debug == true) console.log(x);
     utotal = (x["up_total"] == undefined) ? x["utotal"] : x["up_total"];
     dtotal = (x["down_total"] == undefined) ? x["dtotal"] : x["down_total"];
     ptotal = (x["comment_total"] == undefined) ? 0 : x["comment_total"];
@@ -333,6 +333,7 @@ function forwardPosts(x) {
 }
 
 function forwardVote(x) {
+    if (typeof(x) === 'undefined') return
     if (debug == true) console.log(x);
     voteStatus = x["status"];
     var message = {
