@@ -39,7 +39,7 @@ function createObjects() {
   if (settingsState["loggedIn"]) ourdomain += `&username=${pretty_name}&vote=true`;
   if (addingId != '#') ourdomain += addingId
   iframe.src = ourdomain;
-  iframe.style.width = (chrome) ? '350px' : '100%';
+  iframe.style.width = (chrRegex.test(navigator.userAgent)) ? '360px' : '100%';
   iframe.style.height = '100%';
 }
 

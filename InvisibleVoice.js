@@ -5,8 +5,6 @@ var globalCode = "";
 // The Elements we inject
 aSiteYouVisit = window.location.href;
 allowUpdate = true;
-
-phoneMode = false;
 distance = 0;
 var oldNetworkDistance;
 
