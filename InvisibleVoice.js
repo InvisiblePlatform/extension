@@ -5,6 +5,8 @@ var globalCode = "";
 // The Elements we inject
 aSiteYouVisit = window.location.href;
 allowUpdate = true;
+
+phoneMode = false;
 distance = 0;
 var oldNetworkDistance;
 
@@ -122,6 +124,7 @@ function enableNotifications() {
 
 
   browser.storage.local.get(({ data, siteData }) => {
+    console.log("notifications")
     const tags = (settingsState.notificationsTags || '');
     const domainKey = domainString.replace(/\./g, "");
     if (settingsState["dissmissedNotifications"].includes(domainKey)) {
@@ -217,17 +220,17 @@ function createObjects() {
 
         document.documentElement.appendChild(bobble);
         dragElement(document.getElementById("InvisibleVoice-bobble"));
-        browser.storage.local.get('newplace', function (position) {
-          var pos = Object.values(position)[0].split(',');
-          // console.log("[ Invisible Voice ]: loading loc" + pos)
-          if (pos[0] > 1) pos[0] = 0.9;
-          if (pos[0] < 0) pos[0] = 0.1;
-          if (pos[1] > 1) pos[1] = 0.9;
-          if (pos[1] < 0) pos[1] = 0.1;
-          // console.log("[ Invisible Voice ]: loading loc" + (window.innerWidth * pos[1]) + "," + (window.innerHeight * pos[0]))
-          bobble.style.top = (window.innerHeight * pos[0]) + "px";
-          bobble.style.left = (window.innerWidth * pos[1]) + "px";
-        })
+        //browser.storage.local.get('newplace', function (position) {
+        //  var pos = Object.values(position)[0].split(',') || [0 , 0];
+        //  // console.log("[ Invisible Voice ]: loading loc" + pos)
+        //  if (pos[0] > 1) pos[0] = 0.9;
+        //  if (pos[0] < 0) pos[0] = 0.1;
+        //  if (pos[1] > 1) pos[1] = 0.9;
+        //  if (pos[1] < 0) pos[1] = 0.1;
+        //  // console.log("[ Invisible Voice ]: loading loc" + (window.innerWidth * pos[1]) + "," + (window.innerHeight * pos[0]))
+        //  bobble.style.top = (window.innerHeight * pos[0]) + "px";
+        //  bobble.style.left = (window.innerWidth * pos[1]) + "px";
+        //})
       }
     })
   }
@@ -497,12 +500,14 @@ function dragElement(elmnt) {
 
 function boycott() {
   aSiteYouVisit = window.location.href;
+    console.log("boycott")
   window.location.replace(browser.runtime.getURL('blocked.html') + "?site=" + domainString + "&return=" + aSiteYouVisit);
 }
 
 function startDataChain(lookup) {
-  processSettingsObject(true).then(fetch(new Request(psl, init))
-    .then(response => parsePSL(response.body, lookup, aSiteYouVisit)));
+  settingsState = defaultSettingsState
+  fetch(new Request(psl, init))
+    .then(response => parsePSL(response.body, lookup, aSiteYouVisit)).then(res => console.log(res));
 }
 
 var once = 0;
@@ -634,6 +639,7 @@ document.addEventListener('mouseup', function (event) {
 });
 
 window.addEventListener('message', function (e) {
+
   const { type, data } = e.data;
   if (type === undefined) return;
   if (debug) console.log(`${type} Stub ${data}`);
@@ -774,6 +780,7 @@ window.addEventListener('message', function (e) {
 });
 
 browser.runtime.onMessage.addListener(msgObj => {
+  console.log(msgObj)
   if (msgObj === "InvisibleVoiceBlockCheck" && aSiteYouVisit !== window.location.href) {
     blockCheck();
   } else {

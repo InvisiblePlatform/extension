@@ -44,7 +44,7 @@ var init = {
     cache: 'default'
 };
 
-var debug;
+var debug = true;
 var distance;
 
 const ivLogoArrow = "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' fill='none'%3e%3ccircle cx='20' cy='20' r='18' fill='none'/%3e%3cpath fill='%231A1A1A' d='M18.201 14.181h3.657v14.536a1.823 1.823 0 0 1-1.828 1.817 1.823 1.823 0 0 1-1.829-1.817V14.181ZM18.201 10.547c0-1.003.819-1.817 1.829-1.817s1.828.814 1.828 1.817a1.823 1.823 0 0 1-1.828 1.817 1.823 1.823 0 0 1-1.829-1.817Z'/%3e%3cpath fill='%231A1A1A' d='m10.318 21.634 1.292-1.285a1.836 1.836 0 0 1 2.586 0l8.402 8.351-2.585 2.57-9.696-9.636Z'/%3e%3cpath fill='%231A1A1A' d='M25.804 20.349a1.836 1.836 0 0 1 2.586 0l1.293 1.285-9.696 9.636-2.585-2.57 8.402-8.351Z'/%3e%3cpath fill='%231A1A1A' fill-rule='evenodd' d='M40 20c0 11.046-8.954 20-20 20S0 31.046 0 20 8.954 0 20 0s20 8.954 20 20ZM20 37.46c9.643 0 17.46-7.817 17.46-17.46S29.643 2.54 20 2.54 2.54 10.357 2.54 20 10.357 37.46 20 37.46Z' clip-rule='evenodd'/%3e%3c/svg%3e"
@@ -222,7 +222,10 @@ const updown = {
     "IVDislike": "down",
 }
 
+var now = Date.now();
+
 function fetchIndex() {
+    console.log("index")
     browser.storage.local.get(function (localdata) {
         blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
         if ((localdata.time + 480000) < now) allowUpdate = true;
@@ -253,6 +256,8 @@ function getNewPost(e) {
 }
 
 function shuffleArray(array) {
+
+    console.log("shuffle")
     for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [array[i], array[j]] = [array[j], array[i]];
@@ -284,6 +289,7 @@ function handleError(e) {
 }
 
 function sendMessageToPage(message) {
+
     if (typeof (iframe) !== 'undefined') {
         iframe.contentWindow.postMessage(message, '*');
     } else {
@@ -348,6 +354,7 @@ function forwardVote(x) {
 
 
 async function processSettingsObject(skip=false) {
+    console.log("processSettings")
     settingsState = defaultSettingsState;
     try {
         tempSettingsState = await browser.storage.local.get("settings_obj").then(function (obj) {
@@ -356,19 +363,21 @@ async function processSettingsObject(skip=false) {
         for (item in tempSettingsState) {
             settingsState[item] = tempSettingsState[item];
         }
+
     } catch (e) {
         console.log(e)
+        browser.storage.local.set({ "settings_obj": JSON.stringify(settingsState) });
     }
     debug = settingsState["debugMode"]
     if (!skip) console.log(settingsState);
-    if (settingsState["notifications"], !popup)
-        enableNotifications()
+    if (settingsState["notifications"])
+        if (!popup) enableNotifications()
 
     return settingsState
 }
 
 function parseDomain(domain, publicSuffixes) {
-    const parts = domain.split('.').reverse();
+    const parts = domain.split('.').reverse()
     const suffix = getSuffix(parts, publicSuffixes);
     if (suffix == null) return null
     const suffixSize = suffix.split('.').length;
@@ -381,7 +390,9 @@ function parseDomain(domain, publicSuffixes) {
     };
 }
 function getSuffix(parts, publicSuffixes) {
+    console.log("getSuff")
     let domainParts = parts.reverse();
+    console.log(domainParts)
     let longestMatch = null;
     for (let i = 0; i < domainParts.length; i++) {
         const suffix = domainParts.slice(i).join('.');
@@ -396,11 +407,12 @@ function getSuffix(parts, publicSuffixes) {
     return null
 }
 
-var coded;
-function lookupDomainHash(lookup) {
+function lookupDomainHash(lookup, domainInfo) {
+    console.log("lookupDomHash")
+    console.log(domainInfo)
     if (domainInfo == null) return null
-    domainString = domainInfo.domain
-    hashforsite = lookup[domainString];
+    let domainString = domainInfo.domain
+    let hashforsite = lookup[domainString];
     if (hashforsite === undefined && domainInfo.subdomains.length) {
         domainString = domainInfo.domain.split('.').slice(-2).join('.');
         hashforsite = lookup[domainString];
@@ -415,6 +427,7 @@ function lookupDomainHash(lookup) {
 }
 
 function processDomain(pattern) {
+    console.log("ProcessDom")
     globalCode = pattern;
     sourceString = pattern;
     createObjects();
@@ -422,8 +435,12 @@ function processDomain(pattern) {
 }
 
 function domainChecker(domains, lookupList) {
+    console.log("DomCheck")
+    console.log(domains)
+    console.log(lookupList)
     try {
         if (lookupList[sourceString]) return processDomain(sourceString)
+
     } catch (e) {
         fetchIndex()
         if (lookupList[sourceString]) return processDomain(sourceString)
@@ -439,22 +456,32 @@ function domainChecker(domains, lookupList) {
     } catch (e) { }
     return undefined
 }
-function fetchCodeForPattern(lookup) {
-    bgjson = lookupDomainHash(lookup);
+function fetchCodeForPattern(lookup, domainInfo) {
+    console.log("fetch code for ")
+    headers = new Headers();
+    init = {
+        method: 'GET',
+        headers: headers,
+        mode: 'cors',
+        cache: 'default'
+    };
+    bgjson = lookupDomainHash(lookup, domainInfo);
     if (bgjson == null) return null
     bgresponse = JSON.parse(bgjson);
     sourceString = bgresponse['sourceString'];
     domainString = bgresponse['domainString'];
     hashforsite = bgresponse['hashforsite'] ? bgresponse['hashforsite'] : false;
     var pattern = "/" + sourceString + "/";
-    if (debug == true) console.log("[ IV ] " + domainString + " : " + hashforsite + " : " + pattern);
+    if (debug == true) console.log("[ IV ] " + domainString + " : " + hashforsite + " : " + pattern + " : " + sourceString);
     browser.storage.local.get("data", function (data) {
         try {
             fetch(new Request(localHash, init))
                 .then(response => response.json())
-                .then(subdata => subdata[hashforsite])
+                .then(subdata => console.log(subdata[hashforsite]))
                 .then(possibileDomains => domainChecker(possibileDomains, data.data))
+            console.log(data)
         } catch {
+            console.log("catch 1")
             try {
                 fetch(new Request(localReplace, init))
                     .then(response => response.json())
@@ -464,17 +491,20 @@ function fetchCodeForPattern(lookup) {
                         }
                     });
             } catch {
+            console.log("catch 2")
                 return;
             }
         }
     });
-    return coded;
+    return;
 }
 
 
 // Domain handling
 // PSL 2023/06/23 updated
 async function parsePSL(pslStream, lookup, aSiteYouVisit) {
+    console.log("parsePSL")
+  console.log(lookup)
     browser.storage.local.get(function (data) {
         pretty_name = data.pretty_name;
         username = data.username;
@@ -512,9 +542,14 @@ async function parsePSL(pslStream, lookup, aSiteYouVisit) {
             publicSuffixes.push({ suffix, exceptionRules: [] });
         }
     }
-    domainString = aSiteYouVisit.replace(/\.m\./g, '.').replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0].replace(/^m\./g, '');
+        console.log(domainString)
+    domainString = aSiteYouVisit.replace(/\.m\./g, '.')
+        .replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0].replace(/^m\./g, '');
+        console.log(domainString)
     domainInfo = parseDomain(domainString, publicSuffixes);
-    fetchCodeForPattern(lookup);
+    fetchCodeForPattern(lookup, domainInfo);
+    console.log("did we make it?")
+    console.log(domainInfo)
     return domainInfo;
 }
 
