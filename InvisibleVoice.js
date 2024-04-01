@@ -6,7 +6,6 @@ var globalCode = "";
 aSiteYouVisit = window.location.href;
 allowUpdate = true;
 
-phoneMode = false;
 distance = 0;
 var oldNetworkDistance;
 

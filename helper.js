@@ -13,6 +13,7 @@ if (chrRegex.test(navigator.userAgent)) identifier = "fafojfdhjlapbpafdcoggecpag
 if (frRegex.test(navigator.userAgent)) identifier = "c81358df75e512918fcefb49e12266fadd4be00f@temporary-addon"
 if (phoneRegex.test(navigator.userAgent)) phoneMode = true;
 
+console.log(phoneMode)
 // Various Lookups
 let localReplace = browser.runtime.getURL('replacements.json');
 let localHash = browser.runtime.getURL('hashtosite.json');
