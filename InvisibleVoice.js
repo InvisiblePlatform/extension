@@ -121,9 +121,8 @@ function enableNotifications() {
   notificationOverlay.appendChild(ivnotclose);
 
   notificationShade.appendChild(notificationOverlay);
-
-
-  browser.storage.local.get(({ data, siteData }) => {
+  var currentState;
+  browser.storage.local.get(data => {
     console.log("notifications")
     const tags = (settingsState.notificationsTags || '');
     const domainKey = domainString.replace(/\./g, "");
@@ -131,12 +130,13 @@ function enableNotifications() {
       console.log("dismissed on this domain");
       return;
     }
-    const siteTags = data?.[domainKey]?.k || '';
+    const siteTags = data.data?.[domainKey]?.k || '';
     const matchedTags = tags.split('').filter(tag => siteTags.includes(tag));
     if (debug && matchedTags.length) console.log(matchedTags)
     if (matchedTags.length > 0) {
-      const currentState = siteData || {};
-      const requestList = generateNotificationRequestList(matchedTags, currentState, domainKey);
+      currentState = data.siteData || {};
+      console.log(currentState)
+      const requestList = generateNotificationRequestList(matchedTags, data.data, domainKey);
 
       if (currentState[domainKey]) {
         const domainObj = currentState[domainKey]
@@ -148,17 +148,20 @@ function enableNotifications() {
       requestList.forEach(domain => {
         fetch(`${aSiteWePullAndPushTo}/db/${domain}/index.json`, init)
           .then(response => response.json())
-          .then(data => {
-            currentState[domain] = data.data;
-            browser.storage.local.set({ "siteData": currentState });
+          .then(state => {
+            currentState[domain] = state.data;
+            console.log(currentState)
 
             if (domain === domainKey) {
-              matchedTags.forEach(tag => processNotification(tag, data));
+              matchedTags.forEach(tag => processNotification(tag, state.data));
             }
-          });
+            return currentState
+          }).then(currentState => browser.storage.local.set({ "siteData": currentState }));
       });
+      console.log(currentState)
     }
   });
+  browser.storage.local.set({ "siteData": currentState });
 }
 
 function createNotificationElement(tagName, className, textContent, clickHandler) {
@@ -178,8 +181,13 @@ function generateNotificationRequestList(matchedTags, currentState, domainKey) {
   const requestList = [domainKey];
   const indexList = currentState;
 
+  console.log(currentState)
+  console.log(matchedTags)
+  console.log(requestList)
+
   if (typeof indexList === 'object' && indexList !== null) {
     const tagArray = [...matchedTags];
+
     const filteredList = Object.keys(indexList).filter(key => {
       const item = indexList[key];
       if (typeof item.k === 'string') {
@@ -193,6 +201,7 @@ function generateNotificationRequestList(matchedTags, currentState, domainKey) {
       }
     }
   }
+  console.log(requestList)
   return requestList;
 }
 
@@ -505,9 +514,8 @@ function boycott() {
 }
 
 function startDataChain(lookup) {
-  settingsState = defaultSettingsState
-  fetch(new Request(psl, init))
-    .then(response => parsePSL(response.body, lookup, aSiteYouVisit)).then(res => console.log(res));
+  processSettingsObject(true).then(fetch(new Request(psl, init))
+    .then(response => parsePSL(response.body, lookup, aSiteYouVisit)).then(res => console.log(res)));
 }
 
 var once = 0;
