@@ -23,12 +23,24 @@ var lookup;
 var localSite = browser.runtime.getURL("sitetohash.json");
 
 var blockedHashes = [];
+var apiKey = '';
+
+async function updateApiKey(){
+  browser.storage.local.get("apiKey", function (key) {
+    console.log(key.apiKey);
+    apiKey = key.apiKey;
+    return apiKey
+  });
+}
+
+apiKey = updateApiKey()
 
 var headers = new Headers();
 var init = {
   method: "GET",
   headers: headers,
   mode: "cors",
+  credentials: "include",
   cache: "default",
 };
 
@@ -112,14 +124,18 @@ async function postGet(location) {
     });
   return data;
 }
-async function postMake(opts) {
+async function postMake(post_type, content, location) {
+  if (apiKey == ''){
+    apiKey = await updateApiKey()
+  }
   var postHeaders = new Headers({
     "Content-Type": "application/json",
   });
   var data = {
-    post_type: opts["post_type"],
-    content: opts["content"],
-    location: opts["location"],
+    post_type,
+    content,
+    location,
+    api_session_token: apiKey
   };
   var postVars = {
     method: "POST",
@@ -127,16 +143,24 @@ async function postMake(opts) {
     credentials: "include",
     body: JSON.stringify(data),
   };
-  console.log(opts["location"], opts["content"], opts["post_type"]);
-  var data = await fetch(new Request(voteUrl + "/post", postVars))
-    .then((response) => response.json())
-    .then((data) => {
-      return data;
+  console.log(postVars)
+  console.log(`${data.content}`);
+  var ret = await fetch(new Request(voteUrl + "/post", postVars))
+    .then((response) => {
+      console.log(response)
+      response.json();
+    })
+    .then((ret) => {
+      console.log(ret)
+      return ret;
     });
-  return data;
+  return ret;
 }
 
 async function voteAsyncPost(site, type) {
+  if (apiKey == ''){
+    apiKey = await updateApiKey()
+  }
   var direction;
   switch (type) {
     case "IVPostVoteUp":
@@ -157,14 +181,15 @@ async function voteAsyncPost(site, type) {
     type: "domainhash",
     location: site,
     direction: direction,
+    api_session_token: apiKey,
   };
+  console.log(data)
   var voteVars = {
     method: "POST",
     headers: voteHeaders,
     credentials: "include",
     body: JSON.stringify(data),
   };
-  console.log(site, direction);
   var data = await fetch(new Request(voteUrl + "/vote", voteVars))
     .then((response) => response.json())
     .then((data) => {
@@ -175,6 +200,9 @@ async function voteAsyncPost(site, type) {
 
 // For voting
 async function voteAsync(site, direction, type = "domainHash") {
+  if (apiKey == ''){
+    apiKey = await updateApiKey()
+  }
   var voteHeaders = new Headers({
     "Content-Type": "application/json",
   });
@@ -182,31 +210,13 @@ async function voteAsync(site, direction, type = "domainHash") {
     type: "domainhash",
     location: site,
     direction: direction,
+    api_session_token: apiKey,
   };
   var voteVars = {
     method: "POST",
     headers: voteHeaders,
     credentials: "include",
     body: JSON.stringify(data),
-  };
-  console.log(site, direction);
-  var data = await fetch(new Request(voteUrl + "/vote", voteVars))
-    .then((response) => response.json())
-    .then((data) => {
-      return data;
-    });
-  return data;
-}
-
-async function vote(site, direction) {
-  var voteHeaders = new Headers({
-    site: site,
-    direction: direction,
-  });
-  var voteVars = {
-    method: "POST",
-    headers: voteHeaders,
-    mode: "nocors",
   };
   console.log(site, direction);
   var data = await fetch(new Request(voteUrl + "/vote", voteVars))
@@ -224,6 +234,7 @@ async function voteTotal(site, v2 = false) {
   });
   var voteVars = {
     method: "GET",
+    credentials: "include",
     headers: voteHeaders,
   };
   var stub = v2 ? "/get-data-v2" : "/get-data";
@@ -249,7 +260,7 @@ async function updateWithSiteData(data) {
 
 browser.runtime.onMessage.addListener(function (msgObj, sender, sendResponse) {
   console.log(msgObj);
-  firstKey = Object.keys(msgObj)[0];
+  firstKey = Object.keys(msgObj).filter(x => x.startsWith("I"))[0]
   switch (firstKey) {
     case "InvisibleOpenPopup":
       browser.action.openPopup();
@@ -281,10 +292,16 @@ browser.runtime.onMessage.addListener(function (msgObj, sender, sendResponse) {
       break;
     case "InvisibleMakePost":
       (async function () {
-        var data = await postMake(msgObj[firstKey]);
+        const post_type = msgObj[firstKey].post_type
+        const content = msgObj[firstKey].content
+        const location = msgObj[firstKey].location
+        var data = await postMake(post_type, content, location);
         sendResponse(data);
       })();
       break;
+    case "IVPostVoteUp":
+    case "IVPostVoteDown":
+    case "IVPostVoteUn":
     case "InvisibleModuleVote":
       (async function () {
         var data = await voteAsyncPost(msgObj[firstKey], msgObj["type"]);

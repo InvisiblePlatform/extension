@@ -2,7 +2,7 @@ iframe = document.getElementById("Invisible");
 var identifier = "com.morkforid.Invisible-Voice.Extension (C5N688B362)"
 
 debug = true;
-phoneMode = false;
+phoneMode = true;
 distance = 160;
 popup = true;
 

@@ -504,7 +504,6 @@ function fetchCodeForPattern(lookup, domainInfo) {
 // PSL 2023/06/23 updated
 async function parsePSL(pslStream, lookup, aSiteYouVisit) {
     console.log("parsePSL")
-  console.log(lookup)
     browser.storage.local.get(function (data) {
         pretty_name = data.pretty_name;
         username = data.username;
@@ -542,14 +541,11 @@ async function parsePSL(pslStream, lookup, aSiteYouVisit) {
             publicSuffixes.push({ suffix, exceptionRules: [] });
         }
     }
-        console.log(domainString)
     domainString = aSiteYouVisit.replace(/\.m\./g, '.')
         .replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0].replace(/^m\./g, '');
         console.log(domainString)
     domainInfo = parseDomain(domainString, publicSuffixes);
     fetchCodeForPattern(lookup, domainInfo);
-    console.log("did we make it?")
-    console.log(domainInfo)
     return domainInfo;
 }
 

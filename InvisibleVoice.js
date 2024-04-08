@@ -280,7 +280,7 @@ const loginCheck = async () => {
     if (response.hasOwnProperty("username")) {
       const username = response.username;
       console.log(`Logged in as ${username}/${response.pretty_name}`)
-      browser.storage.local.set({ "username": username, "pretty_name": response.pretty_name });
+      browser.storage.local.set({ "username": username, "pretty_name": response.pretty_name, "apiKey": response.apiKey });
       console.log(browser.storage.local.get())
     }
   } catch (e) {
@@ -291,6 +291,7 @@ const loginCheck = async () => {
       if (username != undefined) {
         browser.storage.local.remove("username")
         browser.storage.local.remove("pretty_name")
+        browser.storage.local.remove("apiKey")
         console.log(`[ IV ] "${username}" logged out of extension`)
       } else {
         console.log(`not logged in`)
@@ -429,6 +430,7 @@ function dragElement(elmnt) {
     elmnt.style.transition = "filter .5s transform .2s";
     elmnt.style.transform = "scale(1,1)";
     elmnt.innerHTML = ""
+    bonce=0;
   }
 
   var id = null;
@@ -534,7 +536,7 @@ function handleNotificationClick(event) {
       const notification = document.getElementById("IVNotification");
       if (notification) {
         notification.remove();
-        settingsState["dismissedNotifications"].push(domainKey);
+        settingsState["dissmissedNotifications"].push(domainKey);
         browser.storage.local.set({ "settings_obj": JSON.stringify(settingsState) });
       }
     }
@@ -557,7 +559,7 @@ function handleNotificationClick(event) {
     node = clickedElement.parentNode;
   }
   const dataInfotype = node.getAttribute("data-infotype");
-  const addingId = `#${idLookup[dataInfotype]}`;
+  addingId = `#${idLookup[dataInfotype]}`;
 
   const dismissData = {};
   dismissData[globalCode] = 0;
