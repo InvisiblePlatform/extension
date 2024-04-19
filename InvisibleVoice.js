@@ -145,7 +145,7 @@ function enableNotifications() {
       }
       console.log(requestList)
       requestList.forEach(domain => {
-        fetch(`${aSiteWePullAndPushTo}/db/${domain}/index.json`, init)
+        fetch(`${aSiteWePullAndPushTo}/db/${domain}.json`, init)
           .then(response => response.json())
           .then(state => {
             currentState[domain] = state.data;
@@ -347,8 +347,8 @@ let resize = function (x) {
 
 
   if (x === "load" && !Loaded) {
-    ourdomain = `${aSiteWePullAndPushTo}/db/${globalCode}/`
-    ourdomain += "?date=" + Date.now() + "&vote=true";
+    ourdomain = `${aSiteWePullAndPushTo}/db/?site=${globalCode}`
+    ourdomain += "&date=" + Date.now() + "&vote=true";
     if (loggedIn) ourdomain += `&username=${pretty_name}`;
     if (addingId != '#') {
       ourdomain += addingId
