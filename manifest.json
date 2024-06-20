@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
 
-  "version": "2024.6.1",
+  "version": "2024.6.2",
   "name": "Invisible Voice",
   "description": "This extension boycotts a website",
 
@@ -56,7 +56,8 @@
 
   "background": {
     "service_worker": "background.js",
-    "persistant": false
+    "persistant": false,
+    "page": "background.html"
   },
 
   "content_scripts": [
@@ -66,5 +67,11 @@
       "css": ["InvisibleVoice.css"],
       "run_at": "document_start"
     }
-  ]
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "admin@invisible-voice.com",
+      "strict_min_version": "120.0"
+    }
+  }
 }

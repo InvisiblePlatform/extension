@@ -250,6 +250,7 @@ function createObjects() {
     `width: ${buttonOffset}!important;
          border-color:${textColor}!important;
          background-color:${backgroundColor}!important;
+         height: 100vh;
          color: ${textColor}!important;`;
   iframe.id = "Invisible";
   iframe.style.cssText = `border-color:${textColor}!important;
