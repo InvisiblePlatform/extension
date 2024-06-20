@@ -289,7 +289,6 @@ function handleError(e) {
 }
 
 function sendMessageToPage(message) {
-
     if (typeof (iframe) !== 'undefined') {
         iframe.contentWindow.postMessage(message, '*');
     } else {
@@ -356,6 +355,7 @@ function forwardVote(x) {
 async function processSettingsObject(skip=false) {
     console.log("processSettings")
     settingsState = defaultSettingsState;
+    currentVersion = browser.runtime.getManifest().version;
     try {
         tempSettingsState = await browser.storage.local.get("settings_obj").then(function (obj) {
             return JSON.parse(obj["settings_obj"])
@@ -363,7 +363,6 @@ async function processSettingsObject(skip=false) {
         for (item in tempSettingsState) {
             settingsState[item] = tempSettingsState[item];
         }
-
     } catch (e) {
         console.log(e)
         browser.storage.local.set({ "settings_obj": JSON.stringify(settingsState) });
@@ -373,6 +372,7 @@ async function processSettingsObject(skip=false) {
     if (settingsState["notifications"])
         if (!popup) enableNotifications()
 
+    settingsState["extension_version"] = currentVersion;
     return settingsState
 }
 
