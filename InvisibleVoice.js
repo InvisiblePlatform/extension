@@ -245,7 +245,7 @@ function createObjects() {
   if (phoneMode) return;
   iframe = document.createElement("iframe");
   open = document.createElement("div");
-  open.id = "invisible-voice";
+  open.id = "invisible-voice-window";
   open.style.cssText =
     `width: ${buttonOffset}!important;
          border-color:${textColor}!important;
@@ -624,14 +624,14 @@ document.addEventListener('fullscreenchange', function () {
   var isFullScreen = document.fullScreen ||
     document.mozFullScreen ||
     document.webkitIsFullScreen || (document.msFullscreenElement != null);
-  floating = document.getElementById("invisible-voice");
+  floating = document.getElementById("invisible-voice-window");
   floating.style.visibility = (isFullScreen) ? 'hidden' : 'visible';
 });
 
 document.addEventListener('mouseup', function (event) {
   if (dontOpen != true) {
     // This is to reopen the box if it needs to be
-    if (event.target.matches('#invisible-voice')) {
+    if (event.target.matches('#invisible-voice-window')) {
       var dismissData = {};
       dismissData[globalCode] = 0;
       browser.storage.local.set(dismissData);

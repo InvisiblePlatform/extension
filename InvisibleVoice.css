@@ -190,7 +190,7 @@
     box-shadow: rgba(0, 0, 0, 0.1) 0 0 100px; 
     transition: width .2s;
 }
-#invisible-voice {
+#invisible-voice-window {
     transition: right .2s;
     height:inherit;
     height:-webkit-fill-available;
