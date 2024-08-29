@@ -120,6 +120,7 @@ function enableNotifications() {
   notificationOverlay.appendChild(ivnotclose);
 
   notificationShade.appendChild(notificationOverlay);
+  notificationShade.classList.add("shown");
   var currentState;
   browser.storage.local.get(data => {
     console.log("notifications")
@@ -250,7 +251,6 @@ function createObjects() {
     `width: ${buttonOffset}!important;
          border-color:${textColor}!important;
          background-color:${backgroundColor}!important;
-         height: 100vh;
          color: ${textColor}!important;`;
   iframe.id = "Invisible";
   iframe.style.cssText = `border-color:${textColor}!important;
@@ -589,6 +589,10 @@ function addItemToNotification(event, labelName = "BaddyScore", score = "91", is
 
   if (!document.getElementById("IVNotification")) {
     document.documentElement.appendChild(notificationShade);
+    setTimeout(() => {
+      notificationShade.classList.remove("shown");
+      console.log("removing")
+    }, 5000);
   }
 
   const ivNotItems = document.getElementsByClassName("IVNotItem");

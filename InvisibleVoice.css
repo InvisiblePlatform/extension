@@ -1,31 +1,62 @@
 @keyframes IVNotShadeDown {
     0% {
-        transform: translateY(-64px);
+        transform: translateX(176px);
     }
     100% {
-        transform: translateY(0px);
+        transform: translateX(-10px);
     }
 }
 #IVNotification {
     max-width: 200px;
     min-width: 200px;
+    height: 48px;
     margin: 0px;
     padding: 0px;
-    margin-right: 8px;
     display: flex;
     flex-direction: column-reverse;
     position: fixed;
-    right: 16px;
+    /* inset: 8px 8px auto calc(100vw - 200px); */
+    margin-right: 8px;
     top: 8px;
-    font-family: sans-serif;
-    animation: 0.4s ease-out 0s 1 IVNotShadeDown;
-    transition: opacity 0.2s;
+    left: calc(100vw - 200px);
+    font-family: "Helvetica", "Arial", sans-serif!important;
+    transition: all 0.2s;   
     filter: drop-shadow(0px 2px 1px #00000030);
     z-index: 10000;
+    transform-origin: top right;
+    transform: translateX(176px);
+    border-collapse: collapse;
+    border: black solid 1px;
+    border-radius: 8px;
+    @starting-style {
+        transform: translateX(-10px);
+    }
     & .IVNotItem:last-of-type{
-       padding-left: 40px;
+        padding-left: 40px;
+    }
+
+}
+
+#IVNotification:hover {
+    animation: IVNotShadeDown 0.3s forwards;
+    opacity: 1;
+    contain-intrinsic-height: 300px;
+    overflow: scroll;
+    min-height: 48px;
+    height: 300px;
+    @starting-style {
+        height: 48px;
+    }
+    .IVNotItem {
+        min-height: 48px;
     }
 }
+
+#IVNotification.shown {
+    opacity: 0;
+    transform: translateX(-10px);
+}
+
 .IVNotItem, .IVNotOverlay {
     margin: 0px;
     padding: 0px;
@@ -62,7 +93,7 @@
     top: 48px;
     box-sizing: border-box;
     width: 200px;
-    transform: translateY(48px);
+    transform: translateY(0px);
     overflow: hidden;
     display:grid;
     grid-template-areas: "title title" "source score";
@@ -192,11 +223,12 @@
 }
 #invisible-voice-window {
     transition: right .2s;
-    height:inherit;
-    height:-webkit-fill-available;
+    /* height:inherit; */
+    /* height:-webkit-fill-available; */
+    height: 100px;
     z-index: 2147483646;
     right: 0;
-    top: 0;
+    bottom: 0;
     padding: 0;
     border-radius: 0;
     position: fixed; 
