@@ -12,8 +12,6 @@ var phoneMode = false
 if (chrRegex.test(navigator.userAgent)) identifier = "fafojfdhjlapbpafdcoggecpagohpono"
 if (frRegex.test(navigator.userAgent)) identifier = "c81358df75e512918fcefb49e12266fadd4be00f@temporary-addon"
 if (phoneRegex.test(navigator.userAgent)) phoneMode = true;
-
-console.log(phoneMode)
 // Various Lookups
 let localReplace = browser.runtime.getURL('replacements.json');
 let localHash = browser.runtime.getURL('hashtosite.json');
@@ -223,6 +221,64 @@ const updown = {
     "IVDislike": "down",
 }
 
+const languagesWeSupport = ["AR", "FR", "EO", "CA", "DE", "ZH", "HI", "EN", "ES"]
+const dirtyTranslateTable = {
+    "dismiss": {
+        "en": "Dismiss",
+        "es": "Descartar",
+        "fr": "Rejeter",
+        "de": "Ablehnen",
+        "ar": "رفض",
+        "zh": "解雇",
+        "hi": "खारिज करें",
+        "eo": "Forĵeti",
+        "ca": "Descartar"
+    },
+    "dismiss-on-site": {
+        "en": "Dismiss on this site",
+        "es": "Descartar en este sitio",
+        "fr": "Rejeter sur ce site",
+        "de": "Ablehnen auf dieser Seite",
+        "ar": "رفض على هذا الموقع",
+        "zh": "在此站点上解雇",
+        "hi": "इस साइट पर खारिज करें",
+        "eo": "Forĵeti sur tiu ĉi retejo",
+        "ca": "Descartar en aquest lloc"
+    },
+    "invisible-voice-available": {
+        "en": "Invisible Voice is available on this site",
+        "es": "Invisible Voice está disponible en este sitio",
+        "fr": "Invisible Voice est disponible sur ce site",
+        "de": "Invisible Voice ist auf dieser Seite verfügbar",
+        "ar": "الصوت الخفي متاح على هذا الموقع",
+        "zh": "此站点上提供隐形语音",
+        "hi": "इस साइट पर गुप्त आवाज़ उपलब्ध है",
+        "eo": "Invisible Voice estas havebla sur tiu ĉi retejo",
+        "ca": "Invisible Voice està disponible en aquest lloc"
+    },
+}
+
+const dirtyTranslate = (key, lang) => {
+    // get preferred language
+    lang = lang || settingsState.preferred_language
+    if (dirtyTranslateTable[key] && dirtyTranslateTable[key][lang]) {
+        return dirtyTranslateTable[key][lang]
+    }
+    return key
+}
+
+const closeCross = `
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none">
+    <path fill="#000" fill-rule="evenodd" d="M12 10.586L5.707 4.293 4.293 5.707 10.586 12l-6.293 6.293 1.414 1.414L12 13.414l6.293 6.293 1.414-1.414L13.414 12l6.293-6.293-1.414-1.414L12 10.586z" clip-rule="evenodd"></path>
+    </svg>`
+
+const threeDots = `
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none">
+    <circle cx="12" cy="12" r="1.5" fill="#000"></circle>
+    <circle cx="12" cy="6" r="1.5" fill="#000"></circle>
+    <circle cx="12" cy="18" r="1.5" fill="#000"></circle>
+    </svg>`
+
 var now = Date.now();
 
 function fetchIndex() {
@@ -339,7 +395,7 @@ function forwardPosts(x) {
 }
 
 function forwardVote(x) {
-    if (typeof(x) === 'undefined') return
+    if (typeof (x) === 'undefined') return
     if (debug == true) console.log(x);
     voteStatus = x["status"];
     var message = {
@@ -352,8 +408,7 @@ function forwardVote(x) {
 }
 
 
-async function processSettingsObject(skip=false) {
-    console.log("processSettings")
+async function processSettingsObject(skip = false) {
     settingsState = defaultSettingsState;
     currentVersion = browser.runtime.getManifest().version;
     try {
@@ -390,9 +445,7 @@ function parseDomain(domain, publicSuffixes) {
     };
 }
 function getSuffix(parts, publicSuffixes) {
-    console.log("getSuff")
     let domainParts = parts.reverse();
-    console.log(domainParts)
     let longestMatch = null;
     for (let i = 0; i < domainParts.length; i++) {
         const suffix = domainParts.slice(i).join('.');
@@ -408,8 +461,6 @@ function getSuffix(parts, publicSuffixes) {
 }
 
 function lookupDomainHash(lookup, domainInfo) {
-    console.log("lookupDomHash")
-    console.log(domainInfo)
     if (domainInfo == null) return null
     let domainString = domainInfo.domain
     let hashforsite = lookup[domainString];
@@ -491,7 +542,7 @@ function fetchCodeForPattern(lookup, domainInfo) {
                         }
                     });
             } catch {
-            console.log("catch 2")
+                console.log("catch 2")
                 return;
             }
         }
@@ -503,7 +554,6 @@ function fetchCodeForPattern(lookup, domainInfo) {
 // Domain handling
 // PSL 2023/06/23 updated
 async function parsePSL(pslStream, lookup, aSiteYouVisit) {
-    console.log("parsePSL")
     browser.storage.local.get(function (data) {
         pretty_name = data.pretty_name;
         username = data.username;
@@ -543,7 +593,6 @@ async function parsePSL(pslStream, lookup, aSiteYouVisit) {
     }
     domainString = aSiteYouVisit.replace(/\.m\./g, '.')
         .replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0].replace(/^m\./g, '');
-        console.log(domainString)
     domainInfo = parseDomain(domainString, publicSuffixes);
     fetchCodeForPattern(lookup, domainInfo);
     return domainInfo;

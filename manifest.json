@@ -1,10 +1,8 @@
 {
   "manifest_version": 3,
-
-  "version": "2024.8.1",
+  "version": "2024.10.9",
   "name": "Invisible Voice",
   "description": "This extension boycotts a website",
-
   "permissions": [
     "tabs",
     "storage",
@@ -18,8 +16,9 @@
     "https://test.reveb.la/*",
     "https://assets.reveb.la/*"
   ],
-  "optional_host_permissions": ["*://*/*"],
-
+  "optional_host_permissions": [
+    "*://*/*"
+  ],
   "action": {
     "default_icon": "icon128.png",
     "default_title": "invisible voice",
@@ -34,7 +33,6 @@
     "browser_style": true,
     "default_popup": "popup.html"
   },
-
   "icons": {
     "16": "icon16.png",
     "24": "icon24.png",
@@ -43,27 +41,80 @@
     "96": "icon96.png",
     "128": "icon128.png"
   },
-
   "web_accessible_resources": [
-    { "resources": ["replacements.json"], "matches": ["<all_urls>"] },
-    { "resources": ["sitetohash.json"], "matches": ["<all_urls>"] },
-    { "resources": ["public_suffix_list.dat"], "matches": ["<all_urls>"] },
-    { "resources": ["hashtosite.json"], "matches": ["<all_urls>"] },
-    { "resources": ["blocked.html"], "matches": ["<all_urls>"] },
-    { "resources": ["logoShow.png"], "matches": ["<all_urls>"] },
-    { "resources": ["button.svg"], "matches": ["<all_urls>"] }
+    {
+      "resources": [
+        "replacements.json"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    },
+    {
+      "resources": [
+        "sitetohash.json"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    },
+    {
+      "resources": [
+        "public_suffix_list.dat"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    },
+    {
+      "resources": [
+        "hashtosite.json"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    },
+    {
+      "resources": [
+        "blocked.html"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    },
+    {
+      "resources": [
+        "logoShow.png"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    },
+    {
+      "resources": [
+        "button.svg"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
   ],
-
   "background": {
     "service_worker": "background.js",
     "persistant": false
   },
-
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["helper.js", "InvisibleVoice.js"],
-      "css": ["InvisibleVoice.css"],
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "helper.js",
+        "InvisibleVoice.js"
+      ],
+      "css": [
+        "InvisibleVoice.css"
+      ],
       "run_at": "document_start"
     }
   ],

@@ -13,6 +13,7 @@ var open;
 var domainInfo;
 var bgresponse;
 var username, pretty_name;
+keepOnScreen = true;
 
 var buttonOffsetVal = 16;
 var buttonOffset = buttonOffsetVal + "px";
@@ -33,132 +34,264 @@ var bubbleMode = 0;
 var loggedIn;
 var dismissForever;
 
-
 function isMatchingLabel(value, preference) {
   const { labels } = preference;
   return labels.includes(value);
 }
 
-function processNotification(tag, dataObj) {
-  const value = dataObj[tag];
-  const preferences = settingsState["userPreferences"] || defaultUserPreferences;
-  if (!preferences[tag]) return;
-  const { type } = preferences[tag];
-  const repeat = tagsDuplicatable.includes(tag);
-  let repeatCount = 1;
-  let items = [tag]
-  if (repeat) {
-    items = Object.keys(dataObj).filter(dataTag => dataTag.startsWith(tag));
-    repeatCount = items.length;
-  }
-  for (let i = 0; i < repeatCount; i++) {
-    const currentItem = repeat ? dataObj[items[i]] : value;
-    let source = (tag !== "m") ? dataObj[`_${items[i]}`] : false;
+class notification {
+  constructor(label, value, alttitle, source, isSS) {
+    this.label = label;
+    this.value = value;
+    this.alttitle = alttitle;
+    this.source = source;
+    this.isSS = isSS;
 
-    switch (type) {
-      case "range":
-        if (isInRange(currentItem, preferences[tag])) {
-          displayNotification(tag, currentItem, false, source);
+    this.name = (this.alttitle) ? this.alttitle : this.label;
+    this.sourceString = (this.source) ? `<h3>${this.source}</h3>` : '';
+    this.item = document.createElement("div");
+    this.item.classList.add("IVNotItem");
+    this.item.onclick = this.handleNotificationClick;
+    if (this.isSS) this.item.classList.add("IVNotItemSS");
+    this.item.innerHTML = `
+      <h1>${this.name}</h1>
+      <h2${this.isSS ? ' style="font-size:1em"' : ''}>${this.value}</h2>
+      ${this.sourceString}
+    `;
+    this.item.setAttribute("data-infotype", this.label);
+  }
+
+  handleNotificationClick() {
+    const dismissData = {};
+    dismissData[globalCode] = 0;
+    browser.storage.local.set(dismissData);
+    resize("load");
+  }
+}
+
+
+class notificationDisplay {
+  constructor(visible, domainKey, tags) {
+    this.visible = visible;
+    this.domainKey = domainKey;
+    this.dismissed = false;
+    this.showNubbin = true;
+    this.element = this.generateElement();
+
+    this.notifications = [];
+    this.notificationRequestList = [];
+
+    this.tags = tags;
+    this.matchedTags = [];
+  }
+
+  generateElement() {
+    const notificationShade = document.createElement("div");
+    notificationShade.id = "IVNotification";
+    notificationShade.classList.add("IVNotification");
+    notificationShade.onclick = handleNotificationClick;
+    const closeButton = document.createElement("div");
+    closeButton.classList.add("IVNotificationClose");
+    closeButton.onclick = this.collapse;
+    closeButton.innerHTML = closeCross;
+    notificationShade.appendChild(closeButton);
+    const expandButton = document.createElement("div");
+    expandButton.classList.add("IVNotificationExpand");
+    expandButton.onclick = this.expand;
+    expandButton.innerHTML = threeDots;
+    notificationShade.appendChild(expandButton);
+    const dismissOnSiteButton = document.createElement("div");
+    dismissOnSiteButton.classList.add("IVNotificationDismiss");
+    dismissOnSiteButton.onclick = this.dissmissForDomain;
+    dismissOnSiteButton.textContent = dirtyTranslate("dismiss-on-site");
+
+    notificationShade.appendChild(dismissOnSiteButton);
+    const notificationsContainer = document.createElement("div");
+    notificationsContainer.classList.add("IVNotificationsContainer");
+    notificationShade.appendChild(notificationsContainer);
+    return notificationShade;
+  }
+
+  addElementToPage() {
+    document.documentElement.appendChild(this.element);
+  }
+
+  expand() {
+    if (notificationD.dismissed) {
+      if (debug) console.log("dismissed, so opening IV");
+      resize("load");
+      return;
+    }
+    document.getElementById("IVNotification").classList.toggle("onScreen");
+  }
+
+  collapse() {
+    document.getElementById("IVNotification").classList.toggle("onScreen");
+  }
+
+  generateNotificationRequestList(currentState) {
+    const requestList = [this.domainKey];
+    const indexList = currentState;
+    if (typeof indexList === 'object' && indexList !== null) {
+      const tagArray = [...this.matchedTags];
+
+      const filteredList = Object.keys(indexList).filter(key => {
+        const item = indexList[key];
+        if (typeof item.k === 'string') {
+          return tagArray.some(substring => item.k.includes(substring));
         }
-        break;
-      case "label":
-        for (const place in currentItem) {
-          const label = currentItem[place];
-          if (isMatchingLabel(label, preferences[tag])) {
-            displayNotification(tag, label, false, source);
+      });
+      while (requestList.length < 9) {
+        const randomIndex = Math.floor(Math.random() * filteredList.length);
+        if (!requestList.includes(filteredList[randomIndex])) {
+          requestList.push(filteredList[randomIndex]);
+        }
+      }
+    }
+    this.notificationRequestList = requestList;
+  }
+
+  fetchNotificationData(domainKey) {
+    this.notificationRequestList.forEach(domain => {
+      fetch(`${aSiteWePullAndPushTo}/db/${domain}.json`, init)
+        .then(response => response.json())
+        .then(state => {
+          currentState[domain] = state.data;
+          if (domain === domainKey) {
+            this.matchedTags.forEach(tag => this.processNotification(tag, state.data));
           }
-        }
-        break;
-      case "multiRange":
-        for (const item in currentItem) {
-          const { s: source, m: modules } = currentItem[item];
-          for (const mod in modules) {
-            const data = modules[mod];
-            displayNotification(tag, data.r, data.s.replaceAll("_", " ").slice(5), source);
+          return currentState
+        }).then(currentState => browser.storage.local.set({ "siteData": currentState }));
+    });
+  }
+
+  attemptToDisplay() {
+    if (this.matchedTags.length > 0) {
+      this.fetchNotificationData(this.domainKey);
+    }
+
+    if (!this.dismissed) {
+      this.visible = true;
+      document.documentElement.appendChild(this.element);
+    }
+
+    if (this.showNubbin) {
+      const nubbin = document.createElement("div");
+      nubbin.classList.add("IVNubbin");
+    }
+  }
+
+
+  displayNotification(tag, value, alttitle, source) {
+    // if (debug) console.log(`${tag},${value},${source}`);
+    const tagLabel = tagLookup[tag]; // Get the label for the tag
+    const isSS = tag === 'm'; // Check if it's a special case for "m" tag
+    this.addItemToNotification(null, tagLabel, value, isSS, alttitle, source);
+  }
+
+  addItemToNotification(event, labelName = "BaddyScore", score = "91", isSS = false, alttitle = false, source = false) {
+    const newNotification = new notification(labelName, score, alttitle, source, isSS);
+    this.element.getElementsByClassName("IVNotificationsContainer")[0].appendChild(newNotification.item);
+    this.notifications.push(newNotification);
+
+    if (!document.getElementById("IVNotification") && !keepOnScreen) {
+      setTimeout(() => {
+        this.element.classList.remove("shown");
+        console.log("removing")
+      }, 5000);
+    }
+  }
+
+
+  dissmissForDomain() {
+    this.dismissed = true;
+    document.getElementById("IVNotification").remove();
+    settingsState["dissmissedNotifications"].push(domainString.replace(/\./g, ""));
+    browser.storage.local.set({ "settings_obj": JSON.stringify(settingsState) });
+  }
+  processNotification(tag, dataObj) {
+    const value = dataObj[tag];
+    const preferences = settingsState["userPreferences"] || defaultUserPreferences;
+    if (!preferences[tag]) return;
+    const { type } = preferences[tag];
+    const repeat = tagsDuplicatable.includes(tag);
+    let repeatCount = 1;
+    let items = [tag]
+    if (repeat) {
+      items = Object.keys(dataObj).filter(dataTag => dataTag.startsWith(tag));
+      repeatCount = items.length;
+    }
+    for (let i = 0; i < repeatCount; i++) {
+      const currentItem = repeat ? dataObj[items[i]] : value;
+      let source = (tag !== "m") ? dataObj[`_${items[i]}`] : false;
+
+      switch (type) {
+        case "range":
+          if (isInRange(currentItem, preferences[tag])) {
+            this.displayNotification(tag, currentItem, false, source);
           }
-        }
-        break;
-      default:
-        break;
+          break;
+        case "label":
+          for (const place in currentItem) {
+            const label = currentItem[place];
+            if (isMatchingLabel(label, preferences[tag])) {
+              this.displayNotification(tag, label, false, source);
+            }
+          }
+          break;
+        case "multiRange":
+          for (const item in currentItem) {
+            const { s: source, m: modules } = currentItem[item];
+            for (const mod in modules) {
+              const data = modules[mod];
+              this.displayNotification(tag, data.r, data.s.replaceAll("_", " ").slice(5), source);
+            }
+          }
+          break;
+        default:
+          break;
+      }
     }
   }
 }
-
-function displayNotification(tag, value, alttitle, source) {
-  // if (debug) console.log(`${tag},${value},${source}`);
-  const tagLabel = tagLookup[tag]; // Get the label for the tag
-  const isSS = tag === 'm'; // Check if it's a special case for "m" tag
-  addItemToNotification(null, tagLabel, value, isSS, alttitle, source);
-}
+let notificationD = null;
 
 var notificationsToShow = false;
 var notificationsDismissed = false;
-var notificationShade;
-
 function enableNotifications() {
-  if (notificationsDismissed) return;
-
-  notificationShade = document.createElement("section");
-  notificationShade.id = "IVNotification";
-
-  const notificationOverlay = document.createElement("div");
-  notificationOverlay.classList.add("IVNotOverlay");
-
-  const notivlogo = createNotificationElement("img", "IVNotLogo", ivLogoArrow, handleNotificationClick);
-  notificationOverlay.appendChild(notivlogo);
-
-  const hoverRemove = createNotificationElement("div", "IVDismissForever", "dismiss all on site?", handleNotificationClick);
-  hoverRemove.setAttribute("data-clicks", 0);
-  notificationOverlay.appendChild(hoverRemove);
-  dismissForever = hoverRemove;
-
-  const hovernotice = createNotificationElement("div", "IVHoverNotice", "hover to see more");
-  hovernotice.style.visibility = "hidden";
-  notificationOverlay.appendChild(hovernotice);
-
-  const ivnotclose = createNotificationElement("div", "IVNotClose", "+", dismissNotification);
-  notificationOverlay.appendChild(ivnotclose);
-
-  notificationShade.appendChild(notificationOverlay);
-  notificationShade.classList.add("shown");
   var currentState;
   browser.storage.local.get(data => {
-    console.log("notifications")
     const tags = (settingsState.notificationsTags || '');
     const domainKey = domainString.replace(/\./g, "");
+    if (!data.data.hasOwnProperty(domainKey)) {
+      return;
+    }
+    if (notificationD === null) {
+      notificationD = new notificationDisplay(false, false, domainKey, tags);
+      notificationD.addElementToPage();
+    } else {
+      notificationD.visible = false;
+      notificationD.domainKey = domainKey;
+      notificationD.tags = tags;
+    }
+
     if (settingsState["dissmissedNotifications"].includes(domainKey)) {
-      console.log("dismissed on this domain");
+      console.log("notifications dismissed on this domain");
+      notificationD.dismissed = true;
       return;
     }
     const siteTags = data.data?.[domainKey]?.k || '';
     const matchedTags = tags.split('').filter(tag => siteTags.includes(tag));
+    notificationD.matchedTags = matchedTags;
     if (debug && matchedTags.length) console.log(matchedTags)
     if (matchedTags.length > 0) {
       currentState = data.siteData || {};
-      console.log(currentState)
-      const requestList = generateNotificationRequestList(matchedTags, data.data, domainKey);
-
+      notificationD.generateNotificationRequestList(data.data);
       if (currentState[domainKey]) {
         const domainObj = currentState[domainKey]
-        matchedTags.forEach(tag => processNotification(tag, domainObj))
-        console.log(domainObj)
+        matchedTags.forEach(tag => notificationD.processNotification(tag, domainObj))
         return
       }
-      console.log(requestList)
-      requestList.forEach(domain => {
-        fetch(`${aSiteWePullAndPushTo}/db/${domain}.json`, init)
-          .then(response => response.json())
-          .then(state => {
-            currentState[domain] = state.data;
-            console.log(currentState)
-
-            if (domain === domainKey) {
-              matchedTags.forEach(tag => processNotification(tag, state.data));
-            }
-            return currentState
-          }).then(currentState => browser.storage.local.set({ "siteData": currentState }));
-      });
-      console.log(currentState)
     }
   });
   browser.storage.local.set({ "siteData": currentState });
@@ -177,33 +310,6 @@ function createNotificationElement(tagName, className, textContent, clickHandler
   return element;
 }
 
-function generateNotificationRequestList(matchedTags, currentState, domainKey) {
-  const requestList = [domainKey];
-  const indexList = currentState;
-
-  console.log(currentState)
-  console.log(matchedTags)
-  console.log(requestList)
-
-  if (typeof indexList === 'object' && indexList !== null) {
-    const tagArray = [...matchedTags];
-
-    const filteredList = Object.keys(indexList).filter(key => {
-      const item = indexList[key];
-      if (typeof item.k === 'string') {
-        return tagArray.some(substring => item.k.includes(substring));
-      }
-    });
-    while (requestList.length < 9) {
-      const randomIndex = Math.floor(Math.random() * filteredList.length);
-      if (!requestList.includes(filteredList[randomIndex])) {
-        requestList.push(filteredList[randomIndex]);
-      }
-    }
-  }
-  console.log(requestList)
-  return requestList;
-}
 
 function createObjects() {
   // if (aSiteYouVisit == "http://example.com/") enableNotifications();
@@ -230,7 +336,7 @@ function createObjects() {
         document.documentElement.appendChild(bobble);
         dragElement(document.getElementById("InvisibleVoice-bobble"));
         browser.storage.local.get('newplace', function (position) {
-          var pos = Object.values(position)[0].split(',') || [0 , 0];
+          var pos = Object.values(position)[0].split(',') || [0, 0];
           // console.log("[ Invisible Voice ]: loading loc" + pos)
           if (pos[0] > 1) pos[0] = 0.9;
           if (pos[0] < 0) pos[0] = 0.1;
@@ -301,6 +407,10 @@ const loginCheck = async () => {
   }
 }
 let resize = function (x) {
+  closedSize = 0;
+  openSize = 400;
+  networkSize = 840;
+
   if (typeof (open.style) === 'undefined') return;
   if (phoneMode) return;
   if (debug) console.log(x)
@@ -314,7 +424,7 @@ let resize = function (x) {
 
   // Handle the different distance scenarios
   if (x === "close") {
-    distance = 0;
+    distance = closedSize;
     iframe.src = "about:blank";
     Loaded = false;
 
@@ -324,18 +434,16 @@ let resize = function (x) {
       notificationShade.style.opacity = 1;
     }
 
-    open.style.transform = "translateX(0px)";
+    open.style.transform = "translateX(16px)";
     open.style.transition = "transform 0.2s";
     iframe.style.transition = "none";
   } else if (x === "network") {
     oldNetworkDistance = distance;
-    distance = 840;
-  } else if (distance === 160) {
-    distance = 640;
+    distance = networkSize;
   } else if (x === "oldnetwork") {
     distance = oldNetworkDistance;
   } else {
-    distance = 160;
+    distance = openSize;
   }
 
   if (x !== "close") {
@@ -353,7 +461,7 @@ let resize = function (x) {
     if (loggedIn) ourdomain += `&username=${pretty_name}`;
     if (addingId != '#') {
       ourdomain += addingId
-      distance = 640;
+      distance = openSize;
     }
 
     iframe.src = ourdomain;
@@ -431,7 +539,7 @@ function dragElement(elmnt) {
     elmnt.style.transition = "filter .5s transform .2s";
     elmnt.style.transform = "scale(1,1)";
     elmnt.innerHTML = ""
-    bonce=0;
+    bonce = 0;
   }
 
   var id = null;
@@ -511,7 +619,7 @@ function dragElement(elmnt) {
 
 function boycott() {
   aSiteYouVisit = window.location.href;
-    console.log("boycott")
+  console.log("boycott")
   window.location.replace(browser.runtime.getURL('blocked.html') + "?site=" + domainString + "&return=" + aSiteYouVisit);
 }
 
@@ -523,29 +631,19 @@ function startDataChain(lookup) {
 var once = 0;
 function handleNotificationClick(event) {
   const clickedElement = event.target;
-  if (clickedElement.classList.contains("IVNotLogo")) {
-    const dismissForever = document.querySelector(".IVDismissForever");
-    let clicks = parseInt(dismissForever.getAttribute("data-clicks")) || 0;
-
-    clicks++;
-    if (clicks <= 2) {
-      dismissForever.textContent = `Are You Sure${'?'.repeat(clicks)}`;
-      dismissForever.style.backgroundColor = "#ff0000";
-    }
-    if (clicks > 2) {
-      const domainKey = domainString.replace(/\./g, "");
-      const notification = document.getElementById("IVNotification");
-      if (notification) {
-        notification.remove();
-        settingsState["dissmissedNotifications"].push(domainKey);
-        browser.storage.local.set({ "settings_obj": JSON.stringify(settingsState) });
-      }
-    }
-
-    dismissForever.setAttribute("data-clicks", clicks);
+  const domainKey = domainString.replace(/\./g, "");
+  const notification = document.getElementById("IVNotification");
+  if (event.target.matches('.IVNotificationClose')) {
     return;
   }
-
+  if (event.target.matches('.IVNotificationExpand')) {
+    return;
+  }
+  //if (notification) {
+  //  notification.remove();
+  //  settingsState["dissmissedNotifications"].push(domainKey);
+  //  browser.storage.local.set({ "settings_obj": JSON.stringify(settingsState) });
+  //}
   if (phoneMode) {
     if (once > 0) {
       browser.runtime.sendMessage({ "InvisibleOpenPopup": true });
@@ -558,6 +656,9 @@ function handleNotificationClick(event) {
   let node = clickedElement;
   if (!node.classList.contains("IVNotItem")) {
     node = clickedElement.parentNode;
+    if (!node.classList.contains("IVNotItem")) {
+      return;
+    }
   }
   const dataInfotype = node.getAttribute("data-infotype");
   addingId = `#${idLookup[dataInfotype]}`;
@@ -569,37 +670,6 @@ function handleNotificationClick(event) {
   resize("load");
 }
 
-function addItemToNotification(event, labelName = "BaddyScore", score = "91", isSS = false, alttitle = false, source = false) {
-  if (notificationsDismissed) return;
-
-  const name = (alttitle) ? alttitle : labelName;
-  const sourceString = (source) ? `<h3>${source}</h3>` : '';
-
-  const newItem = document.createElement("div");
-  newItem.classList.add("IVNotItem");
-  newItem.onclick = handleNotificationClick;
-  if (isSS) newItem.classList.add("IVNotItemSS");
-  newItem.innerHTML = `
-    <h1>${name}</h1>
-    <h2${isSS ? ' style="font-size:1em"' : ''}>${score}</h2>
-    ${sourceString}
-  `;
-  newItem.setAttribute("data-infotype", labelName);
-  notificationShade.appendChild(newItem);
-
-  if (!document.getElementById("IVNotification")) {
-    document.documentElement.appendChild(notificationShade);
-    setTimeout(() => {
-      notificationShade.classList.remove("shown");
-      console.log("removing")
-    }, 5000);
-  }
-
-  const ivNotItems = document.getElementsByClassName("IVNotItem");
-  if (ivNotItems.length > 0) {
-    document.getElementsByClassName("IVHoverNotice")[0].style.visibility = "visible";
-  }
-}
 
 function dismissNotification() {
   notificationsDismissed = true;
@@ -660,13 +730,13 @@ window.addEventListener('message', function (e) {
 
   switch (type) {
     case 'IVSettingsReq':
-      processSettingsObject().then(function(x){
+      processSettingsObject().then(function (x) {
         const message = {
           message: "SettingsUpdate",
           data: settingsState
         }
         sendMessageToPage(message)
-    })
+      })
       break;
     case 'IVSiteDataUpdate':
       browser.runtime.sendMessage({ [actionLookup[type]]: data });
