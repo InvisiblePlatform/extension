@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "version": "2024.10.9",
+  "version": "2024.10.13",
   "name": "Invisible Voice",
   "description": "This extension boycotts a website",
   "permissions": [

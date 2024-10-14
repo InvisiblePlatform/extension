@@ -36,7 +36,31 @@
 
         >.IVNotificationExpand {
             z-index: -2;
+            opacity: 0;
             transform: translateX(calc(var(--notificationWidth) - 24px));
+        }
+
+        &.noNotifications {
+            padding: 4px;
+            transform: translateX(40px);
+            height: 40px !important;
+            box-sizing: border-box;
+            border-radius: 0px;
+        }
+    }
+
+    &.noNotifications {
+
+        >.IVNotificationSeeOnIV {
+            display: flex;
+        }
+
+        >.IVNotificationsContainer {
+            display: none;
+        }
+
+        >.IVNotificationDismiss {
+            display: none;
         }
     }
 
@@ -44,6 +68,25 @@
         margin: 0px;
         padding: 0px;
         box-sizing: border-box;
+    }
+}
+
+.IVNotificationSeeOnIV {
+    display: none;
+    height: 40px;
+    padding-inline: 16px !important;
+    width: max-content;
+    box-shadow: none;
+    background-color: var(--background-color);
+    justify-content: center;
+    align-items: center;
+    font-size: 12px;
+    color: var(--textColor);
+    cursor: pointer;
+    transition: background-color 0.2s;
+
+    &:hover {
+        background-color: #f4f4f4;
     }
 }
 

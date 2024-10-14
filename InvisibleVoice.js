@@ -89,6 +89,7 @@ class notificationDisplay {
     const notificationShade = document.createElement("div");
     notificationShade.id = "IVNotification";
     notificationShade.classList.add("IVNotification");
+    notificationShade.classList.add("noNotifications");
     notificationShade.onclick = handleNotificationClick;
     const closeButton = document.createElement("div");
     closeButton.classList.add("IVNotificationClose");
@@ -104,11 +105,17 @@ class notificationDisplay {
     dismissOnSiteButton.classList.add("IVNotificationDismiss");
     dismissOnSiteButton.onclick = this.dissmissForDomain;
     dismissOnSiteButton.textContent = dirtyTranslate("dismiss-on-site");
-
     notificationShade.appendChild(dismissOnSiteButton);
     const notificationsContainer = document.createElement("div");
     notificationsContainer.classList.add("IVNotificationsContainer");
     notificationShade.appendChild(notificationsContainer);
+    const notificationSeeOnIV = document.createElement("div");
+    notificationSeeOnIV.classList.add("IVNotificationSeeOnIV");
+    notificationSeeOnIV.textContent = dirtyTranslate("invisible-voice-available");
+    notificationSeeOnIV.onclick = () => {
+      resize("load");
+    }
+    notificationShade.appendChild(notificationSeeOnIV);
     return notificationShade;
   }
 
@@ -149,6 +156,17 @@ class notificationDisplay {
       }
     }
     this.notificationRequestList = requestList;
+
+    for (let i = 0; i < requestList.length; i++) {
+      if (currentState[requestList[i]]) continue;
+      if (!requestList[i]) continue;
+      fetch(`${aSiteWePullAndPushTo}/db/${requestList[i]}.json`, init)
+        .then(response => response.json())
+        .then(state => {
+          currentState[requestList[i]] = state.data;
+          browser.storage.local.set({ "siteData": currentState });
+        });
+    }
   }
 
   fetchNotificationData(domainKey) {
@@ -187,6 +205,12 @@ class notificationDisplay {
     const tagLabel = tagLookup[tag]; // Get the label for the tag
     const isSS = tag === 'm'; // Check if it's a special case for "m" tag
     this.addItemToNotification(null, tagLabel, value, isSS, alttitle, source);
+
+    if (document.getElementById("IVNotification")) {
+      if (document.getElementById("IVNotification").classList.contains("noNotifications")) {
+        document.getElementById("IVNotification").classList.remove("noNotifications");
+      }
+    }
   }
 
   addItemToNotification(event, labelName = "BaddyScore", score = "91", isSS = false, alttitle = false, source = false) {
@@ -274,6 +298,10 @@ function enableNotifications() {
       notificationD.domainKey = domainKey;
       notificationD.tags = tags;
     }
+    if (settingsState["notifications"] == "false") {
+      console.log("notifications disabled");
+      return;
+    }
 
     if (settingsState["dissmissedNotifications"].includes(domainKey)) {
       console.log("notifications dismissed on this domain");
@@ -312,11 +340,11 @@ function createNotificationElement(tagName, className, textContent, clickHandler
 
 
 function createObjects() {
-  // if (aSiteYouVisit == "http://example.com/") enableNotifications();
   blockCheck();
   if (settingsState.bobbleOverride == "true") {
     bubbleMode = 1;
   }
+  enableNotifications();
   if (debug) console.log("[ Invisible Voice ]: creating ");
   if ((bubbleMode == 0 && phoneMode) || debug == true) {
     browser.storage.local.get(function (localdata) {
