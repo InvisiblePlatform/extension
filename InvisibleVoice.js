@@ -434,10 +434,10 @@ const loginCheck = async () => {
     });
   }
 }
+closedSize = 0;
+openSize = 500;
+networkSize = 840;
 let resize = function (x) {
-  closedSize = 0;
-  openSize = 400;
-  networkSize = 840;
 
   if (typeof (open.style) === 'undefined') return;
   if (phoneMode) return;
@@ -468,8 +468,6 @@ let resize = function (x) {
   } else if (x === "network") {
     oldNetworkDistance = distance;
     distance = networkSize;
-  } else if (x === "oldnetwork") {
-    distance = oldNetworkDistance;
   } else {
     distance = openSize;
   }
@@ -728,6 +726,7 @@ document.addEventListener('fullscreenchange', function () {
     document.webkitIsFullScreen || (document.msFullscreenElement != null);
   floating = document.getElementById("invisible-voice-window");
   floating.style.visibility = (isFullScreen) ? 'hidden' : 'visible';
+  notificationD.element.style.visibility = (isFullScreen) ? 'hidden' : 'visible';
 });
 
 document.addEventListener('mouseup', function (event) {
@@ -831,8 +830,8 @@ window.addEventListener('message', function (e) {
         if (level2.includes(data)) resize();
         else if (['antwork', 'graph-box'].includes(data)) resize("network");
         else if (data === 'back') resize();
-        else if (data === 'unwork') resize("oldnetwork");
-        else if (distance === 160) resize();
+        else if (data === 'unwork') resize();
+        else if (distance === openSise) resize();
       }
       break;
     case 'IVNotificationsCacheClear':
