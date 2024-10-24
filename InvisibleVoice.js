@@ -149,7 +149,7 @@ class notificationDisplay {
         notificationD.element.style.setProperty("--top", "");
       }
       this.expandElement.style.transform = side === "right" ?
-        `translate(-40px,${difference}px)` : `translate(40px,${differenceY}px)`;
+        `translate(-40px,${difference}px)` : `translate(40px,${difference}px)`;
       this.element.style.setProperty("--offsetY", `${notificationsOffsetY}px`);
     })
     document.documentElement.appendChild(this.element);
