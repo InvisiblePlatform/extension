@@ -7,7 +7,7 @@
     min-width: var(--notificationWidth) + 48px !important;
     max-width: var(--notificationWidth) + 48px !important;
     min-height: 48px !important;
-    max-height: 256px !important;
+    max-height: 48px !important;
     margin: 0px;
     padding: 4px;
     display: flex;
@@ -16,8 +16,6 @@
     position: fixed;
 
     top: 8px;
-    left: calc(100vw - var(--notificationWidth) - var(--notificationOffset));
-
     font-family: "Space Grotesk", "Helvetica", "Arial", sans-serif !important;
     font-size: 14px !important;
     transition: all 0.2s;
@@ -25,14 +23,68 @@
     background-color: var(--background-color) !important;
 
     z-index: 10000;
-    transform-origin: top right;
-    transform: translateX(310px);
     border-collapse: collapse;
     border-radius: 0px 8px 8px 8px;
     padding-bottom: 60px;
 
+    &.right {
+        left: calc(100vw - var(--notificationWidth) - var(--notificationOffset));
+        border-radius: 0px 8px 8px 8px;
+        transform-origin: top right;
+        transform: translate(314px, var(--offsetY));
+    }
+
+    &.left {
+        right: calc(100vw - var(--notificationWidth) - var(--notificationOffset));
+        border-radius: 8px 0px 8px 8px;
+        transform-origin: top left;
+        transform: translate(-314px, var(--offsetY));
+    }
+
+    &.right .IVNotificationClose,
+    &.right .IVNotificationExpand {
+        transform: translateX(-40px);
+        border-radius: 8px 0 0 8px;
+        left: 0;
+    }
+
+    &.left .IVNotificationClose,
+    &.left .IVNotificationExpand {
+        transform: translateX(40px);
+        border-radius: 0 8px 8px 0;
+        right: 0;
+    }
+
+    &:not(.onScreen).right:hover {
+        transform: translate(308px, var(--offsetY));
+        filter: drop-shadow(0px 2px 4px #00000050);
+    }
+
+    &:not(.onScreen).left:hover {
+        transform: translate(-310px, var(--offsetY));
+        filter: drop-shadow(0px 2px 4px #00000050);
+    }
+
+    &.dragging {
+        transition: none;
+        filter: drop-shadow(0px 2px 4px #00000050);
+        width: 48px;
+        height: 48px;
+    }
+
+    &.dragging.right {
+        transform: translate(308px, var(--offsetY));
+    }
+
+    &.dragging.left {
+        transform: translate(-310px, var(--offsetY));
+    }
+
     &.onScreen {
-        transform: translateX(0px);
+        --top: 8px;
+        max-height: 256px !important;
+        transform: translate(0px, var(--offsetY));
+        top: var(--top);
 
         >.IVNotificationExpand {
             z-index: -2;
@@ -46,6 +98,14 @@
             height: 40px !important;
             box-sizing: border-box;
             border-radius: 0px;
+        }
+
+        >.IVNotificationDismiss {
+            display: flex;
+        }
+
+        >.IVNotificationClose {
+            display: flex;
         }
     }
 
@@ -63,6 +123,23 @@
             display: none;
         }
     }
+
+    &:not(.onScreen, .dragging) .IVNotificationDismiss::after {
+        content: var(--notificationCount);
+        position: absolute;
+        top: 0;
+        left: 0;
+        transform: translate(-33.5px, -5px);
+        color: white;
+        font-size: 8px;
+        width: 10px;
+        height: 10px;
+        text-align: center;
+        background-color: red;
+        border-radius: 100%;
+        z-index: -1;
+    }
+
 
     & * {
         margin: 0px;
@@ -187,7 +264,7 @@
     cursor: pointer;
     background-color: var(--background-color);
     border-radius: 8px;
-    display: flex;
+    display: none;
     justify-content: center;
     align-items: center;
     background-color: #F4F4F4;
@@ -200,7 +277,6 @@
 .IVNotificationExpand {
     position: absolute;
     box-sizing: border-box;
-    left: 0;
     top: 0;
     padding: 4px;
     margin: 0;
@@ -209,8 +285,6 @@
     border-radius: 0px;
     background-color: var(--background-color);
     transition: background-color 0.2s;
-    transform: translateX(-40px);
-    border-radius: 8px 0 0 8px;
     z-index: -1;
     display: flex;
     align-items: center;
@@ -220,6 +294,7 @@
 
 .IVNotificationClose {
     width: 40px;
+    display: none;
 
     &:hover {
         background-color: #f00;

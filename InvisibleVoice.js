@@ -33,6 +33,12 @@ var IVBlock = false;
 var bubbleMode = 0;
 var loggedIn;
 var dismissForever;
+const notificationQuantityBottomOffsets = {
+  1: -8,
+  2: -58,
+  3: -108,
+  4: -158
+};
 
 function isMatchingLabel(value, preference) {
   const { labels } = preference;
@@ -76,8 +82,15 @@ class notificationDisplay {
     this.domainKey = domainKey;
     this.dismissed = false;
     this.showNubbin = true;
+    this.opened = false;
+    this.loadedIV = false;
     this.element = this.generateElement();
-
+    this.expandElement = this.element.getElementsByClassName("IVNotificationExpand")[0];
+    // the expandElementLocation is an array with the first element being the side of the screen
+    // and the second element being the location as a percentage from the top of the screen
+    // ["right", 0] would be the top right corner, ["left", 0] would be the top left corner
+    // ["right", 50] would be the middle right side of the screen
+    this.expandElementLocation = ["right", 0]
     this.notifications = [];
     this.notificationRequestList = [];
 
@@ -99,7 +112,7 @@ class notificationDisplay {
     const expandButton = document.createElement("div");
     expandButton.classList.add("IVNotificationExpand");
     expandButton.onclick = this.expand;
-    expandButton.innerHTML = threeDots;
+    expandButton.innerHTML = ivLogoArrowElement;
     notificationShade.appendChild(expandButton);
     const dismissOnSiteButton = document.createElement("div");
     dismissOnSiteButton.classList.add("IVNotificationDismiss");
@@ -120,19 +133,119 @@ class notificationDisplay {
   }
 
   addElementToPage() {
+    browser.storage.local.get("expandButtonLocation", ({ expandButtonLocation }) => {
+      if (expandButtonLocation) {
+        this.expandElementLocation = expandButtonLocation;
+      }
+      const [side, location] = this.expandElementLocation;
+      this.element.classList.add(side);
+      const notificationsOffsetY = Math.max(Math.min(location * window.innerHeight, window.innerHeight - this.element.offsetHeight), 0);
+      // if location is beyond notificationOffsetY then we move expandElement the rest of the distance
+      var difference = location * window.innerHeight - notificationsOffsetY;
+      if (difference > 0) {
+        var notificationCount = Math.min(notificationD.matchedTags.length, 4);
+        notificationD.element.style.setProperty("--top", `${notificationQuantityBottomOffsets[notificationCount]}px`);
+      } else {
+        notificationD.element.style.setProperty("--top", "");
+      }
+      this.expandElement.style.transform = side === "right" ?
+        `translate(-40px,${difference}px)` : `translate(40px,${differenceY}px)`;
+      this.element.style.setProperty("--offsetY", `${notificationsOffsetY}px`);
+    })
     document.documentElement.appendChild(this.element);
+    this.enableDraggingOnExpandElement();
+  }
+  enableDraggingOnExpandElement() {
+    // Make the expand element draggable:
+    // it will be a bit different than the bobble, as we want to keep it "stuck"
+    // to the side of the screen, and only allow it to move up and down
+    // however, if we try to drag past the middle of the screen, we want it to snap sides
+    var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+    var elmnt = this.expandElement;
+    var currentLocation = this.expandElementLocation;
+    elmnt.addEventListener("mousedown", dragMouseDown);
+    elmnt.addEventListener("touchstart", dragMouseDown);
+
+
+    var notificationElementHeight = 0;
+    function dragMouseDown(e) {
+      e.preventDefault();
+      pos3 = e.clientX || e.changedTouches[0].clientX;
+      pos4 = e.clientY || e.changedTouches[0].clientY;
+      document.addEventListener("mouseup", closeDragElement);
+      document.addEventListener("touchend", closeDragElement);
+      document.addEventListener("mousemove", elementDrag);
+      document.addEventListener("touchmove", elementDrag);
+      notificationElementHeight = notificationD.element.offsetHeight;
+      notificationD.element.classList.add("dragging");
+    }
+
+    function elementDrag(e) {
+      e.preventDefault();
+      var eX = e.clientX || e.changedTouches[0].clientX;
+      var eY = e.clientY || e.changedTouches[0].clientY;
+      // get current position from element
+      pos2 = elmnt.style.transform.replace(/[^0-9,]/g, "").split(",")[1];
+      pos4 = eY
+      // if eX is greater than half the screen width, move to the right side
+      if (eX > window.innerWidth / 2) {
+        currentLocation[0] = "right";
+        notificationD.element.classList.add("right");
+        notificationD.element.classList.remove("left");
+      } else {
+        currentLocation[0] = "left";
+        notificationD.element.classList.add("left");
+        notificationD.element.classList.remove("right");
+      }
+
+      // we need to also offset the notifications container, but 
+      // we want to keep it in the screen, so we have to limit it to 
+      // the height of the screen minus the height of the notification element
+      let notificationsOffsetY = Math.max(Math.min(pos4, window.innerHeight - notificationElementHeight), 0);
+      // we want to handle this in the css so set an "--offsetY" variable
+      notificationD.element.style.setProperty("--offsetY", `${notificationsOffsetY}px`);
+      // if location is beyond notificationOffsetY then we move expandElement the rest of the distance
+      let difference = pos4 - notificationsOffsetY;
+      if (difference > 0) {
+        var notificationCount = Math.min(notificationD.matchedTags.length, 4);
+        console.log({ difference, notificationCount, notificationQuantityBottomOffsets })
+        notificationD.element.style.setProperty("--top", `${notificationQuantityBottomOffsets[notificationCount]}px`);
+      } else {
+        notificationD.element.style.setProperty("--top", "");
+      }
+      notificationD.expandElement.style.transform = currentLocation[0] == "right" ?
+        `translate(-40px,${difference}}px)` : `translate(40px,${difference}px)`;
+
+    }
+
+    function closeDragElement() {
+      document.removeEventListener("mouseup", closeDragElement);
+      document.removeEventListener("touchend", closeDragElement);
+      document.removeEventListener("mousemove", elementDrag);
+      document.removeEventListener("touchmove", elementDrag);
+      let location = Math.max(Math.min(pos4 / window.innerHeight, 1.0), 0.1);
+      let side = currentLocation[0];
+      browser.storage.local.set({ 'expandButtonLocation': [side, location] });
+      setTimeout(() => {
+        notificationD.element.classList.remove("dragging");
+      }, 100);
+    }
+
   }
 
   expand() {
-    if (notificationD.dismissed) {
+    notificationD.opened = true;
+    if (notificationD.dismissed || notificationD.matchedTags.length === 0) {
       if (debug) console.log("dismissed, so opening IV");
       resize("load");
+      this.loadedIV = true;
       return;
     }
     document.getElementById("IVNotification").classList.toggle("onScreen");
   }
 
   collapse() {
+    this.opened = false;
     document.getElementById("IVNotification").classList.toggle("onScreen");
   }
 
@@ -199,6 +312,14 @@ class notificationDisplay {
     }
   }
 
+  updateDisplayIcon() {
+    if (notificationD.matchedTags.length > 0) {
+      notificationD.expandElement.innerHTML = threeDots;
+      notificationD.element.style.setProperty("--notificationCount", `"${notificationD.matchedTags.length}"`);
+    } else {
+      notificationD.expandElement.innerHTML = ivLogoArrowElement;
+    }
+  }
 
   displayNotification(tag, value, alttitle, source) {
     // if (debug) console.log(`${tag},${value},${source}`);
@@ -225,7 +346,6 @@ class notificationDisplay {
       }, 5000);
     }
   }
-
 
   dissmissForDomain() {
     this.dismissed = true;
@@ -315,6 +435,7 @@ function enableNotifications() {
     if (matchedTags.length > 0) {
       currentState = data.siteData || {};
       notificationD.generateNotificationRequestList(data.data);
+      notificationD.updateDisplayIcon();
       if (currentState[domainKey]) {
         const domainObj = currentState[domainKey]
         matchedTags.forEach(tag => notificationD.processNotification(tag, domainObj))
@@ -359,8 +480,6 @@ function createObjects() {
                     background-size: ${buttonSize}px ${buttonSize}px;!important`;
         // bobble.setAttribute("onclick", this.remove());
         bobble.id = "InvisibleVoice-bobble";
-
-
         document.documentElement.appendChild(bobble);
         dragElement(document.getElementById("InvisibleVoice-bobble"));
         browser.storage.local.get('newplace', function (position) {
@@ -522,14 +641,14 @@ function blockCheck() {
 var bonce = 0;
 function dragElement(elmnt) {
   if (debug) console.log(elmnt);
-  if (debug) console.log("bobble enabled");
+  if (debug) console.log("draggable enabled");
   var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
 
   elmnt.addEventListener("mousedown", dragMouseDown);
   elmnt.addEventListener("touchstart", dragMouseDown);
 
   function dragMouseDown(e) {
-    if (debug) console.log("bobble mousedown");
+    if (debug) console.log("draggable mousedown");
     e.preventDefault();
     pos3 = e.clientX || e.changedTouches[0].clientX;
     pos4 = e.clientY || e.changedTouches[0].clientY;
@@ -540,7 +659,7 @@ function dragElement(elmnt) {
     document.addEventListener("touchmove", elementDrag);
     if (debug) console.log(e);
     if (phoneMode) {
-      if (debug) console.log("bobbleClick: " + once)
+      if (debug) console.log("draggableClick: " + once)
       bonce += 1;
       if (bonce > 1) {
         browser.runtime.sendMessage({ "InvisibleOpenPopup": true });
@@ -607,38 +726,38 @@ function dragElement(elmnt) {
     elmnt.style.left = (window.innerWidth * leftOffset) + "px";
     elmnt.style.backgroundColor = "";
 
-    const links = document.getElementsByTagName("a");
     posY = 40 + Number(elmnt.style.top.replace("px", ""))
     posX = 20 + Number(elmnt.style.left.replace("px", ""))
     console.log(posY)
-    for (const link in links) {
-      var linkBB;
-      try {
-        linkBB = links[link].getBoundingClientRect()
-      } catch (e) { }
-      upperBound = linkBB.top;
-      lowerBound = upperBound + linkBB.height
-      if (upperBound < posY && lowerBound > posY) {
-        upperLimit = linkBB.left;
-        lowerLimit = upperLimit + linkBB.width;
-        if (upperLimit < posX && lowerLimit > posX) {
+    // const links = document.getElementsByTagName("a");
+    // for (const link in links) {
+    //   var linkBB;
+    //   try {
+    //     linkBB = links[link].getBoundingClientRect()
+    //   } catch (e) { }
+    //   upperBound = linkBB.top;
+    //   lowerBound = upperBound + linkBB.height
+    //   if (upperBound < posY && lowerBound > posY) {
+    //     upperLimit = linkBB.left;
+    //     lowerLimit = upperLimit + linkBB.width;
+    //     if (upperLimit < posX && lowerLimit > posX) {
 
-          if (typeof (links[link].href) != 'undefined') {
-            elmnt.style.backgroundColor = "red";
-            elmnt.style.borderRadius = "200px";
-            elmnt.innerHTML = `
-                <span id="IVHoverGo" style="text-align: center;
-                transform-origin: center;
-                transform: translate(-50%, 40px);
-                position: inherit;
-                background-color:white;"> ${links[link].href.replace(/\.m\./g, '.').replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0].replace(/^m\./g, '')} </span>
-              `
-          }
+    //       if (typeof (links[link].href) != 'undefined') {
+    //         elmnt.style.backgroundColor = "red";
+    //         elmnt.style.borderRadius = "200px";
+    //         elmnt.innerHTML = `
+    //             <span id="IVHoverGo" style="text-align: center;
+    //             transform-origin: center;
+    //             transform: translate(-50%, 40px);
+    //             position: inherit;
+    //             background-color:white;"> ${links[link].href.replace(/\.m\./g, '.').replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0].replace(/^m\./g, '')} </span>
+    //           `
+    //       }
 
-        }
-        console.log("X " + posX + " Y " + posY + " B " + upperLimit + "LB" + lowerLimit)
-      }
-    }
+    //     }
+    //     console.log("X " + posX + " Y " + posY + " B " + upperLimit + "LB" + lowerLimit)
+    //   }
+    // }
     browser.storage.local.set({ 'newplace': topOffset + "," + leftOffset });
   }
 }
