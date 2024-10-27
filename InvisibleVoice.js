@@ -398,11 +398,10 @@ let notificationD = null;
 var notificationsToShow = false;
 var notificationsDismissed = false;
 function enableNotifications() {
-  var currentState;
   browser.storage.local.get(data => {
     const tags = (settingsState.notificationsTags || '');
-    const domainKey = domainString.replace(/\./g, "");
-    if (!data.data.hasOwnProperty(domainKey)) {
+    const domainKey = sourceString
+    if (!data.data || !data.data.hasOwnProperty(domainKey)) {
       return;
     }
     if (notificationD === null) {
@@ -423,22 +422,24 @@ function enableNotifications() {
       notificationD.dismissed = true;
       return;
     }
-    const siteTags = data.data?.[domainKey]?.k || '';
-    const matchedTags = tags.split('').filter(tag => siteTags.includes(tag));
-    notificationD.matchedTags = matchedTags;
-    if (debug && matchedTags.length) console.log(matchedTags)
-    if (matchedTags.length > 0) {
-      currentState = data.siteData || {};
-      notificationD.generateNotificationRequestList(data.data);
-      notificationD.updateDisplayIcon();
-      if (currentState[domainKey]) {
-        const domainObj = currentState[domainKey]
-        matchedTags.forEach(tag => notificationD.processNotification(tag, domainObj))
-        return
-      }
-    }
+    bgRequestNotificationData(domainKey);
   });
-  browser.storage.local.set({ "siteData": currentState });
+}
+
+function bgRequestNotificationData(domainKey) {
+  const sending = browser.runtime.sendMessage({ "IvGetNotificationData": domainKey })
+  sending.then(response => {
+    if (response) {
+      const { k: tags } = response.data;
+      const matchedTags = notificationD.tags.split('').filter(tag => tags.includes(tag));
+      notificationD.matchedTags = matchedTags;
+      if (matchedTags.length > 0) {
+        matchedTags.forEach(tag => notificationD.processNotification(tag, response.data))
+      }
+      notificationD.updateDisplayIcon();
+    }
+  })
+
 }
 
 function createNotificationElement(tagName, className, textContent, clickHandler) {

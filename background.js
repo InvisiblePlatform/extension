@@ -48,6 +48,10 @@ var init = {
   cache: "default",
 };
 
+fetch(new Request(localIndex, init))
+  .then((response) => response.json())
+  .then((data) => browser.storage.local.set({ data: data }))
+
 fetch(new Request(localHash, init))
   .then((response) => response.json())
   .then((data) => (hashes = data));
@@ -333,6 +337,78 @@ function getSuffix(parts, publicSuffixes) {
   return null
 }
 
+async function getNotificationData(domainKey) {
+  let availableData = await browser.storage.local.get("siteData").then((data) => {
+    if (data.siteData === undefined) {
+      return null;
+    }
+    if (domainKey in data.siteData) {
+      return data.siteData[domainKey];
+    }
+    return null;
+  })
+  if (availableData) {
+    console.log("Returning available data");
+    return availableData;
+  }
+  let domainTags = await browser.storage.local.get("data").then((data) => {
+    return data.data[domainKey];
+  });
+  const tagArray = domainTags.k.split('');
+  let requestList = [domainKey];
+  const siteFilterData = await browser.storage.local.get("data").then((data) => {
+    return Object.keys(data.data).filter((key) => {
+      const item = data.data[key];
+      if (typeof item.k === 'string') {
+        return tagArray.some((tag) => item.k.includes(tag));
+      }
+      return false;
+    }
+    )
+  })
+  while (requestList.length < 9) {
+    const randomIndex = Math.floor(Math.random() * siteFilterData.length);
+    if (requestList.includes(siteFilterData[randomIndex])) {
+      continue;
+    }
+    requestList.push(siteFilterData[randomIndex]);
+  }
+  let externalState = null;
+  const actualRequestList = await browser.storage.local.get("siteData").then((data) => {
+    let currentState = data.siteData || {};
+    requestListResponse = [];
+    for (let i = 0; i < requestList.length; i++) {
+      if (requestList[i] in currentState) {
+        continue;
+      }
+      requestListResponse.push(requestList[i]);
+    }
+    return requestListResponse;
+  })
+  if (actualRequestList.length === 0) {
+    return await browser.storage.local.get("siteData").then((data) => {
+      return data.siteData;
+    })
+  }
+  currentState = await browser.storage.local.get("siteData").then((data) => {
+    return data.siteData;
+  })
+  if (currentState === undefined) {
+    currentState = {};
+    browser.storage.local.set({ siteData: currentState });
+  }
+  for (let i = 0; i < actualRequestList.length; i++) {
+    externalState = fetch(`${aSiteWePullAndPushTo}/db/${actualRequestList[i]}.json`, init)
+      .then((response) => response.json())
+      .then((data) => {
+        currentState[actualRequestList[i]] = data;
+        browser.storage.local.set({ siteData: currentState });
+        return currentState;
+      })
+  }
+  return await currentState[domainKey];
+}
+
 // Domain handling
 // PSL 2023/06/23 updated
 async function parsePSL(pslStream) {
@@ -450,6 +526,18 @@ browser.runtime.onMessage.addListener(function (msgObj, sender, sendResponse) {
     case "InvisibleDomainCheck":
       data = lookupDomain(msgObj[firstKey]);
       sendResponse(data);
+      break;
+    case "IvGetNotificationData":
+      (async function () {
+        var data = await getNotificationData(msgObj[firstKey]);
+        if (data === undefined) {
+          data = await getNotificationData(msgObj[firstKey]);
+        }
+        if (data === undefined) {
+          data = false;
+        }
+        sendResponse(data);
+      })();
       break;
   }
   return true;

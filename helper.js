@@ -172,7 +172,7 @@ var defaultSettingsState = {
     "userPreferences": defaultUserPreferences,
     "bobbleOverride": false,
     "notifications": false,
-    "notificationsTags": availableNotifications,
+    "notificationsTags": '',
     "listOrder": defaultOrderString,
     "listOrder-wbm": defaultOrderStringWbm,
     "dissmissedNotifications": [],
@@ -442,92 +442,12 @@ function domainCheckBg(domain) {
 }
 
 
-function lookupDomainHash(lookup, domainInfo) {
-    if (domainInfo == null) return null
-    let domainString = domainInfo.domain
-    let hashforsite = lookup[domainString];
-    if (hashforsite === undefined && domainInfo.subdomains.length) {
-        domainString = domainInfo.domain.split('.').slice(-2).join('.');
-        hashforsite = lookup[domainString];
-    }
-    // console.log(hashforsite)
-    return JSON.stringify({
-        "sourceString": domainString.replace(/\./g, ""),
-        "domainString": domainString,
-        "subdomains": domainInfo.subdomains,
-        "hashforsite": hashforsite
-    });
-}
-
 function processDomain(pattern) {
     console.log("ProcessDom")
     globalCode = pattern;
     sourceString = pattern;
     createObjects();
 }
-
-// async function domainChecker(domains, lookupList) {
-//     console.log("DomCheck")
-//     console.log(domains)
-//     console.log(lookupList)
-//     if (lookupList[sourceString]) return processDomain(sourceString)
-//     try {
-//         for (const domain of domains) {
-//             const pattern = domain.split('.').join('');
-//             const check = lookupList[pattern];
-//             if (check) {
-//                 return check;
-//             }
-//         }
-//     } catch (e) { }
-//     return undefined
-// }
-//function fetchCodeForPattern(lookup, domainInfo) {
-//    console.log("fetch code for ")
-//    headers = new Headers();
-//    init = {
-//        method: 'GET',
-//        headers: headers,
-//        mode: 'cors',
-//        cache: 'default'
-//    };
-//    bgjson = lookupDomainHash(lookup, domainInfo);
-//    if (bgjson == null) return null
-//    bgresponse = JSON.parse(bgjson);
-//    sourceString = bgresponse['sourceString'];
-//    domainString = bgresponse['domainString'];
-//    hashforsite = bgresponse['hashforsite'] ? bgresponse['hashforsite'] : false;
-//    var pattern = "/" + sourceString + "/";
-//    if (debug == true) console.log("[ IV ] " + domainString + " : " + hashforsite + " : " + pattern + " : " + sourceString);
-//    browser.storage.local.get("data", function (data) {
-//        console.log(data)
-//        try {
-//            fetch(new Request(localHash, init))
-//                .then(response => response.json())
-//                .then(subdata => {
-//                    return subdata[hashforsite]
-//                })
-//                .then(possibileDomains => domainChecker(possibileDomains, data.data))
-//            console.log(data)
-//        } catch {
-//            console.log("catch 1")
-//            try {
-//                fetch(new Request(localReplace, init))
-//                    .then(response => response.json())
-//                    .then(data, function (data) {
-//                        if (data[pattern]) {
-//                            return data[pattern]["t"].replace(/\//g, '');
-//                        }
-//                    });
-//            } catch {
-//                console.log("catch 2")
-//                return;
-//            }
-//        }
-//    });
-//    return;
-//}
-//
 
 async function startUpStart() {
     browser.storage.local.get(function (data) {
