@@ -25,10 +25,7 @@ function callback(tabs) {
   if (sourceString === undefined) {
     currentTab = tabs[0]; // there will be only one in this array
     aSiteYouVisit = currentTab.url;
-    console.log(currentTab.url)
-    fetch(new Request(localSite, init))
-      .then(response => response.json())
-      .then(lookup => startDataChain(lookup, aSiteYouVisit))
+    startDataChain(aSiteYouVisit)
   }
   return true
 }
@@ -251,10 +248,10 @@ iframe.addEventListener('load', function (e) {
   }
 });
 
-function startDataChain(lookup) {
-  console.log("chain")
-  processSettingsObject().then(fetch(new Request(psl, init))
-    .then(response => parsePSL(response.body, lookup, aSiteYouVisit)));
+function startDataChain() {
+  startUpStart()
+  processSettingsObject().then(
+    domainCheckBg(aSiteYouVisit))
 }
 
 console.log(identifier);

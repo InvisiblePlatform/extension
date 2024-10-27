@@ -148,8 +148,6 @@ class notificationDisplay {
       } else {
         notificationD.element.style.setProperty("--top", "");
       }
-      this.expandElement.style.transform = side === "right" ?
-        `translate(-40px,${difference}px)` : `translate(40px,${difference}px)`;
       this.element.style.setProperty("--offsetY", `${notificationsOffsetY}px`);
     })
     document.documentElement.appendChild(this.element);
@@ -213,9 +211,6 @@ class notificationDisplay {
       } else {
         notificationD.element.style.setProperty("--top", "");
       }
-      notificationD.expandElement.style.transform = currentLocation[0] == "right" ?
-        `translate(-40px,${difference}}px)` : `translate(40px,${difference}px)`;
-
     }
 
     function closeDragElement() {
@@ -630,7 +625,7 @@ function blockCheck() {
   browser.storage.local.get(function (localdata) {
     blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
   });
-  if (blockedHashes.includes(hashforsite)) {
+  if (blockedHashes !== undefined && blockedHashes.includes(hashforsite)) {
     fetch(new Request(localHash, init))
       .then(response => response.json())
       .then(data => data[hashforsite]);
@@ -768,9 +763,11 @@ function boycott() {
   window.location.replace(browser.runtime.getURL('blocked.html') + "?site=" + domainString + "&return=" + aSiteYouVisit);
 }
 
-function startDataChain(lookup) {
-  processSettingsObject(true).then(fetch(new Request(psl, init))
-    .then(response => parsePSL(response.body, lookup, aSiteYouVisit)).then(res => console.log(res)));
+function startDataChain() {
+  startUpStart();
+  processSettingsObject(true).then(
+    domainCheckBg(aSiteYouVisit))
+
 }
 
 var once = 0;
@@ -1054,7 +1051,4 @@ window.addEventListener("scroll", function () {
   lastScrollTop = st <= 0 ? 0 : st; // For Mobile or negative scrolling
 }, false);
 
-
-fetch(new Request(localSite, init))
-  .then(response => response.json())
-  .then(lookup => startDataChain(lookup))
+startDataChain();

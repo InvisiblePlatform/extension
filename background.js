@@ -3,6 +3,7 @@ var aSiteWePullAndPushTo = "https://test.reveb.la";
 var voteUrl = "https://assets.reveb.la";
 var now = new Date().getTime();
 var identifier = "com.morkforid.Invisible-Voice.Extension (C5N688B362)";
+var seenTabs = [];
 
 if (chrome) {
   browser = chrome;
@@ -20,12 +21,15 @@ var updateJSON; // Request
 
 // Lookup variables
 var lookup;
-var localSite = browser.runtime.getURL("sitetohash.json");
+let localReplace = browser.runtime.getURL('replacements.json');
+let localHash = browser.runtime.getURL('hashtosite.json');
+let localSite = browser.runtime.getURL('sitetohash.json');
+let psl = browser.runtime.getURL('public_suffix_list.dat');
 
 var blockedHashes = [];
 var apiKey = '';
 
-async function updateApiKey(){
+async function updateApiKey() {
   browser.storage.local.get("apiKey", function (key) {
     console.log(key.apiKey);
     apiKey = key.apiKey;
@@ -44,11 +48,27 @@ var init = {
   cache: "default",
 };
 
+fetch(new Request(localHash, init))
+  .then((response) => response.json())
+  .then((data) => (hashes = data));
+
 fetch(new Request(localSite, init))
   .then((response) => response.json())
   .then((data) => (lookup = data));
 
-function fetchIndex() {
+fetch(new Request(localReplace, init))
+  .then((response) => response.json())
+  .then((data) => (replace = data));
+
+fetch(new Request(psl, init)).then((response) => {
+  if (response.ok) {
+    parsePSL(response.body).then((data) => {
+      publicSuffixes = data;
+    });
+  }
+})
+
+function fetchIndexes() {
   browser.storage.local.get(function (localdata) {
     blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
     if (localdata.time + 480000 < now) allowUpdate = true;
@@ -71,30 +91,56 @@ function fetchIndex() {
       .then(browser.storage.local.set({ time: now }));
 }
 
-fetchIndex();
-function lookupDomainHash(domain) {
-  domainString = domain
-    .replace(/\.m\./g, ".")
-    .replace(/http[s]*:\/\/|www\./g, "")
-    .split(/[/?#]/)[0]
-    .replace(/^m\./g, "");
-  hashforsite = lookup[domainString];
-  if (hashforsite === undefined)
-    if (domainString.split(".").length > 2) {
-      domainString = domainString.split(".").slice(1).join(".");
-      hashforsite = lookup[domainString];
+fetchIndexes();
+function lookupDomainHash(domainInfo) {
+  let domainString = domainInfo.domain
+  let sourceString = domainString.replace(/\./g, "");
+  let hashforsite = lookup[domainString];
+  if (hashforsite === undefined) {
+    replacementLookupPattern = `/${sourceString}/`;
+    lookupPattern = replace[replacementLookupPattern];
+    if ("t" in lookupPattern) {
+      hashforsite = lookup[lookupPattern["t"].replace(/\//g, "")];
     }
-  return JSON.stringify({
-    sourceString: domainString.replace(/\./g, ""),
-    domainString: domainString,
-    hashforsite: hashforsite,
-  });
+  }
+
+  let siteData = hashes[hashforsite] ? hashes[hashforsite] : null;
+  return {
+    "hashforsite": hashforsite,
+    "siteData": siteData,
+    "domainString": domainString,
+    "subdomains": domainInfo.subdomains,
+    "sourceString": sourceString
+  };
 }
 
+function lookupDomain(url) {
+  let domainString = url.replace(/\.m\./g, '.')
+    .replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0].replace(/^m\./, '');
+  let domainInfo = parseDomain(domainString, publicSuffixes);
+  return lookupDomainHash(domainInfo);
+}
+
+
 function blockCheck() {
+  if (seenTabs.length === 0) return;
+  if (browser.storage.local.get("blockedHashes").then(x => {
+    return !(x === undefined || x === null || x == {});
+  })) return;
   browser.tabs.query({ active: true }, (tabs) => {
     tabs.forEach((tab) => {
-      browser.tabs.sendMessage(tab.id, "InvisibleVoiceBlockCheck");
+      if (tab.url === undefined) return;
+      if (tab.url.startsWith("about:")) return;
+      if (tab.url.startsWith("chrome:")) return;
+      if (tab.url.startsWith("moz-extension:")) return;
+      if (tab.url.startsWith("file:")) return;
+      if (tab.url.startsWith("chrome-extension:")) return;
+      if (tab.url.startsWith("view-source:")) return;
+      if (tab.url.startsWith("data:")) return;
+      if (tab.url.startsWith("blob:")) return;
+      if (seenTabs.includes(tab.id)) {
+        browser.tabs.sendMessage(tab.id, "InvisibleVoiceBlockCheck");
+      }
     });
   });
 }
@@ -125,7 +171,7 @@ async function postGet(location) {
   return data;
 }
 async function postMake(post_type, content, location) {
-  if (apiKey == ''){
+  if (apiKey == '') {
     apiKey = await updateApiKey()
   }
   var postHeaders = new Headers({
@@ -158,7 +204,7 @@ async function postMake(post_type, content, location) {
 }
 
 async function voteAsyncPost(site, type) {
-  if (apiKey == ''){
+  if (apiKey == '') {
     apiKey = await updateApiKey()
   }
   var direction;
@@ -200,7 +246,7 @@ async function voteAsyncPost(site, type) {
 
 // For voting
 async function voteAsync(site, direction, type = "domainHash") {
-  if (apiKey == ''){
+  if (apiKey == '') {
     apiKey = await updateApiKey()
   }
   var voteHeaders = new Headers({
@@ -258,9 +304,77 @@ async function updateWithSiteData(data) {
   return "Update Set";
 }
 
+function parseDomain(domain, publicSuffixes) {
+  const parts = domain.split('.').reverse()
+  const suffix = getSuffix(parts, publicSuffixes);
+  if (suffix == null) return null
+  const suffixSize = suffix.split('.').length;
+  const suffixLessParts = parts.reverse().slice(suffixSize);
+  const subdomains = suffixLessParts.slice(1);
+  return {
+    domain: domain,
+    subdomains: subdomains,
+    suffix: suffix
+  };
+}
+function getSuffix(parts, publicSuffixes) {
+  let domainParts = parts.reverse();
+  let longestMatch = null;
+  for (let i = 0; i < domainParts.length; i++) {
+    const suffix = domainParts.slice(i).join('.');
+    const match = publicSuffixes.find(ps => ps.suffix == suffix);
+    if (match) {
+      if (!longestMatch || suffix.length > longestMatch.length) {
+        longestMatch = match;
+      }
+    }
+  }
+  if (longestMatch !== null) return longestMatch.suffix;
+  return null
+}
+
+// Domain handling
+// PSL 2023/06/23 updated
+async function parsePSL(pslStream) {
+  const decoder = new TextDecoder();
+  const reader = pslStream.getReader();
+  let chunk;
+  let pslData = '';
+  while (!(chunk = await reader.read()).done) {
+    const decodedChunk = decoder.decode(chunk.value, { stream: true });
+    pslData += decodedChunk;
+  }
+  const lines = pslData.trim().split('\n');
+  const publicSuffixes = [];
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+    if (trimmedLine === '' || trimmedLine.startsWith('//')) {
+      continue; // Ignore empty lines and comments
+    }
+    const isException = trimmedLine.startsWith('!');
+    const domainOrRule = trimmedLine.substring(isException ? 1 : 0);
+    const isWildcard = domainOrRule.startsWith('*');
+    const suffix = isWildcard ? domainOrRule.substring(1) : domainOrRule;
+    if (isException) {
+      const lastSuffix = publicSuffixes[publicSuffixes.length - 1];
+      if (lastSuffix && lastSuffix.exceptionRules) {
+        lastSuffix.exceptionRules.push(suffix);
+      } else {
+        console.warn('Exception rule without preceding regular rule:', trimmedLine);
+      }
+    } else {
+      publicSuffixes.push({ suffix, exceptionRules: [] });
+    }
+  }
+  return publicSuffixes;
+}
+
+
 browser.runtime.onMessage.addListener(function (msgObj, sender, sendResponse) {
-  console.log(msgObj);
+  console.log(msgObj, sender);
   firstKey = Object.keys(msgObj).filter(x => x.startsWith("I"))[0]
+  if (sender.tab !== undefined)
+    if (seenTabs.indexOf(sender.tab.id) === -1) seenTabs.push(sender.tab.id);
   switch (firstKey) {
     case "InvisibleOpenPopup":
       browser.action.openPopup();
@@ -333,8 +447,8 @@ browser.runtime.onMessage.addListener(function (msgObj, sender, sendResponse) {
       }, 1000);
       blockCheck();
       break;
-    case "IVHASH":
-      data = lookupDomainHash(msgObj[firstKey]);
+    case "InvisibleDomainCheck":
+      data = lookupDomain(msgObj[firstKey]);
       sendResponse(data);
       break;
   }

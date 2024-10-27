@@ -13,14 +13,8 @@ if (chrRegex.test(navigator.userAgent)) identifier = "fafojfdhjlapbpafdcoggecpag
 if (frRegex.test(navigator.userAgent)) identifier = "c81358df75e512918fcefb49e12266fadd4be00f@temporary-addon"
 if (phoneRegex.test(navigator.userAgent)) phoneMode = true;
 // Various Lookups
-let localReplace = browser.runtime.getURL('replacements.json');
-let localHash = browser.runtime.getURL('hashtosite.json');
-let localSite = browser.runtime.getURL('sitetohash.json');
 let buttonSvg = browser.runtime.getURL('button.svg');
-let psl = browser.runtime.getURL('public_suffix_list.dat');
-let localIndex = browser.runtime.getURL('index.json');
 
-var lookup = {};
 var dontOpen = false;
 var blockedHashes;
 var settingsState;
@@ -288,22 +282,6 @@ const ivLogoArrow = "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg
 
 var now = Date.now();
 
-function fetchIndex() {
-    console.log("index")
-    browser.storage.local.get(function (localdata) {
-        blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
-        if ((localdata.time + 480000) < now) allowUpdate = true;
-        if (debug && !IVLocalIndex) console.log("[ Invisible Voice ]: Set to " + aSiteWePullAndPushTo);
-        if (debug && IVLocalIndex) console.log("[ Invisible Voice ]: Set to LocalIndex");
-        updateJSON = (IVLocalIndex) ? new Request(localIndex, init) : new Request(aSiteWePullAndPushTo + "/index.json", init);
-        // Prevent page load
-        blockCheck();
-        if (allowUpdate) fetch(updateJSON)
-            .then(response => response.json())
-            .then(data => browser.storage.local.set({ "data": data }))
-            .then(browser.storage.local.set({ "time": now }));
-    });
-}
 function toTitleCase(str) {
     return str.replace(
         /\w\S*/g,
@@ -317,6 +295,10 @@ function getNewPost(e) {
     if (debug) console.log("sending new post")
     const sending = browser.runtime.sendMessage({ "InvisibleGetPost": e.post_uid })
     sending.then(forwardPost, handleError)
+}
+
+function tabIdSend() {
+    browser.runtime.sendMessage({ "InvisibleTabId": "alive" })
 }
 
 function shuffleArray(array) {
@@ -420,6 +402,10 @@ async function processSettingsObject(skip = false) {
     currentVersion = browser.runtime.getManifest().version;
     try {
         tempSettingsState = await browser.storage.local.get("settings_obj").then(function (obj) {
+            if (obj["settings_obj"] == undefined) {
+                browser.storage.local.set({ "settings_obj": JSON.stringify(settingsState) });
+                return settingsState
+            }
             return JSON.parse(obj["settings_obj"])
         });
         for (item in tempSettingsState) {
@@ -438,34 +424,23 @@ async function processSettingsObject(skip = false) {
     return settingsState
 }
 
-function parseDomain(domain, publicSuffixes) {
-    const parts = domain.split('.').reverse()
-    const suffix = getSuffix(parts, publicSuffixes);
-    if (suffix == null) return null
-    const suffixSize = suffix.split('.').length;
-    const suffixLessParts = parts.reverse().slice(suffixSize);
-    const subdomains = suffixLessParts.slice(1);
-    return {
-        domain: domain,
-        subdomains: subdomains,
-        suffix: suffix
-    };
-}
-function getSuffix(parts, publicSuffixes) {
-    let domainParts = parts.reverse();
-    let longestMatch = null;
-    for (let i = 0; i < domainParts.length; i++) {
-        const suffix = domainParts.slice(i).join('.');
-        const match = publicSuffixes.find(ps => ps.suffix == suffix);
-        if (match) {
-            if (!longestMatch || suffix.length > longestMatch.length) {
-                longestMatch = match;
-            }
+function domainCheckBg(domain) {
+    const sending = browser.runtime.sendMessage({ "InvisibleDomainCheck": domain });
+    sending.then(response => {
+        backgroundJson = response;
+        console.log(backgroundJson)
+        if ("sourceString" in backgroundJson) {
+            processDomain(backgroundJson["sourceString"]);
         }
-    }
-    if (longestMatch !== null) return longestMatch.suffix;
-    return null
+        if ("hashforsite" in backgroundJson) {
+            hashforsite = backgroundJson["hashforsite"];
+        }
+        if ("domainString" in backgroundJson) {
+            domainString = backgroundJson["domainString"];
+        }
+    }, handleError)
 }
+
 
 function lookupDomainHash(lookup, domainInfo) {
     if (domainInfo == null) return null
@@ -489,78 +464,72 @@ function processDomain(pattern) {
     globalCode = pattern;
     sourceString = pattern;
     createObjects();
-    return lookup[pattern];
 }
 
-function domainChecker(domains, lookupList) {
-    console.log("DomCheck")
-    console.log(domains)
-    console.log(lookupList)
-    try {
-        if (lookupList[sourceString]) return processDomain(sourceString)
+// async function domainChecker(domains, lookupList) {
+//     console.log("DomCheck")
+//     console.log(domains)
+//     console.log(lookupList)
+//     if (lookupList[sourceString]) return processDomain(sourceString)
+//     try {
+//         for (const domain of domains) {
+//             const pattern = domain.split('.').join('');
+//             const check = lookupList[pattern];
+//             if (check) {
+//                 return check;
+//             }
+//         }
+//     } catch (e) { }
+//     return undefined
+// }
+//function fetchCodeForPattern(lookup, domainInfo) {
+//    console.log("fetch code for ")
+//    headers = new Headers();
+//    init = {
+//        method: 'GET',
+//        headers: headers,
+//        mode: 'cors',
+//        cache: 'default'
+//    };
+//    bgjson = lookupDomainHash(lookup, domainInfo);
+//    if (bgjson == null) return null
+//    bgresponse = JSON.parse(bgjson);
+//    sourceString = bgresponse['sourceString'];
+//    domainString = bgresponse['domainString'];
+//    hashforsite = bgresponse['hashforsite'] ? bgresponse['hashforsite'] : false;
+//    var pattern = "/" + sourceString + "/";
+//    if (debug == true) console.log("[ IV ] " + domainString + " : " + hashforsite + " : " + pattern + " : " + sourceString);
+//    browser.storage.local.get("data", function (data) {
+//        console.log(data)
+//        try {
+//            fetch(new Request(localHash, init))
+//                .then(response => response.json())
+//                .then(subdata => {
+//                    return subdata[hashforsite]
+//                })
+//                .then(possibileDomains => domainChecker(possibileDomains, data.data))
+//            console.log(data)
+//        } catch {
+//            console.log("catch 1")
+//            try {
+//                fetch(new Request(localReplace, init))
+//                    .then(response => response.json())
+//                    .then(data, function (data) {
+//                        if (data[pattern]) {
+//                            return data[pattern]["t"].replace(/\//g, '');
+//                        }
+//                    });
+//            } catch {
+//                console.log("catch 2")
+//                return;
+//            }
+//        }
+//    });
+//    return;
+//}
+//
 
-    } catch (e) {
-        fetchIndex()
-        if (lookupList[sourceString]) return processDomain(sourceString)
-    }
-    try {
-        for (const domain of domains) {
-            const pattern = domain.split('.').join('');
-            const check = lookupList[pattern];
-            if (check) {
-                return check;
-            }
-        }
-    } catch (e) { }
-    return undefined
-}
-function fetchCodeForPattern(lookup, domainInfo) {
-    console.log("fetch code for ")
-    headers = new Headers();
-    init = {
-        method: 'GET',
-        headers: headers,
-        mode: 'cors',
-        cache: 'default'
-    };
-    bgjson = lookupDomainHash(lookup, domainInfo);
-    if (bgjson == null) return null
-    bgresponse = JSON.parse(bgjson);
-    sourceString = bgresponse['sourceString'];
-    domainString = bgresponse['domainString'];
-    hashforsite = bgresponse['hashforsite'] ? bgresponse['hashforsite'] : false;
-    var pattern = "/" + sourceString + "/";
-    if (debug == true) console.log("[ IV ] " + domainString + " : " + hashforsite + " : " + pattern + " : " + sourceString);
-    browser.storage.local.get("data", function (data) {
-        try {
-            fetch(new Request(localHash, init))
-                .then(response => response.json())
-                .then(subdata => console.log(subdata[hashforsite]))
-                .then(possibileDomains => domainChecker(possibileDomains, data.data))
-            console.log(data)
-        } catch {
-            console.log("catch 1")
-            try {
-                fetch(new Request(localReplace, init))
-                    .then(response => response.json())
-                    .then(data, function (data) {
-                        if (data[pattern]) {
-                            return data[pattern]["t"].replace(/\//g, '');
-                        }
-                    });
-            } catch {
-                console.log("catch 2")
-                return;
-            }
-        }
-    });
-    return;
-}
-
-
-// Domain handling
-// PSL 2023/06/23 updated
-async function parsePSL(pslStream, lookup, aSiteYouVisit) {
+async function startUpStart() {
     browser.storage.local.get(function (data) {
         pretty_name = data.pretty_name;
         username = data.username;
@@ -568,45 +537,11 @@ async function parsePSL(pslStream, lookup, aSiteYouVisit) {
         if (loggedIn) console.log(`user ${username}/${pretty_name} is logged in`)
         settingsState["loggedIn"] = loggedIn
     })
-    const decoder = new TextDecoder();
-    const reader = pslStream.getReader();
-    let chunk;
-    let pslData = '';
-    while (!(chunk = await reader.read()).done) {
-        const decodedChunk = decoder.decode(chunk.value, { stream: true });
-        pslData += decodedChunk;
-    }
-    const lines = pslData.trim().split('\n');
-    const publicSuffixes = [];
-    for (const line of lines) {
-        const trimmedLine = line.trim();
-        if (trimmedLine === '' || trimmedLine.startsWith('//')) {
-            continue; // Ignore empty lines and comments
-        }
-        const isException = trimmedLine.startsWith('!');
-        const domainOrRule = trimmedLine.substring(isException ? 1 : 0);
-        const isWildcard = domainOrRule.startsWith('*');
-        const suffix = isWildcard ? domainOrRule.substring(1) : domainOrRule;
-        if (isException) {
-            const lastSuffix = publicSuffixes[publicSuffixes.length - 1];
-            if (lastSuffix && lastSuffix.exceptionRules) {
-                lastSuffix.exceptionRules.push(suffix);
-            } else {
-                console.warn('Exception rule without preceding regular rule:', trimmedLine);
-            }
-        } else {
-            publicSuffixes.push({ suffix, exceptionRules: [] });
-        }
-    }
-    domainString = aSiteYouVisit.replace(/\.m\./g, '.')
-        .replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0].replace(/^m\./g, '');
-    domainInfo = parseDomain(domainString, publicSuffixes);
-    fetchCodeForPattern(lookup, domainInfo);
-    return domainInfo;
 }
 
 browser.storage.local.get("userPreferences", function (localdata) {
     const loadedPreferences = localdata.userPreferences || {};
     const mergedPreferences = { ...defaultUserPreferences, ...loadedPreferences };
     browser.storage.local.set({ "userPreferences": mergedPreferences });
+    tabIdSend();
 });
