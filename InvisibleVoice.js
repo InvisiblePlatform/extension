@@ -199,11 +199,11 @@ class notificationDisplay {
       // we need to also offset the notifications container, but 
       // we want to keep it in the screen, so we have to limit it to 
       // the height of the screen minus the height of the notification element
-      let notificationsOffsetY = Math.max(Math.min(pos4, window.innerHeight - notificationElementHeight), 0);
+      let notificationsOffsetY = Math.max(Math.min(pos4 - 12, window.innerHeight - notificationElementHeight), 0);
       // we want to handle this in the css so set an "--offsetY" variable
       notificationD.element.style.setProperty("--offsetY", `${notificationsOffsetY}px`);
       // if location is beyond notificationOffsetY then we move expandElement the rest of the distance
-      let difference = pos4 - notificationsOffsetY;
+      let difference = (pos4 - 12) - notificationsOffsetY;
       if (difference > 0) {
         var notificationCount = Math.min(notificationD.matchedTags.length, 4);
         console.log({ difference, notificationCount, notificationQuantityBottomOffsets })
