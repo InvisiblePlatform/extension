@@ -207,6 +207,28 @@ async function postMake(post_type, content, location) {
   return ret;
 }
 
+async function getInfoList(list_of_locations) {
+  var postHeaders = new Headers({
+    "Content-Type": "application/json",
+  });
+  var data = {
+    locations: list_of_locations,
+  };
+  var postVars = {
+    method: "POST",
+    headers: postHeaders,
+    credentials: "include",
+    body: JSON.stringify(data),
+  };
+  var responseData = await fetch(new Request(voteUrl + "/get-data-list", postVars))
+    .then((response) => response.json())
+    .then((data) => {
+      if (debug) console.log(data);
+      return data;
+    });
+  return responseData;
+}
+
 async function voteAsyncPost(site, type) {
   if (apiKey == '') {
     apiKey = await updateApiKey()
@@ -223,12 +245,18 @@ async function voteAsyncPost(site, type) {
       direction = "un";
       break;
   }
-
+  type = "domainhash";
+  if (site.includes("/")) {
+    type = "module";
+    if (site.split("/")[1] === "post") {
+      type = "post";
+    }
+  }
   voteHeaders = new Headers({
     "Content-Type": "application/json",
   });
   var data = {
-    type: "domainhash",
+    type: type,
     location: site,
     direction: direction,
     api_session_token: apiKey,
@@ -489,11 +517,18 @@ browser.runtime.onMessage.addListener(function (msgObj, sender, sendResponse) {
         sendResponse(data);
       })();
       break;
+    case "InvisibleRequestList":
+      (async function () {
+        var data = await getInfoList(msgObj[firstKey]);
+        sendResponse(data);
+      })();
+      break;
     case "IVPostVoteUp":
     case "IVPostVoteDown":
     case "IVPostVoteUn":
     case "InvisibleModuleVote":
       (async function () {
+        console.log(msgObj);
         var data = await voteAsyncPost(msgObj[firstKey], msgObj["type"]);
         sendResponse(data);
       })();

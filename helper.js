@@ -203,11 +203,13 @@ const actionLookup = {
     "IVGetPost": "InvisibleGetPost",
     "IVMakePost": "InvisibleMakePost",
     "IVPostStuff": "InvisibleModuleInfo",
+    "IVRequest": "InvisibleRequestList",
 }
 const actionLookupCallBack = {
     "IVGetPost": forwardPost,
     "IVMakePost": getNewPost,
     "IVPostStuff": forwardPosts,
+    "IVRequest": forwardInfo,
 }
 const updown = {
     "IVLike": "up",
@@ -293,8 +295,8 @@ function toTitleCase(str) {
 
 function getNewPost(e) {
     if (debug) console.log("sending new post")
-    const sending = browser.runtime.sendMessage({ "InvisibleGetPost": e.post_uid })
-    sending.then(forwardPost, handleError)
+    const sending = browser.runtime.sendMessage({ "InvisibleUpdateModule": e })
+    sending.then(forwardInfoSingle, handleError)
 }
 
 function tabIdSend() {
@@ -340,6 +342,24 @@ function sendMessageToPage(message) {
         window.postMessage(message, '*');
     }
     console.log(`sent ${message.message}`)
+}
+
+function forwardInfo(x) {
+    console.debug(x);
+    var message = {
+        message: "ModuleInfo",
+        infoResponse: x
+    };
+    sendMessageToPage(message);
+}
+
+function forwardInfoSingle(x) {
+    console.debug(x);
+    var message = {
+        message: "ModuleInfoSingle",
+        infoResponse: x
+    };
+    sendMessageToPage(message);
 }
 
 function forwardPost(x) {
@@ -428,6 +448,10 @@ function domainCheckBg(domain) {
     const sending = browser.runtime.sendMessage({ "InvisibleDomainCheck": domain });
     sending.then(response => {
         backgroundJson = response;
+        if (backgroundJson == undefined) {
+            console.log("No data for this domain")
+            return
+        }
         console.log(backgroundJson)
         if ("sourceString" in backgroundJson) {
             processDomain(backgroundJson["sourceString"]);

@@ -921,7 +921,7 @@ window.addEventListener('message', function (e) {
     case 'IVPostVoteUp':
     case 'IVPostVoteDown':
     case 'IVPostVoteUnvote':
-      if (e.data.data != '') {
+      if (data != '') {
         if (debug) console.log(data)
         const sending = browser.runtime.sendMessage({ "InvisibleModuleVote": data, "type": type })
         sending.then(forwardPosts, handleError)
@@ -1003,6 +1003,12 @@ window.addEventListener('message', function (e) {
       break;
     case 'IVClose':
       resize("close");
+      break;
+    case 'IVRequest':
+      if (data != '') {
+        const sending = browser.runtime.sendMessage({ [actionLookup[type]]: data });
+        sending.then(forwardInfo, handleError);
+      }
       break;
   }
 });
