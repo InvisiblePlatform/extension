@@ -54,6 +54,9 @@ window.addEventListener('message', function (e) {
   if (debug) console.log(e.data.type + " Stub " + e.data.data);
 
   switch (e.data.type) {
+    case 'SettingsUpdate':
+      sendMessageToPage(e.data)
+      break;
     case 'IVSettingsReq':
       const message = {
         message: "SettingsUpdate",

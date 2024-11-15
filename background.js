@@ -36,7 +36,111 @@ async function updateApiKey() {
     return apiKey
   });
 }
+const availableNotifications = "beglmstwp";
+const defaultUserPreferences = {
+  "l": { type: "range", min: 0, max: 10 },
+  "w": { type: "multiRange", min: 0, max: 100 },
+  "g": { type: "range", min: 0, max: 5 },
+  "b": { type: "range", min: 0, max: 300 },
+  "p": { type: "range", min: 1, max: 6 },
+  "s": { type: "range", min: 0, max: 100 },
+  "t": { type: "range", min: 0, max: 100 },
+  "m": {
+    type: "label", labels: ["conspiracy-pseudoscience", "left",
+      "left-center", "pro-science", "right", "right-center", "satire",
+      "censorship", "conspiracy", "failed-fact-checks", "fake-news", "false-claims",
+      "hate", "imposter", "misinformation", "plagiarism", "poor-sourcing", "propaganda", "pseudoscience"
+    ]
+  },
+};
+const defaultSettingsState = {
+  "preferred_language": "en",
+  "loggedIn": false,
+  "debugMode": false,
+  "darkMode": false,
+  "keepOnScreen": false,
+  "dismissedNotifications": [],
+  "blockedSites": [],
+  "userPreferences": defaultUserPreferences,
+  "bobbleOverride": false,
+  "notifications": false,
+  "notificationsTags": availableNotifications,
+  "listOrder": defaultOrderString,
+  "experimentalFeatures": false,
+  "singleColumn": true,
+  "monoChrome": false,
+  "ignoreUpdateMessage": false,
+  "settingsSync": false,
+  "disabledModules": [],
+  "autoRollTabs": false,
+  "extension_version": "0.0.0",
+};
 
+
+const translate = {
+  "bcorp": "bcorp.title",
+  "carbon": "carbon.title",
+  "cta": "cta.title",
+  "glassdoor": "glassdoor.title",
+  "goodonyou": "goy.section-title",
+  "graph-box": "graph.title",
+  "lobbyeu": "lb.title",
+  "mbfc": "mbfc.title",
+  "opensecrets": "opensec.title",
+  "political": "wikidata.polalignment",
+  "politicali": "wikidata.polideology",
+  "post": "user.moduletitle",
+  "similar": "similar.title",
+  "social": "w.socialmedia",
+  "tosdr": "tos.title",
+  "trustpilot": "trustpilot.title",
+  "trustscore": "trustsc.title",
+  "wbm": "wbm.title",
+  "wbm-automotive-data": "wbm.automotive-data",
+  "wbm-buildings-benchmark": "wbm.buildings-benchmark",
+  "wbm-chumanrightsb": "wbm.chumanrightsb",
+  "wbm-digital-inclusion": "wbm.digital-inclusion",
+  "wbm-electric-utilities": "wbm.electric-utilities",
+  "wbm-financial-system-benchmark": "wbm.financial-system-benchmark",
+  "wbm-food-agriculture-benchmark": "wbm.food-agriculture-benchmark",
+  "wbm-gender-benchmark": "wbm.gender-benchmark",
+  "wbm-just-transition-assessment": "wbm.just-transition-assessment",
+  "wbm-just-transition-assessment-social": "wbm.just-transition-assessment-social",
+  "wbm-nature-benchmark": "wbm.nature-benchmark",
+  "wbm-oil-gas-benchmark": "wbm.oil-gas-benchmark",
+  "wbm-seafood-stewardship": "wbm.seafood-stewardship",
+  "wbm-seeds-index-esa": "wbm.seeds-index-esa",
+  "wbm-seeds-index-ssea": "wbm.seeds-index-ssea",
+  "wbm-seeds-index-wc-africa": "wbm.seeds-index-wc-africa",
+  "wbm-social-transformation": "wbm.social-transformation",
+  "wbm-transport-benchmark": "wbm.transport-benchmark",
+  "wikipedia-first-frame": "w.wikipedia",
+  "wikipedia-infocard-frame": "w.companyinfo",
+  "yahoo": "esg.title",
+};
+
+var defaultestOrder = Object.keys(translate)
+var defaultOrder = []
+var defaultOrderWbm = []
+for (item in defaultestOrder) {
+  if (defaultestOrder[item].startsWith("wbm")) {
+    defaultOrderWbm.push(defaultestOrder[item])
+  } else {
+    defaultOrder.push(defaultestOrder[item])
+  }
+}
+var defaultOrderString = defaultOrder.join('|')
+
+let settingsState = {};
+browser.storage.local.get("settingsState").then((data) => {
+  settingsState = data.settingsState;
+  console.log("Settings State");
+  console.log(settingsState);
+  if (settingsState === undefined) {
+    settingsState = defaultSettingsState;
+    browser.storage.local.set({ settingsState: settingsState });
+  }
+})
 apiKey = updateApiKey()
 
 var headers = new Headers();
@@ -103,7 +207,7 @@ function lookupDomainHash(domainInfo) {
   if (hashforsite === undefined) {
     replacementLookupPattern = `/${sourceString}/`;
     lookupPattern = replace[replacementLookupPattern];
-    if ("t" in lookupPattern) {
+    if (lookupPattern && "t" in lookupPattern) {
       hashforsite = lookup[lookupPattern["t"].replace(/\//g, "")];
     }
   }
@@ -573,6 +677,27 @@ browser.runtime.onMessage.addListener(function (msgObj, sender, sendResponse) {
         }
         sendResponse(data);
       })();
+      break;
+    case "IVSettingsReq":
+      (
+        async function () {
+          const message = {
+            message: "SettingsUpdate",
+            data: settingsState
+          }
+          console.log(message)
+          sendMessageToPage(message)
+        }
+      )
+      break;
+    case "IVSettingsSet":
+      if (settingsState["last_change"] > msgObj[firstKey]["last_change"]) {
+        console.log("Settings are out of date");
+        return;
+      }
+      settingsState = msgObj[firstKey];
+      browser.storage.local.set({ settingsState: settingsState });
+      console.log("Settings Updated");
       break;
   }
   return true;

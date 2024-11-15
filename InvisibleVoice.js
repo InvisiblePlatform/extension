@@ -116,7 +116,7 @@ class notificationDisplay {
     notificationShade.appendChild(expandButton);
     const dismissOnSiteButton = document.createElement("div");
     dismissOnSiteButton.classList.add("IVNotificationDismiss");
-    dismissOnSiteButton.onclick = this.dissmissForDomain;
+    dismissOnSiteButton.onclick = this.dismissForDomain;
     dismissOnSiteButton.textContent = dirtyTranslate("dismiss-on-site");
     notificationShade.appendChild(dismissOnSiteButton);
     const notificationsContainer = document.createElement("div");
@@ -342,10 +342,10 @@ class notificationDisplay {
     }
   }
 
-  dissmissForDomain() {
+  dismissForDomain() {
     this.dismissed = true;
     document.getElementById("IVNotification").remove();
-    settingsState["dissmissedNotifications"].push(domainString.replace(/\./g, ""));
+    settingsState["dismissedNotifications"].push(domainString.replace(/\./g, ""));
     browser.storage.local.set({ "settings_obj": JSON.stringify(settingsState) });
   }
   processNotification(tag, dataObj) {
@@ -417,7 +417,7 @@ function enableNotifications() {
       return;
     }
 
-    if (settingsState["dissmissedNotifications"].includes(domainKey)) {
+    if (settingsState["dismissedNotifications"].includes(domainKey)) {
       console.log("notifications dismissed on this domain");
       notificationD.dismissed = true;
       return;
@@ -597,6 +597,7 @@ let resize = function (x) {
 
 
   if (x === "load" && !Loaded) {
+    getSettingsFromBackground();
     ourdomain = `${aSiteWePullAndPushTo}/db/?site=${globalCode}`
     ourdomain += "&date=" + Date.now() + "&vote=true";
     if (loggedIn) ourdomain += `&username=${pretty_name}`;
@@ -784,7 +785,7 @@ function handleNotificationClick(event) {
   }
   //if (notification) {
   //  notification.remove();
-  //  settingsState["dissmissedNotifications"].push(domainKey);
+  //  settingsState["dismissedNotifications"].push(domainKey);
   //  browser.storage.local.set({ "settings_obj": JSON.stringify(settingsState) });
   //}
   if (phoneMode) {
@@ -873,6 +874,9 @@ window.addEventListener('message', function (e) {
   if (debug) console.log(`${type} Stub ${data}`);
 
   switch (type) {
+    case 'SettingsUpdate':
+      sendMessageToPage(e.data)
+      break;
     case 'IVSettingsReq':
       processSettingsObject().then(function (x) {
         const message = {
@@ -948,7 +952,7 @@ window.addEventListener('message', function (e) {
         else if (['antwork', 'graph-box'].includes(data)) resize("network");
         else if (data === 'back') resize();
         else if (data === 'unwork') resize();
-        else if (distance === openSise) resize();
+        else if (distance === openSize) resize();
       }
       break;
     case 'IVNotificationsCacheClear':

@@ -103,48 +103,46 @@ const defaultUserPreferences = {
         ]
     },
 };
-
-
-var translate = {
-    "cta": "cta.title",
-    "wikipedia-first-frame": "w.wikipedia",
-    "networkgraph": "graph.title",
-    "small-wikidata": "w.companyinfo",
-    "mbfc": "mbfc.title",
-    "trust-pilot": "trustpilot.title",
-    "yahoo": "esg.title",
-    "opensec": "os.title",
+const translate = {
+    "bcorp": "bcorp.title",
     "carbon": "carbon.title",
+    "cta": "cta.title",
+    "glassdoor": "glassdoor.title",
+    "goodonyou": "goy.section-title",
+    "graph-box": "graph.title",
     "lobbyeu": "lb.title",
+    "mbfc": "mbfc.title",
+    "opensecrets": "opensec.title",
+    "political": "wikidata.polalignment",
+    "politicali": "wikidata.polideology",
     "post": "user.moduletitle",
+    "similar": "similar.title",
+    "social": "w.socialmedia",
+    "tosdr": "tos.title",
+    "trustpilot": "trustpilot.title",
+    "trustscore": "trustsc.title",
+    "wbm": "wbm.title",
     "wbm-automotive-data": "wbm.automotive-data",
+    "wbm-buildings-benchmark": "wbm.buildings-benchmark",
+    "wbm-chumanrightsb": "wbm.chumanrightsb",
+    "wbm-digital-inclusion": "wbm.digital-inclusion",
+    "wbm-electric-utilities": "wbm.electric-utilities",
+    "wbm-financial-system-benchmark": "wbm.financial-system-benchmark",
+    "wbm-food-agriculture-benchmark": "wbm.food-agriculture-benchmark",
     "wbm-gender-benchmark": "wbm.gender-benchmark",
     "wbm-just-transition-assessment": "wbm.just-transition-assessment",
     "wbm-just-transition-assessment-social": "wbm.just-transition-assessment-social",
-    "wbm-seeds-index-esa": "wbm.seeds-index-esa",
-    "wbm-seeds-index-ssea": "wbm.seeds-index-ssea",
-    "wbm-seeds-index-wc-africa": "wbm.seeds-index-wc-africa",
-    "wbm-chumanrightsb": "wbm.chumanrightsb",
-    "wbm-financial-system-benchmark": "wbm.financial-system-benchmark",
-    "wbm-social-transformation": "wbm.social-transformation",
-    "wbm-transport-benchmark": "wbm.transport-benchmark",
-    "wbm-buildings-benchmark": "wbm.buildings-benchmark",
-    "wbm-digital-inclusion": "wbm.digital-inclusion",
-    "wbm-electric-utilities": "wbm.electric-utilities",
-    "wbm-food-agriculture-benchmark": "wbm.food-agriculture-benchmark",
     "wbm-nature-benchmark": "wbm.nature-benchmark",
     "wbm-oil-gas-benchmark": "wbm.oil-gas-benchmark",
     "wbm-seafood-stewardship": "wbm.seafood-stewardship",
-    "political-wikidata": "w.political",
-    "politicali-wikidata": "wikidata.polideology",
-    "goodonyou": "goy.section-title",
-    "bcorp": "bcorp.title",
-    "tosdr-link": "tos.title",
-    "glassdoor": "glassdoor.title",
-    "similar-site-wrapper": "similar.title",
-    "social-wikidata": "w.socialmedia",
-    "trust-scam": "trustsc.title",
-    "wbm": "wbm.title",
+    "wbm-seeds-index-esa": "wbm.seeds-index-esa",
+    "wbm-seeds-index-ssea": "wbm.seeds-index-ssea",
+    "wbm-seeds-index-wc-africa": "wbm.seeds-index-wc-africa",
+    "wbm-social-transformation": "wbm.social-transformation",
+    "wbm-transport-benchmark": "wbm.transport-benchmark",
+    "wikipedia-first-frame": "w.wikipedia",
+    "wikipedia-infocard-frame": "w.companyinfo",
+    "yahoo": "esg.title",
 };
 
 var defaultestOrder = Object.keys(translate)
@@ -163,21 +161,6 @@ var defaultOrderStringWbm = defaultOrderWbm.join('|')
 
 const availableNotifications = "beglmstwp";
 
-var defaultSettingsState = {
-    "preferred_language": "en",
-    "loggedIn": false,
-    "debugMode": false,
-    "darkMode": false,
-    "keepOnScreen": false,
-    "userPreferences": defaultUserPreferences,
-    "bobbleOverride": false,
-    "notifications": false,
-    "notificationsTags": '',
-    "listOrder": defaultOrderString,
-    "listOrder-wbm": defaultOrderStringWbm,
-    "dissmissedNotifications": [],
-    "experimentalFeatures": false,
-}
 
 level2 = ['wikipedia-first-frame',
     'isin ssd',
@@ -252,6 +235,29 @@ const dirtyTranslateTable = {
         "ca": "Invisible Voice està disponible en aquest lloc"
     },
 }
+
+const defaultSettingsState = {
+    "preferred_language": "en",
+    "loggedIn": false,
+    "debugMode": false,
+    "darkMode": false,
+    "keepOnScreen": false,
+    "dismissedNotifications": [],
+    "blockedSites": [],
+    "userPreferences": defaultUserPreferences,
+    "bobbleOverride": false,
+    "notifications": false,
+    "notificationsTags": availableNotifications,
+    "listOrder": defaultOrderString,
+    "experimentalFeatures": false,
+    "singleColumn": true,
+    "monoChrome": false,
+    "ignoreUpdateMessage": false,
+    "settingsSync": false,
+    "disabledModules": [],
+    "autoRollTabs": false,
+    "extension_version": "0.0.0",
+};
 
 const dirtyTranslate = (key, lang) => {
     // get preferred language
@@ -417,9 +423,15 @@ function forwardVote(x) {
 }
 
 
-async function processSettingsObject(skip = false) {
-    settingsState = defaultSettingsState;
-    currentVersion = browser.runtime.getManifest().version;
+async function processSettingsObject(skip = false, obj = undefined) {
+    settingsState = obj || defaultSettingsState;
+    if (obj != undefined) {
+        currentVersion = browser.runtime.getManifest().version;
+        settingsFromBackground = await getSettingsFromBackground()
+        if (settingsFromBackground != undefined) {
+            settingsState = settingsFromBackground
+        }
+    }
     try {
         tempSettingsState = await browser.storage.local.get("settings_obj").then(function (obj) {
             if (obj["settings_obj"] == undefined) {
@@ -440,8 +452,18 @@ async function processSettingsObject(skip = false) {
     if (settingsState["notifications"])
         if (!popup) enableNotifications()
 
-    settingsState["extension_version"] = currentVersion;
+    saveSettingsToBackgound()
     return settingsState
+}
+
+async function saveSettingsToBackgound() {
+    browser.runtime.sendMessage({ "IVSettingsSet": settingsState });
+}
+async function getSettingsFromBackground() {
+    browser.runtime.sendMessage({ "IVSettingsReq": "get" }).then(function (response) {
+        settingsState = response;
+        console.log(settingsState)
+    });
 }
 
 function domainCheckBg(domain) {
@@ -474,10 +496,11 @@ function processDomain(pattern) {
 }
 
 async function startUpStart() {
-    browser.storage.local.get(function (data) {
+    browser.storage.local.get(async function (data) {
         pretty_name = data.pretty_name;
         username = data.username;
         loggedIn = (username != undefined) ? true : false;
+        await getSettingsFromBackground()
         if (loggedIn) console.log(`user ${username}/${pretty_name} is logged in`)
         settingsState["loggedIn"] = loggedIn
     })
