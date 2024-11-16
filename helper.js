@@ -450,7 +450,8 @@ async function processSettingsObject(skip = false, obj = undefined) {
     debug = settingsState["debugMode"]
     if (!skip) console.log(settingsState);
     if (settingsState["notifications"])
-        if (!popup) enableNotifications()
+        if (!popup) enableNotifications(settingsState["darkMode"], settingsState["monoChrome"]);
+
 
     saveSettingsToBackgound()
     return settingsState

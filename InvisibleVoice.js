@@ -24,6 +24,9 @@ var addingId = '#'
 var backgroundColor = "#fff";
 var textColor = "#343434";
 var heavyTextColor = "#111";
+var darkMode = false;
+var monoChrome = false;
+
 
 var voteUrl = "https://assets.reveb.la";
 
@@ -77,7 +80,7 @@ class notification {
 
 
 class notificationDisplay {
-  constructor(visible, domainKey, tags) {
+  constructor(visible, domainKey, tags, darkMode, monoChrome) {
     this.visible = visible;
     this.domainKey = domainKey;
     this.dismissed = false;
@@ -93,6 +96,8 @@ class notificationDisplay {
     this.expandElementLocation = ["right", 0]
     this.notifications = [];
     this.notificationRequestList = [];
+    this.monoChrome = monoChrome;
+    this.darkMode = darkMode;
 
     this.tags = tags;
     this.matchedTags = [];
@@ -129,6 +134,7 @@ class notificationDisplay {
       resize("load");
     }
     notificationShade.appendChild(notificationSeeOnIV);
+
     return notificationShade;
   }
 
@@ -149,7 +155,9 @@ class notificationDisplay {
         notificationD.element.style.setProperty("--top", "");
       }
       this.element.style.setProperty("--offsetY", `${notificationsOffsetY}px`);
-      this.element.style.display = "flex";
+      if (!this.dismissed) {
+        this.element.style.display = "flex";
+      }
     })
     document.documentElement.appendChild(this.element);
     this.enableDraggingOnExpandElement();
@@ -328,6 +336,12 @@ class notificationDisplay {
         document.getElementById("IVNotification").classList.remove("noNotifications");
       }
     }
+    if (this.darkMode) {
+      this.element.classList.add("dark-theme");
+    }
+    if (this.monoChrome) {
+      this.element.classList.add("mono-theme");
+    }
   }
 
   addItemToNotification(event, labelName = "BaddyScore", score = "91", isSS = false, alttitle = false, source = false) {
@@ -398,7 +412,7 @@ let notificationD = null;
 
 var notificationsToShow = false;
 var notificationsDismissed = false;
-function enableNotifications() {
+function enableNotifications(darkMode, monoChrome) {
   browser.storage.local.get(data => {
     const tags = (settingsState.notificationsTags || '');
     const domainKey = sourceString
@@ -406,12 +420,22 @@ function enableNotifications() {
       return;
     }
     if (notificationD === null) {
-      notificationD = new notificationDisplay(false, false, domainKey, tags);
+      notificationD = new notificationDisplay(false, domainKey, tags, darkMode, monoChrome);
       notificationD.addElementToPage();
     } else {
       notificationD.visible = false;
       notificationD.domainKey = domainKey;
       notificationD.tags = tags;
+      if (settingsState.darkMode) {
+        notificationD.element.classList.add("dark-theme");
+      } else {
+        notificationD.element.classList.remove("dark-theme");
+      }
+      if (settingsState.monoChrome) {
+        notificationD.element.classList.add("mono-theme");
+      } else {
+        notificationD.element.classList.remove("mono-theme");
+      }
     }
     if (settingsState["notifications"] == "false") {
       console.log("notifications disabled");
@@ -462,7 +486,7 @@ function createObjects() {
   if (settingsState.bobbleOverride == "true") {
     bubbleMode = 1;
   }
-  enableNotifications();
+  enableNotifications(settingsState.darkMode, settingsState.monoChrome);
   if (debug) console.log("[ Invisible Voice ]: creating ");
   if ((bubbleMode == 0 && phoneMode) || debug == true) {
     browser.storage.local.get(function (localdata) {
@@ -963,7 +987,7 @@ window.addEventListener('message', function (e) {
       browser.storage.local.set({ "userPreferences": defaultUserPreferences });
       if (settingsState["notifications"]) dismissNotification();
       notificationsDismissed = false;
-      enableNotifications();
+      enableNotifications(settingsState.darkMode, settingsState.monoChrome);
       break;
 
     case 'IVNotificationsTags':
@@ -971,7 +995,7 @@ window.addEventListener('message', function (e) {
       browser.storage.local.set({ "notificationTags": data });
       if (settingsState["notifications"]) dismissNotification();
       notificationsDismissed = false;
-      enableNotifications();
+      enableNotifications(settingsState.darkMode, settingsState.monoChrome);
       break;
 
     case 'IVNotifications':
@@ -981,7 +1005,7 @@ window.addEventListener('message', function (e) {
       if (data == "true") {
         notificationsDismissed = false;
         if (debug) console.log("notifications were " + settingsState["notifications"]);
-        if (document.getElementById("IVNotification") === null) enableNotifications();
+        if (document.getElementById("IVNotification") === null) enableNotifications(settingsState.darkMode, settingsState.monoChrome);
         settingsState["notifications"] = true
       } else {
         if (settingsState["notifcations"]) dismissNotification();
