@@ -149,6 +149,7 @@ class notificationDisplay {
         notificationD.element.style.setProperty("--top", "");
       }
       this.element.style.setProperty("--offsetY", `${notificationsOffsetY}px`);
+      this.element.style.display = "flex";
     })
     document.documentElement.appendChild(this.element);
     this.enableDraggingOnExpandElement();
@@ -908,6 +909,7 @@ window.addEventListener('message', function (e) {
       if (data != '') {
         blockedHashes.push(hashforsite);
         browser.storage.local.set({ "blockedHashes": blockedHashes });
+        settingsState["blockedSites"].push(domainString);
         aSiteYouVisit = window.location.href;
         window.location.replace(browser.runtime.getURL('blocked.html') + "?site=" + domainString + "&return=" + aSiteYouVisit);
       }

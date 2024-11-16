@@ -10,10 +10,11 @@
     max-height: 48px !important;
     margin: 0px;
     padding: 4px;
-    display: flex;
+    display: none;
     /* flex-direction: column-reverse; */
     flex-direction: column;
     position: fixed;
+    color: var(--textColor);
 
     top: 8px;
     font-family: "Space Grotesk", "Helvetica", "Arial", sans-serif !important;
