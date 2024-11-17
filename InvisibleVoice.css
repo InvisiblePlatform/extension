@@ -35,7 +35,6 @@
     flex-direction: column;
     position: fixed;
     color: var(--textColor);
-
     top: 8px;
     font-family: "Space Grotesk",
     "Helvetica",
@@ -171,6 +170,37 @@
         box-sizing: border-box;
     }
 
+
+    /* Scrollbar */
+    @supports (scroll-behavior: smooth) {
+        html {
+            scroll-behavior: smooth;
+        }
+    }
+
+    /* width */
+    ::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    /* Track */
+    ::-webkit-scrollbar-track {
+        background: var(--background-color);
+        border: var(--secondaryColour);
+    }
+
+    /* Handle */
+    ::-webkit-scrollbar-thumb {
+        background: var(--textColor);
+    }
+
+    /* Handle on hover */
+    ::-webkit-scrollbar-thumb:hover {
+        background: var(--secondaryColour);
+    }
+
+
+
 }
 
 .IVNotificationSeeOnIV {
@@ -198,9 +228,10 @@
     position: relative;
     width: 270px;
     max-height: 192px !important;
-    overflow: scroll;
     background-color: var(--background-color) !important;
     box-shadow: none;
+    overflow-y: scroll;
+    overflow-x: hidden;
 }
 
 .IVNotItem,
