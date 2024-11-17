@@ -17,6 +17,7 @@ let buttonSvg = browser.runtime.getURL('button.svg');
 
 var dontOpen = false;
 var blockedHashes;
+var siteToBlockedHashes = {};
 var settingsState;
 
 var iframe;

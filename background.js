@@ -191,6 +191,7 @@ function fetchIndexes() {
       : new Request(localIndex, init);
     // Prevent page load
     blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
+    settingsState.blockedSites = blockedHashes;
   });
   if (allowUpdate)
     fetch(updateJSON)

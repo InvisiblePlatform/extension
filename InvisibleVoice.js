@@ -648,16 +648,15 @@ if (aSiteYouVisit.includes(voteUrl)) {
 
 
 function blockCheck() {
-  if (debug) console.log("Block Check");
   browser.storage.local.get(function (localdata) {
     blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
+    console.debug("Block Check");
+    console.debug(hashforsite)
+    console.debug(blockedHashes)
+    if (blockedHashes !== undefined && blockedHashes.includes(hashforsite)) {
+      window.location.replace(browser.runtime.getURL('blocked.html') + "?site=" + domainString + "&return=" + aSiteYouVisit);
+    };
   });
-  if (blockedHashes !== undefined && blockedHashes.includes(hashforsite)) {
-    fetch(new Request(localHash, init))
-      .then(response => response.json())
-      .then(data => data[hashforsite]);
-    window.location.replace(browser.runtime.getURL('blocked.html') + "?site=" + domainString + "&return=" + aSiteYouVisit);
-  };
 }
 // Make the DIV element draggable:
 var bonce = 0;
@@ -932,8 +931,11 @@ window.addEventListener('message', function (e) {
     case 'IVBoycott':
       if (data != '') {
         blockedHashes.push(hashforsite);
+        siteToBlockedHashes[domainString] = hashforsite
+        settingsState["blockedSites"] = siteToBlockedHashes;
+        settingsState["last_change"] = Date.now();
         browser.storage.local.set({ "blockedHashes": blockedHashes });
-        settingsState["blockedSites"].push(domainString);
+        saveSettingsToBackgound();
         aSiteYouVisit = window.location.href;
         window.location.replace(browser.runtime.getURL('blocked.html') + "?site=" + domainString + "&return=" + aSiteYouVisit);
       }
