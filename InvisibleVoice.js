@@ -158,6 +158,13 @@ class notificationDisplay {
       if (!this.dismissed) {
         this.element.style.display = "flex";
       }
+      // detect if the scrollbar is visible if it is then add --notificationOffset: 40px; to the notification element
+      // this will allow the notification element to be offset by the scrollbar width
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+      if (scrollbarWidth > 0) {
+        this.element.style.setProperty("--notificationOffset", `${scrollbarWidth + 24}px`);
+      }
+
     })
     document.documentElement.appendChild(this.element);
     this.enableDraggingOnExpandElement();

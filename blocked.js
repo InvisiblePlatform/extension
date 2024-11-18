@@ -32,19 +32,36 @@ chrome.storage.local.get(function (localdata) {
 			.then(data => data[hashforsite])
 			.then(global => setPageValues(global));
 		//window.location.replace(chrome.runtime.getURL('blocked.html') + "?site=" +domainString);
-	};
+	}
 });
+
 
 function isMatch(value) {
 	return value != hashforsite;
 }
 
 function setPageValues(value) {
+	chrome.storage.local.get("settingsState", function (data) {
+		if (data.settingsState) {
+			settingsState = data.settingsState;
+			// Add a {"site": https://example.com, "hash": "hash"} to the blockedSites array
+			// if its not already there
+			var blockedSites = settingsState.blockedSites;
+			var site = blockedSites.find(site => site.site === domainString);
+			if (!site) {
+				blockedSites.push({ "site": domainString, "hash": hashforsite });
+				settingsState.blockedSites = blockedSites;
+				settingsState.last_change = Date.now();
+				chrome.storage.local.set({ "settingsState": settingsState });
+			}
+		}
+	});
 	boycott = document.getElementById("Invisible-information");
 	boycott.innerHTML = value.toString().replace(/,/g, '<br/>');
 }
 
 var myid = chrome.i18n.getMessage("@@extension_id");
+
 
 document.addEventListener('click', function (event) {
 	if (event.target.matches('#Invisible-boycott')) {
@@ -56,6 +73,7 @@ document.addEventListener('click', function (event) {
 		} else {
 			window.location.replace("https://" + domainString);
 		}
+
 	};
 	if (event.target.matches('#Invisible-boycott-temp')) {
 		chrome.runtime.sendMessage(myid, { "InvisibleVoiceReblock": hashforsite });

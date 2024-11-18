@@ -453,7 +453,8 @@ async function processSettingsObject(skip = false, obj = undefined) {
     if (settingsState["notifications"])
         if (!popup) enableNotifications(settingsState["darkMode"], settingsState["monoChrome"]);
 
-
+    currentVersion = browser.runtime.getManifest().version;
+    settingsState["extension_version"] = currentVersion;
     saveSettingsToBackgound()
     return settingsState
 }
