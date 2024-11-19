@@ -104,7 +104,7 @@ const defaultUserPreferences = {
         ]
     },
 };
-cconst translate = {
+const translate = {
     "post": "user.moduletitle",
     "wikipedia-first-frame": "w.wikipedia",
     "wikipedia-infocard-frame": "w.companyinfo",
