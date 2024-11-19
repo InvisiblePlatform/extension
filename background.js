@@ -353,8 +353,9 @@ async function voteAsyncPost(site, type) {
   type = "domainhash";
   if (site.includes("/")) {
     type = "module";
-    if (site.split("/")[1] === "post") {
+    if (site.split("/")[0] === "post") {
       type = "post";
+      site = site.split("/")[1];
     }
   }
   voteHeaders = new Headers({
