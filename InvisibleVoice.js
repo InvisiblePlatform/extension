@@ -179,17 +179,28 @@ class notificationDisplay {
     const firstNotification = this.notifications[0];
     const previewNotification = document.createElement("div");
     previewNotification.classList.add("IVNotificationPreview");
-    previewNotification.innerHTML = firstNotification.item.innerHTML;
+    previewNotification.innerHTML = `<div class="IVNotItem">${firstNotification.item.innerHTML}</div>`;
+    previewNotification.innerHTML += `<div class="IVDismissPreview" onclick="notificationD.dismissForDomain()">${dirtyTranslate("dismiss-on-site")}</div>`;
     previewNotification.onclick = this.expand;
     this.element.appendChild(previewNotification);
     console.log("displaying preview notification")
 
-    setTimeout(() => {
-      previewNotification.classList.add("fade-out");
+    function timeoutFunction() {
       setTimeout(() => {
-        previewNotification.remove();
-      }, 1000);
-    }, 2000);
+        if (previewNotification.matches(':hover')) {
+          timeoutFunction();
+        } else {
+          previewNotification.classList.add("fade-out");
+          setTimeout(() => {
+            previewNotification.remove();
+          }, 1000);
+        }
+      }, 2000);
+    }
+
+    if (!settingsState.keepOnScreen) {
+      timeoutFunction();
+    }
 
   }
   enableDraggingOnExpandElement() {

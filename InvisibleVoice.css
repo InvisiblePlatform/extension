@@ -253,7 +253,7 @@
     align-items: center;
 }
 
-.IVNotificationPreview,
+
 .IVNotItem {
     box-sizing: border-box;
     width: 270px;
@@ -434,7 +434,7 @@
     position: fixed;
     background-color: var(--secondaryColour);
     z-index: 9999;
-    display: block;
+    display: grid;
     margin: 8px;
     border-radius: 8px !important;
     bottom: 0;
@@ -442,6 +442,16 @@
     transform: scaleX(1);
     transition: transform 0.2s;
     overflow: hidden;
+    overflow-x: scroll;
+    scrollbar-width: none;
+    grid-template-areas: "notification dismiss";
+    scroll-snap-type: x mandatory;
+    height: 48px;
+    width: 270px;
+
+    &>div {
+        scroll-snap-align: end;
+    }
 
     @starting-style {
         transform: scaleX(0);
@@ -449,6 +459,19 @@
 
     &.fade-out {
         animation: IVNotificationPreviewSlideOut 0.2s forwards;
+    }
+
+    .IVDismissPreview {
+        background-color: var(--warningColour);
+        color: var(--background-color);
+        grid-area: dismiss;
+        border-radius: 0;
+        padding: 4px 8px !important;
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
     }
 }
 
