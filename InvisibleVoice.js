@@ -49,12 +49,13 @@ function isMatchingLabel(value, preference) {
 }
 
 class notification {
-  constructor(label, value, alttitle, source, isSS) {
+  constructor(label, value, alttitle, source, isSS, outOf) {
     this.label = label;
     this.value = value;
     this.alttitle = alttitle;
     this.source = source;
     this.isSS = isSS;
+    this.outOf = outOf;
 
     this.name = (this.alttitle) ? this.alttitle : this.label;
     this.sourceString = (this.source) ? `<h3>${this.source}</h3>` : '';
@@ -68,6 +69,9 @@ class notification {
       ${this.sourceString}
     `;
     this.item.setAttribute("data-infotype", this.label);
+    if (this.outOf) {
+      this.item.style.setProperty("--outOf", `"${this.outOf}"`);
+    }
   }
 
   handleNotificationClick() {
@@ -76,6 +80,7 @@ class notification {
     browser.storage.local.set(dismissData);
     resize("load");
   }
+
 }
 
 
@@ -169,6 +174,24 @@ class notificationDisplay {
     document.documentElement.appendChild(this.element);
     this.enableDraggingOnExpandElement();
   }
+  displayPreviewNotification() {
+    // Take the first notification and push it to its own element on the page
+    const firstNotification = this.notifications[0];
+    const previewNotification = document.createElement("div");
+    previewNotification.classList.add("IVNotificationPreview");
+    previewNotification.innerHTML = firstNotification.item.innerHTML;
+    previewNotification.onclick = this.expand;
+    this.element.appendChild(previewNotification);
+    console.log("displaying preview notification")
+
+    setTimeout(() => {
+      previewNotification.classList.add("fade-out");
+      setTimeout(() => {
+        previewNotification.remove();
+      }, 1000);
+    }, 2000);
+
+  }
   enableDraggingOnExpandElement() {
     // Make the expand element draggable:
     // it will be a bit different than the bobble, as we want to keep it "stuck"
@@ -242,6 +265,7 @@ class notificationDisplay {
       }, 100);
     }
 
+
   }
 
   expand() {
@@ -253,6 +277,10 @@ class notificationDisplay {
       return;
     }
     document.getElementById("IVNotification").classList.toggle("onScreen");
+
+    if (document.getElementsByClassName("IVNotificationPreview").length > 0) {
+      document.getElementsByClassName("IVNotificationPreview")[0].remove()
+    }
   }
 
   collapse() {
@@ -332,11 +360,11 @@ class notificationDisplay {
     }
   }
 
-  displayNotification(tag, value, alttitle, source) {
+  displayNotification(tag, value, alttitle, source, outOf) {
     // if (debug) console.log(`${tag},${value},${source}`);
     const tagLabel = tagLookup[tag]; // Get the label for the tag
     const isSS = tag === 'm'; // Check if it's a special case for "m" tag
-    this.addItemToNotification(null, tagLabel, value, isSS, alttitle, source);
+    this.addItemToNotification(null, tagLabel, value, isSS, alttitle, source, outOf);
 
     if (document.getElementById("IVNotification")) {
       if (document.getElementById("IVNotification").classList.contains("noNotifications")) {
@@ -351,8 +379,8 @@ class notificationDisplay {
     }
   }
 
-  addItemToNotification(event, labelName = "BaddyScore", score = "91", isSS = false, alttitle = false, source = false) {
-    const newNotification = new notification(labelName, score, alttitle, source, isSS);
+  addItemToNotification(event, labelName = "BaddyScore", score = "91", isSS = false, alttitle = false, source = false, outOf = false) {
+    const newNotification = new notification(labelName, score, alttitle, source, isSS, outOf);
     this.element.getElementsByClassName("IVNotificationsContainer")[0].appendChild(newNotification.item);
     this.notifications.push(newNotification);
 
@@ -385,18 +413,19 @@ class notificationDisplay {
     for (let i = 0; i < repeatCount; i++) {
       const currentItem = repeat ? dataObj[items[i]] : value;
       let source = (tag !== "m") ? dataObj[`_${items[i]}`] : false;
+      let outOf = (tag !== "m") ? notificationOutOf[items[i]] : false;
 
       switch (type) {
         case "range":
           if (isInRange(currentItem, preferences[tag])) {
-            this.displayNotification(tag, currentItem, false, source);
+            this.displayNotification(tag, currentItem, false, source, outOf);
           }
           break;
         case "label":
           for (const place in currentItem) {
             const label = currentItem[place];
             if (isMatchingLabel(label, preferences[tag])) {
-              this.displayNotification(tag, label, false, source);
+              this.displayNotification(tag, label, false, source, outOf);
             }
           }
           break;
@@ -405,7 +434,7 @@ class notificationDisplay {
             const { s: source, m: modules } = currentItem[item];
             for (const mod in modules) {
               const data = modules[mod];
-              this.displayNotification(tag, data.r, data.s.replaceAll("_", " ").slice(5), source);
+              this.displayNotification(tag, data.r, data.s.replaceAll("_", " ").slice(5), source, outOf);
             }
           }
           break;
@@ -413,7 +442,11 @@ class notificationDisplay {
           break;
       }
     }
+    if (this.notifications.length > 0 && document.getElementsByClassName("IVNotificationPreview").length === 0) {
+      this.displayPreviewNotification();
+    }
   }
+
 }
 let notificationD = null;
 

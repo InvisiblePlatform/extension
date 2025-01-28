@@ -104,6 +104,18 @@ const defaultUserPreferences = {
         ]
     },
 };
+
+const notificationOutOf = {
+    "b": "300+",
+    "g": "100",
+    "l": "10",
+    "m": false,
+    "p": "6",
+    "s": "100",
+    "t": "100",
+    "w": "100",
+}
+
 const translate = {
     "post": "user.moduletitle",
     "wikipedia-first-frame": "w.wikipedia",

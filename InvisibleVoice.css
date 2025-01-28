@@ -78,6 +78,16 @@
         right: 0;
     }
 
+    &.right .IVNotificationPreview {
+        transform-origin: right;
+        right: calc(100% + 48px);
+    }
+
+    &.left .IVNotificationPreview {
+        transform-origin: left;
+        left: calc(100% + 48px);
+    }
+
     &:not(.onScreen).right:hover {
         transform: translate(308px, var(--offsetY));
         filter: drop-shadow(0px 2px 4px var(--shadowColour));
@@ -243,6 +253,7 @@
     align-items: center;
 }
 
+.IVNotificationPreview,
 .IVNotItem {
     box-sizing: border-box;
     width: 270px;
@@ -258,6 +269,7 @@
     height: 48px !important;
     /* transform: translateX(calc(var(--notificationOffset) * -1)); */
     box-shadow: none;
+
 
     & h1,
     h2 {
@@ -276,22 +288,23 @@
         font-size: 24px;
         position: absolute;
         display: flex;
-        align-items: center;
+        align-items: baseline;
         right: 0px;
         bottom: 0px;
         height: 48px;
-        padding: 4px;
-        padding-left: 48px;
+        /* padding: 4px; */
+        /* padding-left: 48px; */
+        padding: inherit !important;
         box-sizing: border-box;
         background: linear-gradient(90deg, transparent, var(--background-color), var(--background-color));
         opacity: 0.9;
 
         &::after {
-            content: var(--outOf);
+            content: '/' var(--outOf);
             font-size: 12px;
-            position: absolute;
-            right: 4px;
-            bottom: 4px;
+            /* position: absolute; */
+            /* right: 4px; */
+            /* bottom: 4px; */
             color: var(--textColor);
             opacity: 0.7;
         }
@@ -305,6 +318,10 @@
         opacity: 0.2;
         font-weight: 300 !important;
     }
+
+    /* &[data-outof] h2::after {
+        content: attr(data-outof);
+    } */
 }
 
 .IVNotificationDismiss {
@@ -411,4 +428,36 @@
     border-radius: 0;
     background-color: transparent;
     object-fit: 1;
+}
+
+.IVNotificationPreview {
+    position: fixed;
+    background-color: var(--secondaryColour);
+    z-index: 9999;
+    display: block;
+    margin: 8px;
+    border-radius: 8px !important;
+    bottom: 0;
+    top: 0px;
+    transform: scaleX(1);
+    transition: transform 0.2s;
+    overflow: hidden;
+
+    @starting-style {
+        transform: scaleX(0);
+    }
+
+    &.fade-out {
+        animation: IVNotificationPreviewSlideOut 0.2s forwards;
+    }
+}
+
+@keyframes IVNotificationPreviewSlideOut {
+    0% {
+        transform: scaleX(1);
+    }
+
+    100% {
+        transform: scaleX(0);
+    }
 }
