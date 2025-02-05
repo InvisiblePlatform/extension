@@ -29,10 +29,9 @@ function callback(tabs) {
   }
   return true
 }
-
 function createObjects() {
   console.log(sourceString, hashforsite);
-  ourdomain = `${aSiteWePullAndPushTo}/db/?site=${globalCode}&date=${Date.now()}&app=true`;
+  ourdomain = `${siteUrl}/db/?site=${globalCode}&date=${Date.now()}&app=true`;
   if (settingsState["loggedIn"]) ourdomain += `&username=${pretty_name}&vote=true`;
   if (addingId != '#') ourdomain += addingId
   iframe.src = ourdomain;

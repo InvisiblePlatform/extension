@@ -1,4 +1,5 @@
-var aSiteWePullAndPushTo = "https://test.reveb.la";
+var siteUrl = "https://assets.reveb.la/db/";
+var dbUrl = "https://test.reveb.la";
 
 // Set browser to chrome if chromium based
 const chrRegex = /Chr/i;

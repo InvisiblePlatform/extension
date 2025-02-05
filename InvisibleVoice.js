@@ -28,7 +28,7 @@ var darkMode = false;
 var monoChrome = false;
 
 
-var voteUrl = "https://assets.reveb.la";
+var siteUrl = "https://assets.reveb.la";
 
 var globalCode, code;
 
@@ -323,7 +323,7 @@ class notificationDisplay {
     for (let i = 0; i < requestList.length; i++) {
       if (currentState[requestList[i]]) continue;
       if (!requestList[i]) continue;
-      fetch(`${aSiteWePullAndPushTo}/db/${requestList[i]}.json`, init)
+      fetch(`${dbUrl}/db/${requestList[i]}.json`, init)
         .then(response => response.json())
         .then(state => {
           currentState[requestList[i]] = state.data;
@@ -334,7 +334,7 @@ class notificationDisplay {
 
   fetchNotificationData(domainKey) {
     this.notificationRequestList.forEach(domain => {
-      fetch(`${aSiteWePullAndPushTo}/db/${domain}.json`, init)
+      fetch(`${dbUrl}/db/${domain}.json`, init)
         .then(response => response.json())
         .then(state => {
           currentState[domain] = state.data;
@@ -421,6 +421,7 @@ class notificationDisplay {
       items = Object.keys(dataObj).filter(dataTag => dataTag.startsWith(tag));
       repeatCount = items.length;
     }
+
     for (let i = 0; i < repeatCount; i++) {
       const currentItem = repeat ? dataObj[items[i]] : value;
       let source = (tag !== "m") ? dataObj[`_${items[i]}`] : false;
@@ -592,7 +593,7 @@ function createObjects() {
 
 const loginCheck = async () => {
   try {
-    postURL = `${voteUrl}/auth/am-i-logged-in`
+    postURL = `${siteUrl}/auth/am-i-logged-in`
     headers = new Headers({
       "content-type": 'application/json'
     });
@@ -674,9 +675,9 @@ let resize = function (x) {
 
   if (x === "load" && !Loaded) {
     getSettingsFromBackground();
-    ourdomain = `${aSiteWePullAndPushTo}/db/?site=${globalCode}`
+    ourdomain = `${siteUrl}/db/?site=${globalCode}`
     ourdomain += "&date=" + Date.now() + "&vote=true";
-    if (loggedIn) ourdomain += `&username=${pretty_name}`;
+    if (loggedIn) ourdomain += `&username=${username}`;
     if (addingId != '#') {
       ourdomain += addingId
       distance = openSize;
@@ -692,7 +693,7 @@ let resize = function (x) {
   if (debug) console.log(`${x}, ${distance}, ${oldNetworkDistance}`)
 };
 
-if (aSiteYouVisit.includes(voteUrl)) {
+if (aSiteYouVisit.includes(siteUrl)) {
   console.log("[ IV ] Assets Site")
   loginCheck();
 }

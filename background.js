@@ -1,6 +1,6 @@
 var debug = true;
-var aSiteWePullAndPushTo = "https://test.reveb.la";
-var voteUrl = "https://assets.reveb.la";
+var dbUrl = "https://test.reveb.la";
+var siteUrl = "https://assets.reveb.la";
 var now = new Date().getTime();
 var identifier = "com.morkforid.Invisible-Voice.Extension (C5N688B362)";
 var seenTabs = [];
@@ -183,11 +183,11 @@ function fetchIndexes() {
 
     if (debug) console.log(localdata);
     if (debug && !IVLocalIndex)
-      console.log("[ Invisible Voice ]: Set to " + aSiteWePullAndPushTo);
+      console.log("[ Invisible Voice ]: Set to " + dbUrl);
     if (debug && IVLocalIndex)
       console.log("[ Invisible Voice ]: Set to LocalIndex");
     updateJSON = IVLocalIndex
-      ? new Request(aSiteWePullAndPushTo + "/index.json", init)
+      ? new Request(dbUrl + "/index.json", init)
       : new Request(localIndex, init);
     // Prevent page load
     blockedHashes = localdata.blockedHashes ? localdata.blockedHashes : [];
@@ -268,7 +268,7 @@ async function postGet(location) {
   };
   console.log(`getting post for ${location}`);
   console.log(postVars);
-  var data = await fetch(new Request(voteUrl + "/get-post", postVars))
+  var data = await fetch(new Request(siteUrl + "/get-post", postVars))
     .then((response) => response.json())
     .then((data) => {
       if (debug) console.log(data);
@@ -300,7 +300,7 @@ async function postMake(post_type, content, location) {
   };
   console.log(postVars)
   console.log(`${data.content}`);
-  var ret = await fetch(new Request(voteUrl + "/post", postVars))
+  var ret = await fetch(new Request(siteUrl + "/post", postVars))
     .then((response) => {
       console.log(response)
       response.json();
@@ -325,7 +325,7 @@ async function getInfoList(list_of_locations) {
     credentials: "include",
     body: JSON.stringify(data),
   };
-  var responseData = await fetch(new Request(voteUrl + "/get-data-list", postVars))
+  var responseData = await fetch(new Request(siteUrl + "/get-data-list", postVars))
     .then((response) => response.json())
     .then((data) => {
       if (debug) console.log(data);
@@ -374,7 +374,7 @@ async function voteAsyncPost(site, type) {
     credentials: "include",
     body: JSON.stringify(data),
   };
-  var data = await fetch(new Request(voteUrl + "/vote", voteVars))
+  var data = await fetch(new Request(siteUrl + "/vote", voteVars))
     .then((response) => response.json())
     .then((data) => {
       return data;
@@ -403,7 +403,7 @@ async function voteAsync(site, direction, type = "domainHash") {
     body: JSON.stringify(data),
   };
   console.log(site, direction);
-  var data = await fetch(new Request(voteUrl + "/vote", voteVars))
+  var data = await fetch(new Request(siteUrl + "/vote", voteVars))
     .then((response) => response.json())
     .then((data) => {
       return data;
@@ -422,7 +422,7 @@ async function voteTotal(site, v2 = false) {
     headers: voteHeaders,
   };
   var stub = v2 ? "/get-data-v2" : "/get-data";
-  var data = await fetch(new Request(voteUrl + stub, voteVars))
+  var data = await fetch(new Request(siteUrl + stub, voteVars))
     .then((response) => response.json())
     .then((data) => {
       if (v2) data["location"] = site;
@@ -532,7 +532,7 @@ async function getNotificationData(domainKey) {
     browser.storage.local.set({ siteData: currentState });
   }
   for (let i = 0; i < actualRequestList.length; i++) {
-    externalState = fetch(`${aSiteWePullAndPushTo}/db/${actualRequestList[i]}.json`, init)
+    externalState = fetch(`${dbUrl}/${actualRequestList[i]}.json`, init)
       .then((response) => response.json())
       .then((data) => {
         currentState[actualRequestList[i]] = data;

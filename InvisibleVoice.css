@@ -7,6 +7,33 @@
     --shadowColour: #00000030;
     --warningColour: #f00;
 
+    width: var(--notificationWidth)+48px !important;
+    min-width: var(--notificationWidth)+48px !important;
+    max-width: var(--notificationWidth)+48px !important;
+    min-height: 48px !important;
+    max-height: 48px !important;
+    margin: 0px;
+    padding: 4px;
+    display: none;
+    /* flex-direction: column-reverse; */
+    flex-direction: column;
+    position: fixed;
+    color: var(--textColor);
+    top: 8px;
+    font-family: "Space Grotesk",
+        "Helvetica",
+        "Arial",
+        sans-serif !important;
+    font-size: 14px !important;
+    transition: all 0.2s;
+    filter: drop-shadow(0px 2px 1px var(--shadowColour));
+    background-color: var(--background-color) !important;
+
+    z-index: 10000;
+    border-collapse: collapse;
+    border-radius: 0px 8px 8px 8px;
+    padding-bottom: 60px;
+
     &.dark-theme {
         --background-color: #343434;
         --textColor: #fff;
@@ -22,33 +49,6 @@
             --warningColour: #2c2c2c;
         }
     }
-
-    width: var(--notificationWidth)+48px !important;
-    min-width: var(--notificationWidth)+48px !important;
-    max-width: var(--notificationWidth)+48px !important;
-    min-height: 48px !important;
-    max-height: 48px !important;
-    margin: 0px;
-    padding: 4px;
-    display: none;
-    /* flex-direction: column-reverse; */
-    flex-direction: column;
-    position: fixed;
-    color: var(--textColor);
-    top: 8px;
-    font-family: "Space Grotesk",
-    "Helvetica",
-    "Arial",
-    sans-serif !important;
-    font-size: 14px !important;
-    transition: all 0.2s;
-    filter: drop-shadow(0px 2px 1px var(--shadowColour));
-    background-color: var(--background-color) !important;
-
-    z-index: 10000;
-    border-collapse: collapse;
-    border-radius: 0px 8px 8px 8px;
-    padding-bottom: 60px;
 
     &.right {
         left: calc(100vw - var(--notificationWidth) - var(--notificationOffset));
