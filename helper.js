@@ -29,6 +29,7 @@ var popup = false;
 var voteCode;
 var allowUpdate;
 var voteStatus, hashforsite;
+var apiKey = "";
 
 var updateJSON;
 var headers = new Headers();
@@ -518,6 +519,7 @@ async function startUpStart() {
         await getSettingsFromBackground()
         if (loggedIn) console.log(`user ${username}/${pretty_name} is logged in`)
         settingsState["loggedIn"] = loggedIn
+        apiKey = data.apiKey;
     })
 }
 

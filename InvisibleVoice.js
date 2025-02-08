@@ -608,7 +608,7 @@ const loginCheck = async () => {
       const username = response.username;
       console.log(`Logged in as ${username}/${response.pretty_name}`)
       browser.storage.local.set({ "username": username, "pretty_name": response.pretty_name, "apiKey": response.apiKey });
-      console.log(browser.storage.local.get())
+      apiKey = response.apiKey;
     }
   } catch (e) {
     //console.log(e)                                                      
@@ -670,6 +670,7 @@ let resize = function (x) {
     if (notificationShade) {
       notificationShade.style.opacity = 0;
     }
+
   }
 
 
@@ -686,6 +687,9 @@ let resize = function (x) {
     iframe.src = ourdomain;
     console.log(globalCode);
     Loaded = true;
+    if (apiKey != "") {
+      sendMessageToPage({ message: "LoginWithApiKey", data: apiKey });
+    }
   }
   // Set the right and width values
   open.style.right = distance + 'px';
@@ -1093,6 +1097,9 @@ window.addEventListener('message', function (e) {
         const sending = browser.runtime.sendMessage({ [actionLookup[type]]: data });
         sending.then(forwardInfo, handleError);
       }
+      break;
+    case 'IVApiKeyRequest':
+      sendMessageToPage({ message: "LoginWithApiKey", data: apiKey });
       break;
   }
 });
