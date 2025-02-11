@@ -636,6 +636,9 @@ let resize = function (x) {
   if (debug) console.log(x)
   // Set default value for x
   if (typeof x === 'undefined') x = "";
+  if (iframe.src === "about:blank" && x !== "load") {
+    return;
+  }
 
   // Transition properties
   open.style.transition = "right 0.2s";
