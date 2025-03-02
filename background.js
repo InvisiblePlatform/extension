@@ -152,6 +152,8 @@ var init = {
   cache: "default",
 };
 
+var userInformation = {};
+
 fetch(new Request(localIndex, init))
   .then((response) => response.json())
   .then((data) => browser.storage.local.set({ data: data }))
@@ -222,14 +224,170 @@ function lookupDomainHash(domainInfo) {
     "sourceString": sourceString
   };
 }
-
+// Modify lookupDomain to include bloom filter check
 function lookupDomain(url) {
   let domainString = url.replace(/\.m\./g, '.')
-    .replace(/http[s]*:\/\/|www\./g, '').split(/[/?#]/)[0].replace(/^m\./, '');
+    .replace(/http[s]*:\/\/|www\./g, '')
+    .split(/[/?#]/)[0]
+    .replace(/^m\./, '');
+
+  // Check bloom filter first
+  filterMatch = checkDomain("db/" + domainString.replace(/\./g, ''));
+  if (!filterMatch) {
+    return null; // Domain not in any list
+  }
+
+  // Continue with existing lookup if in bloom filter
   let domainInfo = parseDomain(domainString, publicSuffixes);
-  return lookupDomainHash(domainInfo);
+  domainResponse = lookupDomainHash(domainInfo)
+  domainResponse["filterMatch"] = filterMatch;
+  return domainResponse;
 }
 
+// Add to existing variables
+let siteListBloomFilters = {};
+
+function checkDomain(domain) {
+  console.log('Checking domain:', domain);
+  console.log('Available filters:', siteListBloomFilters);
+  matched_filters = [];
+  for (const [id, data] of Object.entries(siteListBloomFilters)) {
+    console.log(`Checking filter ${id}:`, data);
+    if (data.filter.test(domain)) {
+      console.log(`Domain ${domain} found in filter ${id}`);
+      matched_filters.push(id);
+    }
+  }
+
+  if (matched_filters.length > 0) {
+    console.log(`Domain ${domain} found in filters:`, matched_filters);
+    siteListAction(domain, matched_filters);
+    return matched_filters;
+  }
+  console.log(`Domain ${domain} not found in any filter`);
+  return false;
+}
+
+async function fetchSiteList(id) {
+  try {
+    const response = await fetch(`${siteUrl}/sitelist/api/sitelist/${id}`);
+    const data = await response.json();
+    console.log('Raw sitelist response:', data);
+
+    if (!data.filter) {
+      console.error('Missing bloom filter in response:', data);
+      return false;
+    }
+
+    // Create bloom filter using size and num_hash_functions from response
+    const filter = SimpleBloomFilter.fromBase64(
+      data.filter,
+      data.size || 1024,
+      data.num_hash_functions || 3
+    );
+
+    siteListBloomFilters[id] = {
+      filter: filter,
+      version: data.version,
+      lastUpdated: data.last_updated,
+      reason: data.reason,
+      icon: data.icon,
+      group_id: data.group_id,
+      author_id: data.author_id,
+      boycottable: data.boycottable,
+      id: data.id,
+      name: data.name,
+    };
+
+    // also save a copy of the metadata in storage
+    browser.storage.local.set({
+      [`siteList_${id}`]: {
+        version: data.version,
+        lastUpdated: data.last_updated,
+        reason: data.reason,
+        icon: data.icon,
+        group_id: data.group_id,
+        author_id: data.author_id,
+        boycottable: data.boycottable,
+        id: data.id,
+        name: data.name,
+      }
+    });
+
+    console.log('Created filter for sitelist:', id, siteListBloomFilters[id]);
+    return true;
+  } catch (error) {
+    console.error('Failed to fetch sitelist:', error);
+    console.error('Stack:', error.stack);
+    return false;
+  }
+}
+
+// Add periodic version check
+async function checkSiteListVersions() {
+  for (const id of Object.keys(siteListBloomFilters)) {
+    try {
+      const response = await fetch(`${siteUrl}/sitelist/api/sitelist/${id}/check?version=${siteListBloomFilters[id].version}`);
+      const data = await response.json();
+
+      if (data.needs_update) {
+        await fetchSiteList(id);
+      }
+    } catch (error) {
+      console.error('Failed to check sitelist version:', error);
+    }
+  }
+}
+
+// Initialize main sitelist
+fetchSiteList(1);
+// Check versions every 5 minutes
+setInterval(checkSiteListVersions, 5 * 60 * 1000);
+
+async function updateUserInfo(username) {
+  try {
+    const response = await fetch(`${siteUrl}/u/${username}/object`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      }
+    );
+    const data = await response.json();
+    console.log('User info:', data.user);
+    userInformation = data.user;
+    if (userInformation.sitelist_preferences) {
+      console.log('Fetching site lists for user:', userInformation.sitelist_preferences);
+      for (const id in userInformation.sitelist_preferences) {
+        if (!(id in siteListBloomFilters)) {
+          await fetchSiteList(id);
+        }
+      }
+      browser.storage.local.set({ userInformation: userInformation });
+    }
+    return data;
+  } catch (error) {
+    console.error('Failed to fetch user info:', error);
+    return {};
+  }
+}
+
+async function handleUserInformation() {
+  if (settingsState.loggedIn) {
+    if (userInformation === undefined) {
+      await updateUserInfo(settingsState.loggedIn);
+    }
+  }
+  if (userInformation.sitelist_preferences) {
+    for (const id in userInformation.sitelist_preferences) {
+      if (!(id in siteListBloomFilters)) {
+        await fetchSiteList(id);
+      }
+    }
+  }
+}
 
 function blockCheck() {
   if (seenTabs.length === 0) return;
@@ -249,6 +407,36 @@ function blockCheck() {
       if (tab.url.startsWith("blob:")) return;
       if (seenTabs.includes(tab.id)) {
         browser.tabs.sendMessage(tab.id, "InvisibleVoiceBlockCheck");
+      }
+    });
+  });
+}
+
+function sendNotificationToPages(domain, name, value) {
+  sendMessageToPage(
+    { message: "IVAddWarningToNotification", domain: domain, name: name, value: value });
+}
+
+function siteListBlockDomain(domain, siteListId) {
+  sendMessageToPage(
+    { message: "IVBlockBySiteList", domain: domain, siteListId: siteListId });
+}
+
+function sendMessageToPage(message) {
+  if (seenTabs.length === 0) return;
+  browser.tabs.query({ active: true }, (tabs) => {
+    tabs.forEach((tab) => {
+      if (tab.url === undefined) return;
+      if (tab.url.startsWith("about:")) return;
+      if (tab.url.startsWith("chrome:")) return;
+      if (tab.url.startsWith("moz-extension:")) return;
+      if (tab.url.startsWith("file:")) return;
+      if (tab.url.startsWith("chrome-extension:")) return;
+      if (tab.url.startsWith("view-source:")) return;
+      if (tab.url.startsWith("data:")) return;
+      if (tab.url.startsWith("blob:")) return;
+      if (seenTabs.includes(tab.id)) {
+        browser.tabs.sendMessage(tab.id, message);
       }
     });
   });
@@ -543,6 +731,37 @@ async function getNotificationData(domainKey) {
   return await currentState[domainKey];
 }
 
+
+function siteListAction(domain, siteLists) {
+  // This function will be called when a domain is found in a site list
+  // it is for seeing if the site list is set to boycott or notify, 
+  // if its notify it will send a notification to the user
+  // if its boycott it will block the site
+  // if its neither it will do nothing
+
+  // First check the domain against the sitelists
+  for (const id of siteLists) {
+    if (id == 1) continue; // Skip the main sitelist
+    if (id == 0) continue; // Skip the null sitelist
+    console.log(`Checking site list ${id} for domain ${domain}`);
+    siteList = siteListBloomFilters[id];
+    if (siteList.filter.test(domain)) {
+      console.log(`Domain ${domain} found in site list ${id}:`, siteList);
+      if (userInformation.sitelist_preferences && userInformation.sitelist_preferences[id]) {
+        const preference = userInformation.sitelist_preferences[id].mode;
+        if (preference == 'boycott') {
+          console.log(`Boycotting domain ${domain} from site list ${id}`);
+          siteListBlockDomain(domain, id);
+        } else if (preference == 'notify') {
+          console.log(`Notifying user about domain ${domain} from site list ${id}`);
+          sendNotificationToPages(domain, siteList.name, siteList.reason);
+        }
+      }
+    }
+  }
+}
+
+
 // Domain handling
 // PSL 2023/06/23 updated
 async function parsePSL(pslStream) {
@@ -588,7 +807,7 @@ browser.runtime.onMessage.addListener(function (msgObj, sender, sendResponse) {
   switch (firstKey) {
     case "InvisibleOpenPopup":
       browser.action.openPopup();
-      break;
+      return false;
     case "InvisibleVoteUpvote":
     case "InvisibleVoteDownvote":
     case "InvisibleVoteUnvote":
@@ -600,20 +819,20 @@ browser.runtime.onMessage.addListener(function (msgObj, sender, sendResponse) {
         var data = await voteAsync(msgObj[Object.keys(msgObj)[0]], direction);
         sendResponse(data);
       })();
-      break;
+      return true;
     case "InvisibleVoteTotal":
       (async function () {
         var data = await voteTotal(msgObj[firstKey]);
         sendResponse(data);
       })();
-      break;
+      return true;
     case "InvisibleGetPost":
       (async function () {
         var data = await postGet(msgObj[firstKey]);
-        if ("error" in data) return;
+        if ("error" in data) return false;
         sendResponse(data);
       })();
-      break;
+      return true;
     case "InvisibleMakePost":
       (async function () {
         const post_type = msgObj[firstKey].post_type
@@ -622,13 +841,13 @@ browser.runtime.onMessage.addListener(function (msgObj, sender, sendResponse) {
         var data = await postMake(post_type, content, location);
         sendResponse(data);
       })();
-      break;
+      return true;
     case "InvisibleRequestList":
       (async function () {
         var data = await getInfoList(msgObj[firstKey]);
         sendResponse(data);
       })();
-      break;
+      return true;
     case "IVPostVoteUp":
     case "IVPostVoteDown":
     case "IVPostVoteUn":
@@ -638,19 +857,19 @@ browser.runtime.onMessage.addListener(function (msgObj, sender, sendResponse) {
         var data = await voteAsyncPost(msgObj[firstKey], msgObj["type"]);
         sendResponse(data);
       })();
-      break;
+      return true;
     case "InvisibleSiteDataUpdate":
       (async function () {
         var data = await updateWithSiteData(msgObj[firstKey]);
         sendResponse(data);
       })();
-      break;
+      return true;
     case "InvisibleModuleInfo":
       (async function () {
         var data = await voteTotal(msgObj[firstKey], true);
         sendResponse(data);
       })();
-      break;
+      return true;
     case "InvisibleVoiceReblock":
       setTimeout(function () {
         hashtoadd = msgObj[Object.keys(msgObj)[0]];
@@ -663,11 +882,11 @@ browser.runtime.onMessage.addListener(function (msgObj, sender, sendResponse) {
         browser.storage.local.set({ blockedHashes: blockedHashes });
       }, 1000);
       blockCheck();
-      break;
+      return false;
     case "InvisibleDomainCheck":
       data = lookupDomain(msgObj[firstKey]);
       sendResponse(data);
-      break;
+      return true;
     case "IvGetNotificationData":
       (async function () {
         var data = await getNotificationData(msgObj[firstKey]);
@@ -679,7 +898,7 @@ browser.runtime.onMessage.addListener(function (msgObj, sender, sendResponse) {
         }
         sendResponse(data);
       })();
-      break;
+      return true;
     case "IVSettingsReq":
       (
         async function () {
@@ -691,18 +910,100 @@ browser.runtime.onMessage.addListener(function (msgObj, sender, sendResponse) {
           sendMessageToPage(message)
         }
       )
-      break;
+      return true;
     case "IVSettingsSet":
       if (settingsState["last_change"] > msgObj[firstKey]["last_change"]) {
         console.log("Settings are out of date");
-        return;
+        return false;
       }
       settingsState = msgObj[firstKey];
       browser.storage.local.set({ settingsState: settingsState });
       console.log("Settings Updated");
-      break;
+      return false;
+    case "IVLogin":
+      (async function () {
+        var data = await updateUserInfo(msgObj[firstKey]);
+        sendResponse(data);
+      })();
+      return true;
+    // case "IVFilterMatch":
+    //   (async function () {
+    //     await siteListAction(msgObj[firstKey].domain, msgObj[firstKey].matches);
+    //   }
+    //   )();
+    //   return false;
+    default:
+      return false;
   }
-  return true;
 });
 
 setInterval(blockCheck, 10000);
+class SimpleBloomFilter {
+  constructor(size = 1024, numHashFunctions = 3) {
+    this.size = size;
+    this.numHashFunctions = numHashFunctions;
+    this.bitArray = new Array(size).fill(0);
+  }
+
+  static fromBase64(base64String, size, numHashFunctions) {
+    const filter = new SimpleBloomFilter(size, numHashFunctions);
+
+    // Handle padding if needed
+    const paddedBase64 = base64String.replace(/-/g, '+').replace(/_/g, '/');
+    const padding = paddedBase64.length % 4;
+    const normalizedBase64 = padding ?
+      paddedBase64 + '='.repeat(4 - padding) :
+      paddedBase64;
+
+    try {
+      const bytes = atob(normalizedBase64);
+      const buffer = new Uint8Array(bytes.length);
+
+      for (let i = 0; i < bytes.length; i++) {
+        buffer[i] = bytes.charCodeAt(i);
+      }
+
+      for (let i = 0; i < buffer.length; i++) {
+        const byte = buffer[i];
+        for (let j = 0; j < 8; j++) {
+          if (i * 8 + j < size) {
+            filter.bitArray[i * 8 + j] = (byte >> j) & 1;
+          }
+        }
+      }
+      console.log('Successfully created bloom filter:', {
+        size: filter.size,
+        numHashFunctions: filter.numHashFunctions,
+        bitArrayLength: filter.bitArray.length
+      });
+      return filter;
+    } catch (error) {
+      console.error('Base64 decode error:', {
+        original: base64String,
+        normalized: normalizedBase64,
+        error: error.message
+      });
+      throw error;
+    }
+  }
+
+  _hashFunction(item, seed) {
+    let value = 0;
+    for (let i = 0; i < item.length; i++) {
+      value = (value * seed + item.charCodeAt(i)) % this.size;
+    }
+    return value;
+  }
+
+  test(item) {
+    console.log(`Testing ${item} in bloom filter of size ${this.size} with ${this.numHashFunctions} hash functions`);
+    for (let seed = 0; seed < this.numHashFunctions; seed++) {
+      const index = this._hashFunction(item, seed);
+      // console.log(`Checking index ${index} with seed ${seed}: ${this.bitArray[index]}`);
+      if (!this.bitArray[index]) {
+        return false;
+      }
+    }
+    return true;
+  }
+}

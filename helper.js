@@ -491,6 +491,7 @@ function domainCheckBg(domain) {
             return
         }
         console.log(backgroundJson)
+
         if ("sourceString" in backgroundJson) {
             processDomain(backgroundJson["sourceString"]);
         }
@@ -517,7 +518,16 @@ async function startUpStart() {
         username = data.username;
         loggedIn = (username != undefined) ? true : false;
         await getSettingsFromBackground()
-        if (loggedIn) console.log(`user ${username}/${pretty_name} is logged in`)
+        if (loggedIn) {
+            console.log(`user ${username}/${pretty_name} is logged in`)
+            browser.runtime.sendMessage({ "IVLogin": username }).then(response => {
+                if (response) {
+                    console.log("IVLogin response: " + response)
+                    userInformation = response;
+                }
+            }
+            )
+        }
         settingsState["loggedIn"] = loggedIn
         apiKey = data.apiKey;
     })

@@ -319,6 +319,14 @@
         font-weight: 300 !important;
     }
 
+    &.IVNotItemMagic {
+        --textColor: white;
+        --background-color: #990000;
+        order: -1;
+        background-color: #990000;
+        color: white;
+    }
+
     /* &[data-outof] h2::after {
         content: attr(data-outof);
     } */
@@ -473,6 +481,15 @@
         justify-content: center;
         cursor: pointer;
     }
+
+    &.IVNotItemMagic {
+        --textColor: white;
+        --background-color: #990000;
+        order: -1;
+        background-color: #990000;
+        color: white;
+    }
+
 }
 
 @keyframes IVNotificationPreviewSlideOut {

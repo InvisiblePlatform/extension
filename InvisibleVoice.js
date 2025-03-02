@@ -26,6 +26,8 @@ var textColor = "#343434";
 var heavyTextColor = "#111";
 var darkMode = false;
 var monoChrome = false;
+var userInformation = {};
+var warningStack = [];
 
 
 var siteUrl = "https://assets.reveb.la";
@@ -49,13 +51,14 @@ function isMatchingLabel(value, preference) {
 }
 
 class notification {
-  constructor(label, value, alttitle, source, isSS, outOf) {
+  constructor(label, value, alttitle, source, isSS, outOf, magic = false) {
     this.label = label;
     this.value = value;
     this.alttitle = alttitle;
     this.source = source;
     this.isSS = isSS;
     this.outOf = outOf;
+    this.magic = magic;
 
     this.name = (this.alttitle) ? this.alttitle : this.label;
     this.sourceString = (this.source) ? `<h3>${this.source}</h3>` : '';
@@ -63,6 +66,7 @@ class notification {
     this.item.classList.add("IVNotItem");
     this.item.onclick = this.handleNotificationClick;
     if (this.isSS) this.item.classList.add("IVNotItemSS");
+    if (this.magic) this.item.classList.add("IVNotItemMagic");
     this.item.innerHTML = `
       <h1>${this.name}</h1>
       <h2${this.isSS ? ' style="font-size:1em"' : ''}>${this.value}</h2>
@@ -175,11 +179,19 @@ class notificationDisplay {
     this.enableDraggingOnExpandElement();
   }
   displayPreviewNotification() {
-    // Take the first notification and push it to its own element on the page
-    const firstNotification = this.notifications[0];
+    // Take the first notification and push it to its own element on the page, unless there is a magic notification
+    // then we want to display the magic notification first
+    if (warningStack.length > 0) {
+      warningStack.forEach(warning => {
+        this.addWarningToNotification(warning.name, warning.value);
+      });
+      warningStack = [];
+    }
+    const magicNotification = this.notifications.find(notification => notification.magic);
+    const firstNotification = magicNotification || this.notifications[0];
     const previewNotification = document.createElement("div");
     previewNotification.classList.add("IVNotificationPreview");
-    previewNotification.innerHTML = `<div class="IVNotItem">${firstNotification.item.innerHTML}</div>`;
+    previewNotification.innerHTML = `<div class="IVNotItem ${magicNotification ? "IVNotItemMagic" : ""}">${firstNotification.item.innerHTML}</div>`;
     previewNotification.innerHTML += `<div class="IVDismissPreview" onclick="notificationD.dismissForDomain()">${dirtyTranslate("dismiss-on-site")}</div>`;
     previewNotification.onclick = this.expand;
     this.element.appendChild(previewNotification);
@@ -391,6 +403,12 @@ class notificationDisplay {
   }
 
   addItemToNotification(event, labelName = "BaddyScore", score = "91", isSS = false, alttitle = false, source = false, outOf = false) {
+    // We need to check if the notification already exists, some notifications have the same label but different values
+    const existingNotification = this.notifications.find(notification => notification.label === labelName && notification.value === score);
+    if (existingNotification) {
+      return;
+    }
+
     const newNotification = new notification(labelName, score, alttitle, source, isSS, outOf);
     this.element.getElementsByClassName("IVNotificationsContainer")[0].appendChild(newNotification.item);
     this.notifications.push(newNotification);
@@ -401,6 +419,12 @@ class notificationDisplay {
         console.log("removing")
       }, 5000);
     }
+  }
+
+  addWarningToNotification(name, value) {
+    const newNotification = new notification(name, value, false, "warning", false, false, true);
+    this.element.getElementsByClassName("IVNotificationsContainer")[0].appendChild(newNotification.item);
+    this.notifications.push(newNotification);
   }
 
   dismissForDomain() {
@@ -851,8 +875,8 @@ function boycott() {
 function startDataChain() {
   startUpStart();
   processSettingsObject(true).then(
-    domainCheckBg(aSiteYouVisit))
-
+    domainCheckBg(aSiteYouVisit)
+  )
 }
 
 var once = 0;
@@ -1111,6 +1135,18 @@ browser.runtime.onMessage.addListener(msgObj => {
   console.log(msgObj)
   if (msgObj === "InvisibleVoiceBlockCheck" && aSiteYouVisit !== window.location.href) {
     blockCheck();
+  } else if (msgObj.message === "IVBlockBySiteList") {
+    console.log("IVBlockBySiteList")
+    if (msgObj.domain.replace("db/", "") === domainString.replaceAll(".", ""))
+      window.location.replace(browser.runtime.getURL('sitelistblock.html') + "?id=" + msgObj.siteListId + "&return=" + aSiteYouVisit);
+  } else if (msgObj.message === "IVAddWarningToNotification") {
+    if (msgObj.domain.replace("db/", "") === domainString.replaceAll(".", ""))
+      if (notificationD) {
+        notificationD.addWarningToNotification(msgObj.name, msgObj.value);
+      } else {
+        warningStack.push(msgObj);
+      }
+
   } else {
     if (debug) console.log(msgObj);
   }

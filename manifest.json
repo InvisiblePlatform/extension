@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "version": "2025.2.1",
+  "version": "2025.3.1",
   "name": "Invisible Voice",
   "description": "This extension boycotts a website",
   "permissions": [
@@ -44,30 +44,9 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "replacements.json"
-      ],
-      "matches": [
-        "<all_urls>"
-      ]
-    },
-    {
-      "resources": [
-        "sitetohash.json"
-      ],
-      "matches": [
-        "<all_urls>"
-      ]
-    },
-    {
-      "resources": [
-        "public_suffix_list.dat"
-      ],
-      "matches": [
-        "<all_urls>"
-      ]
-    },
-    {
-      "resources": [
+        "replacements.json",
+        "public_suffix_list.dat",
+        "sitetohash.json",
         "hashtosite.json"
       ],
       "matches": [
@@ -76,7 +55,9 @@
     },
     {
       "resources": [
-        "blocked.html"
+        "blocked.html",
+        "sitelistblock.html",
+        "sitelistblock.js"
       ],
       "matches": [
         "<all_urls>"
@@ -84,14 +65,7 @@
     },
     {
       "resources": [
-        "logoShow.png"
-      ],
-      "matches": [
-        "<all_urls>"
-      ]
-    },
-    {
-      "resources": [
+        "logoShow.png",
         "button.svg"
       ],
       "matches": [
