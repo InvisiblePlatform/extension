@@ -231,6 +231,20 @@ function lookupDomain(url) {
     .split(/[/?#]/)[0]
     .replace(/^m\./, '');
 
+  if (domainString.includes("localhost:") ||
+    domainString.includes(".local") ||
+    domainString.includes(".lan") ||
+    domainString.startsWith("about:") ||
+    domainString.startsWith("chrome:") ||
+    domainString.startsWith("moz-extension:") ||
+    domainString.startsWith("file:") ||
+    domainString.startsWith("chrome-extension:") ||
+    domainString.startsWith("view-source:") ||
+    domainString.startsWith("data:") ||
+    domainString.startsWith("blob:")
+  ) {
+    return null;
+  }
   // Check bloom filter first
   filterMatch = checkDomain("db/" + domainString.replace(/\./g, ''));
   if (!filterMatch) {
@@ -341,8 +355,8 @@ async function checkSiteListVersions() {
 
 // Initialize main sitelist
 fetchSiteList(1);
-// Check versions every 5 minutes
-setInterval(checkSiteListVersions, 5 * 60 * 1000);
+// Check versions every hour
+setInterval(checkSiteListVersions, 60 * 60 * 1000);
 
 async function updateUserInfo(username) {
   try {
