@@ -734,7 +734,7 @@ async function getNotificationData(domainKey) {
     browser.storage.local.set({ siteData: currentState });
   }
   for (let i = 0; i < actualRequestList.length; i++) {
-    externalState = fetch(`${dbUrl}/${actualRequestList[i]}.json`, init)
+    externalState = fetch(`${dbUrl}/db/${actualRequestList[i]}.json`, init)
       .then((response) => response.json())
       .then((data) => {
         currentState[actualRequestList[i]] = data;
