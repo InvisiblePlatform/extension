@@ -64,12 +64,13 @@ class notification {
     this.sourceString = (this.source) ? `<h3>${this.source}</h3>` : '';
     this.item = document.createElement("div");
     this.item.classList.add("IVNotItem");
+    this.item.classList.add("IVNotClick");
     this.item.onclick = this.handleNotificationClick;
     if (this.isSS) this.item.classList.add("IVNotItemSS");
     if (this.magic) this.item.classList.add("IVNotItemMagic");
     this.item.innerHTML = `
-      <h1>${this.name}</h1>
-      <h2${this.isSS ? ' style="font-size:1em"' : ''}>${this.value}</h2>
+      <h1 class="IVNotClick">${this.name}</h1>
+      <h2${this.isSS ? ' style="font-size:1em"' : ''} class="IVNotClick">${this.value}</h2>
       ${this.sourceString}
     `;
     this.item.setAttribute("data-infotype", this.label);
@@ -118,19 +119,23 @@ class notificationDisplay {
     notificationShade.classList.add("IVNotification");
     notificationShade.classList.add("noNotifications");
     notificationShade.onclick = handleNotificationClick;
+    notificationShade.ontouchend = handleNotificationClick;
     const closeButton = document.createElement("div");
     closeButton.classList.add("IVNotificationClose");
     closeButton.onclick = this.collapse;
+    closeButton.ontouchend = this.collapse;
     closeButton.innerHTML = closeCross;
     notificationShade.appendChild(closeButton);
     const expandButton = document.createElement("div");
     expandButton.classList.add("IVNotificationExpand");
     expandButton.onclick = this.expand;
+    expandButton.ontouchend = this.expand;
     expandButton.innerHTML = ivLogoArrowElement;
     notificationShade.appendChild(expandButton);
     const dismissOnSiteButton = document.createElement("div");
     dismissOnSiteButton.classList.add("IVNotificationDismiss");
     dismissOnSiteButton.onclick = this.dismissForDomain;
+    dismissOnSiteButton.ontouchend = this.dismissForDomain;
     dismissOnSiteButton.textContent = dirtyTranslate("dismiss-on-site");
     notificationShade.appendChild(dismissOnSiteButton);
     const notificationsContainer = document.createElement("div");
@@ -140,6 +145,9 @@ class notificationDisplay {
     notificationSeeOnIV.classList.add("IVNotificationSeeOnIV");
     notificationSeeOnIV.textContent = dirtyTranslate("invisible-voice-available");
     notificationSeeOnIV.onclick = () => {
+      resize("load");
+    }
+    notificationSeeOnIV.ontouchend = () => {
       resize("load");
     }
     notificationShade.appendChild(notificationSeeOnIV);
@@ -241,7 +249,7 @@ class notificationDisplay {
     }
 
     function elementDrag(e) {
-      e.preventDefault();
+      // e.preventDefault();
       var eX = e.clientX || e.changedTouches[0].clientX;
       var eY = e.clientY || e.changedTouches[0].clientY;
       // get current position from element
@@ -294,7 +302,7 @@ class notificationDisplay {
   expand() {
     notificationD.opened = true;
     if (notificationD.dismissed || notificationD.matchedTags.length === 0) {
-      if (debug) console.log("dismissed, so opening IV");
+      console.debug("dismissed, so opening IV");
       resize("load");
       this.loadedIV = true;
       return;
@@ -422,6 +430,12 @@ class notificationDisplay {
   }
 
   addWarningToNotification(name, value) {
+    // We need to check if the notification already exists, some notifications have the same label but different values
+    const existingNotification = this.notifications.find(notification => notification.label === name && notification.value === value);
+    if (existingNotification) {
+      return;
+    }
+
     const newNotification = new notification(name, value, false, "warning", false, false, true);
     this.element.getElementsByClassName("IVNotificationsContainer")[0].appendChild(newNotification.item);
     this.notifications.push(newNotification);
@@ -564,35 +578,35 @@ function createObjects() {
   }
   enableNotifications(settingsState.darkMode, settingsState.monoChrome);
   if (debug) console.log("[ Invisible Voice ]: creating ");
-  if ((bubbleMode == 0 && phoneMode) || debug == true) {
-    browser.storage.local.get(function (localdata) {
-      if (settingsState.bobbleMode != "true") {
-        bobble = document.createElement("div");
-        buttonSize = 40;
-        bobble.style.cssText = `
-                    width:${buttonSize}px!important;
-                    background-image:url(${buttonSvg})!important;
-                    height:${buttonSize}px!important;
-                    z-index: 2147483647!important;
-                    background-size: ${buttonSize}px ${buttonSize}px;!important`;
-        // bobble.setAttribute("onclick", this.remove());
-        bobble.id = "InvisibleVoice-bobble";
-        document.documentElement.appendChild(bobble);
-        dragElement(document.getElementById("InvisibleVoice-bobble"));
-        browser.storage.local.get('newplace', function (position) {
-          var pos = Object.values(position)[0].split(',') || [0, 0];
-          // console.log("[ Invisible Voice ]: loading loc" + pos)
-          if (pos[0] > 1) pos[0] = 0.9;
-          if (pos[0] < 0) pos[0] = 0.1;
-          if (pos[1] > 1) pos[1] = 0.9;
-          if (pos[1] < 0) pos[1] = 0.1;
-          // console.log("[ Invisible Voice ]: loading loc" + (window.innerWidth * pos[1]) + "," + (window.innerHeight * pos[0]))
-          bobble.style.top = (window.innerHeight * pos[0]) + "px";
-          bobble.style.left = (window.innerWidth * pos[1]) + "px";
-        })
-      }
-    })
-  }
+  // if ((bubbleMode == 0 && phoneMode) || debug == true) {
+  //   browser.storage.local.get(function (localdata) {
+  //     if (settingsState.bobbleMode != "true") {
+  //       bobble = document.createElement("div");
+  //       buttonSize = 40;
+  //       bobble.style.cssText = `
+  //                   width:${buttonSize}px!important;
+  //                   background-image:url(${buttonSvg})!important;
+  //                   height:${buttonSize}px!important;
+  //                   z-index: 2147483647!important;
+  //                   background-size: ${buttonSize}px ${buttonSize}px;!important`;
+  //       // bobble.setAttribute("onclick", this.remove());
+  //       bobble.id = "InvisibleVoice-bobble";
+  //       document.documentElement.appendChild(bobble);
+  //       dragElement(document.getElementById("InvisibleVoice-bobble"));
+  //       browser.storage.local.get('newplace', function (position) {
+  //         var pos = Object.values(position)[0].split(',') || [0, 0];
+  //         // console.log("[ Invisible Voice ]: loading loc" + pos)
+  //         if (pos[0] > 1) pos[0] = 0.9;
+  //         if (pos[0] < 0) pos[0] = 0.1;
+  //         if (pos[1] > 1) pos[1] = 0.9;
+  //         if (pos[1] < 0) pos[1] = 0.1;
+  //         // console.log("[ Invisible Voice ]: loading loc" + (window.innerWidth * pos[1]) + "," + (window.innerHeight * pos[0]))
+  //         bobble.style.top = (window.innerHeight * pos[0]) + "px";
+  //         bobble.style.left = (window.innerWidth * pos[1]) + "px";
+  //       })
+  //     }
+  //   })
+  // }
   if (phoneMode) return;
   iframe = document.createElement("iframe");
   open = document.createElement("div");
@@ -656,6 +670,9 @@ networkSize = 840;
 let resize = function (x) {
 
   if (typeof (open.style) === 'undefined') return;
+  if (phoneMode && x === 'load') {
+    browser.runtime.sendMessage({ "InvisibleOpenPopup": true });
+  }
   if (phoneMode) return;
   if (debug) console.log(x)
   // Set default value for x
@@ -774,7 +791,7 @@ function dragElement(elmnt) {
 
   function elementDrag(e) {
     dontOpen = true;
-    e.preventDefault();
+    // e.preventDefault();
     var eX = e.clientX || e.changedTouches[0].clientX;
     var eY = e.clientY || e.changedTouches[0].clientY;
     pos1 = pos3 - eX;
@@ -890,6 +907,9 @@ function handleNotificationClick(event) {
   if (event.target.matches('.IVNotificationExpand')) {
     return;
   }
+  if (!event.target.matches('.IVNotClick')) {
+    return;
+  }
   //if (notification) {
   //  notification.remove();
   //  settingsState["dismissedNotifications"].push(domainKey);
@@ -898,6 +918,7 @@ function handleNotificationClick(event) {
   if (phoneMode) {
     if (once > 0) {
       browser.runtime.sendMessage({ "InvisibleOpenPopup": true });
+      console.debug("event.target", event.target)
       once = 0;
     }
     once++;
