@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "version": "2025.5.1",
+  "version": "2025.6.1",
   "name": "Invisible Voice",
   "description": "This extension boycotts a website",
   "permissions": [
@@ -9,6 +9,7 @@
     "activeTab",
     "scripting",
     "webRequest",
+    "nativeMessaging",
     "unlimitedStorage"
   ],
   "host_permissions": [
@@ -48,6 +49,7 @@
         "public_suffix_list.dat",
         "sitetohash.json",
         "hashtosite.json",
+        "auth_helper.js",
         "blocked.html",
         "sitelistblock.html",
         "sitelistblock.js",
@@ -60,9 +62,9 @@
     }
   ],
   "background": {
-    "service_worker": "background.js",
-    "persistant": false
+    "service_worker": "background.js"
   },
+  "incognito": "split",
   "content_scripts": [
     {
       "matches": [

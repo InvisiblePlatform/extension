@@ -1,5 +1,6 @@
-var siteUrl = "https://assets.reveb.la/db/";
 var dbUrl = "https://test.reveb.la";
+var assetsURL = "https://assets.reveb.la";
+var siteUrl = "https://assets.reveb.la/db/";
 
 // Set browser to chrome if chromium based
 const chrRegex = /Chr/i;
@@ -19,6 +20,34 @@ let buttonSvg = browser.runtime.getURL('button.svg');
 var dontOpen = false;
 var blockedHashes;
 var siteToBlockedHashes = {};
+
+// Function to initialize auth from shared app context (if available)
+async function initializeSharedAuth() {
+    // Wait for auth helper to be available
+    if (typeof window.IV_Auth === 'undefined') {
+        // Try to load the auth helper dynamically
+        try {
+            const authHelperUrl = browser.runtime.getURL('auth_helper.js');
+            const response = await fetch(authHelperUrl);
+            const scriptText = await response.text();
+            // Create a script element and execute it
+            const script = document.createElement('script');
+            script.textContent = scriptText;
+            document.head.appendChild(script);
+            console.log("Auth helper loaded dynamically");
+        } catch (e) {
+            console.error("Failed to load auth helper:", e);
+            return false;
+        }
+    }
+
+    // Now try to apply the auth token
+    if (typeof window.IV_Auth !== 'undefined' && window.IV_Auth.applyAuthTokenIfAvailable) {
+        return await window.IV_Auth.applyAuthTokenIfAvailable();
+    }
+
+    return false;
+}
 var settingsState;
 
 var iframe;
@@ -436,6 +465,40 @@ function forwardVote(x) {
     sendMessageToPage(message);
 }
 
+async function LoginWithApiKey() {
+    if (apiKey == undefined) {
+        console.log("No API key found")
+        return
+    }
+    // Request to the server using the API key
+    var postVars = {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+    };
+    var ret = await fetch(`${assetsURL}/auth/login-with-api-key?api_key=${apiKey}`, postVars)
+        .then((response) => response.json())
+        .then((ret) => {
+            if (ret.error) {
+                console.error(ret.error);
+                return;
+            }
+            console.log("Login successful");
+            browser.storage.local.set({ "username": ret.username });
+            browser.storage.local.set({ "pretty_name": ret.pretty_name });
+            browser.storage.local.set({ "apiKey": apiKey });
+            browser.runtime.sendMessage({ "IVLogin": ret.username }).then(response => {
+                if (response) {
+                    console.log("IVLogin response: " + response)
+                    userInformation = response;
+                }
+            });
+            sendMessageToPage({ "message": "LoginWithApiKey", "data": apiKey });
+            return ret;
+        });
+    return ret;
+
+}
 
 async function processSettingsObject(skip = false, obj = undefined) {
     settingsState = obj || defaultSettingsState;
@@ -522,7 +585,7 @@ async function startUpStart() {
             console.log(`user ${username}/${pretty_name} is logged in`)
             browser.runtime.sendMessage({ "IVLogin": username }).then(response => {
                 if (response) {
-                    console.log("IVLogin response: " + response)
+                    console.log("IVLogin response: ", response)
                     userInformation = response;
                 }
             }

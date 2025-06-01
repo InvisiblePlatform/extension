@@ -51,7 +51,7 @@ function isMatchingLabel(value, preference) {
 }
 
 class notification {
-  constructor(label, value, alttitle, source, isSS, outOf, magic = false) {
+  constructor(label, value, alttitle, source, isSS, outOf, magic = false, raw_infoType = false) {
     this.label = label;
     this.value = value;
     this.alttitle = alttitle;
@@ -59,6 +59,7 @@ class notification {
     this.isSS = isSS;
     this.outOf = outOf;
     this.magic = magic;
+    this.infoType = raw_infoType || label;
 
     this.name = (this.alttitle) ? this.alttitle : this.label;
     this.sourceString = (this.source) ? `<h3>${this.source}</h3>` : '';
@@ -66,6 +67,32 @@ class notification {
     this.item.classList.add("IVNotItem");
     this.item.classList.add("IVNotClick");
     this.item.onclick = this.handleNotificationClick;
+    this.position = 100000;
+    let itemId = idLookup[this.infoType] || "priority";
+
+    // if itemId is wbm we need to process the info differently
+
+    if (settingsState["listOrder"].split('|').includes(itemId)) {
+      this.position = settingsState["listOrder"].split('|').indexOf(itemId);
+    } else {
+      if (itemId === "wbm") {
+        itemId = "wbm-" + this.name.toLowerCase().replace(/ /g, "-");
+        if (settingsState["listOrder"].split('|').includes(itemId)) {
+          this.position = settingsState["listOrder"].split('|').indexOf(itemId);
+        } else {
+          console.warn("wbm item not found in listOrder, adding it");
+        }
+      } else {
+        console.warn(`Item ID "${itemId}" not found in listOrder, adding it`);
+      }
+    }
+
+    if (this.position == 100000) {
+      this.item.style.setProperty("order", 0);
+    } else {
+      this.item.style.setProperty("order", this.position);
+    }
+    this.item.dataset.infoType = this.infoType;
     if (this.isSS) this.item.classList.add("IVNotItemSS");
     if (this.magic) this.item.classList.add("IVNotItemMagic");
     this.item.innerHTML = `
@@ -73,7 +100,7 @@ class notification {
       <h2${this.isSS ? ' style="font-size:1em"' : ''} class="IVNotClick">${this.value}</h2>
       ${this.sourceString}
     `;
-    this.item.setAttribute("data-infotype", this.label);
+    // this.item.setAttribute("data-infotype", this.label);
     if (this.outOf) {
       this.item.style.setProperty("--outOf", `"${this.outOf}"`);
     }
@@ -410,14 +437,14 @@ class notificationDisplay {
     }
   }
 
-  addItemToNotification(event, labelName = "BaddyScore", score = "91", isSS = false, alttitle = false, source = false, outOf = false) {
+  addItemToNotification(event, labelName = "BaddyScore", score = "91", isSS = false, alttitle = false, source = false, outOf = false, infoType = false) {
     // We need to check if the notification already exists, some notifications have the same label but different values
     const existingNotification = this.notifications.find(notification => notification.label === labelName && notification.value === score);
     if (existingNotification) {
       return;
     }
 
-    const newNotification = new notification(labelName, score, alttitle, source, isSS, outOf);
+    const newNotification = new notification(labelName, score, alttitle, source, isSS, outOf, false, infoType);
     this.element.getElementsByClassName("IVNotificationsContainer")[0].appendChild(newNotification.item);
     this.notifications.push(newNotification);
 
