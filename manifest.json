@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "version": "2025.5.3",
+  "version": "2025.8.2",
   "name": "Invisible Voice",
   "description": "This extension boycotts a website",
   "permissions": [
