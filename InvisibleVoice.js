@@ -30,7 +30,7 @@ var userInformation = {};
 var warningStack = [];
 
 
-var siteUrl = "https://assets.reveb.la";
+var siteUrl = "https://invisible-voice.com";
 
 var globalCode, code;
 

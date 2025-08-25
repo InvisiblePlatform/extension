@@ -1,5 +1,5 @@
 iframe = document.getElementById("Invisible");
-var identifier = "com.morkforid.Invisible-Voice.Extension (C5N688B362)"
+var identifier = "com.morkforid.invisible-voice-neo.Invisible-Voice (C5N688B362)";
 
 debug = true;
 phoneMode = true;
@@ -7,6 +7,25 @@ distance = 160;
 popup = true;
 
 var voting = false;
+
+// Initialize auth from shared context when popup opens
+async function initializeAuth() {
+  if (typeof window.IV_Auth !== 'undefined' && window.IV_Auth.applyAuthTokenIfAvailable) {
+    const authenticated = await window.IV_Auth.applyAuthTokenIfAvailable();
+    console.log("Auth initialized from shared context:", authenticated);
+    if (authenticated) {
+      // Auth token is available and valid
+      apiKey = await window.IV_Auth.getAuthToken();
+      LoginWithApiKey(apiKey);
+      console.log("Auth token applied:", apiKey);
+      return true;
+    } else {
+      // Auth token is not available or invalid
+      console.log("Auth token not available or invalid");
+      return false;
+    }
+  }
+}
 
 var currentTab;
 var query = {
@@ -25,13 +44,21 @@ function callback(tabs) {
   if (sourceString === undefined) {
     currentTab = tabs[0]; // there will be only one in this array
     aSiteYouVisit = currentTab.url;
-    startDataChain(aSiteYouVisit)
+
+    // Initialize auth before starting the data chain
+    initializeAuth().then(() => {
+      startDataChain(aSiteYouVisit);
+    });
   }
   return true
 }
 function createObjects() {
   console.log(sourceString, hashforsite);
   ourdomain = `${siteUrl}/?site=${globalCode}&date=${Date.now()}&app=true`;
+  let pretty_name = browser.storage.local.get("pretty_name");
+  if (pretty_name != undefined) {
+    settingsState["loggedIn"] = true;
+  }
   if (settingsState["loggedIn"]) ourdomain += `&username=${pretty_name}&vote=true`;
   if (addingId != '#') ourdomain += addingId
   iframe.src = ourdomain;
@@ -247,6 +274,16 @@ iframe.addEventListener('load', function (e) {
       };
       sendMessageToPage(message)
     })();
+  }
+  if (iframe.src != "about:blank" && !iframe.src.matches(/username/)) {
+    setTimeout(() => {
+      (async () => {
+        if (apiKey != undefined) {
+          if (debug) console.log("apiKey set");
+          const login = await LoginWithApiKey(apiKey);
+        }
+      })();
+    }, 3000);
   }
 });
 

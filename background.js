@@ -1,9 +1,28 @@
 var debug = true;
-var dbUrl = "https://test.reveb.la";
-var siteUrl = "https://assets.reveb.la";
+var dbUrl = "https://static.invisible-voice.com";
+var siteUrl = "https://invisible-voice.com";
 var now = new Date().getTime();
-var identifier = "com.morkforid.Invisible-Voice.Extension (C5N688B362)";
+var identifier = "com.morkforid.invisible-voice-neo.Extension (C5N688B362)";
 var seenTabs = [];
+
+// Dynamically import auth helper script
+async function importAuthHelper() {
+  try {
+    const authHelperUrl = browser.runtime.getURL('auth_helper.js');
+    const response = await fetch(authHelperUrl);
+    const scriptText = await response.text();
+    // Execute the script in the current context
+    eval(scriptText);
+    console.log("Auth helper loaded in background script");
+    return true;
+  } catch (e) {
+    console.error("Failed to load auth helper:", e);
+    return false;
+  }
+}
+
+// Initialize auth helper
+importAuthHelper();
 
 if (chrome) {
   browser = chrome;
@@ -30,10 +49,27 @@ var blockedHashes = [];
 var apiKey = '';
 
 async function updateApiKey() {
-  browser.storage.local.get("apiKey", function (key) {
-    console.log(key.apiKey);
-    apiKey = key.apiKey;
-    return apiKey
+  // First try to get token from the auth helper (works with Safari extension)
+  if (typeof window.IV_Auth !== 'undefined' && window.IV_Auth.getAuthToken) {
+    try {
+      const token = await window.IV_Auth.getAuthToken();
+      if (token) {
+        console.log("Retrieved token from auth helper");
+        apiKey = token;
+        return token;
+      }
+    } catch (e) {
+      console.error("Error getting token from auth helper:", e);
+    }
+  }
+
+  // Fall back to browser storage (for compatibility with other browsers)
+  return new Promise(resolve => {
+    browser.storage.local.get("apiKey", function (key) {
+      console.log("Retrieved token from storage");
+      apiKey = key.apiKey || '';
+      resolve(apiKey);
+    });
   });
 }
 const availableNotifications = "beglmstwp";
