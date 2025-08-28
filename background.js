@@ -1,6 +1,6 @@
 var debug = true;
-var dbUrl = "https://test.reveb.la";
-var siteUrl = "https://assets.reveb.la";
+var dbUrl = "https://static.invisible-voice.com";
+var siteUrl = "https://invisible-voice.com";
 var now = new Date().getTime();
 var identifier = "com.morkforid.invisible-voice-neo.Extension (C5N688B362)";
 var seenTabs = [];

@@ -1,6 +1,6 @@
-var dbUrl = "https://test.reveb.la";
-var assetsURL = "https://assets.reveb.la";
-var siteUrl = "https://assets.reveb.la/db/";
+var dbUrl = "https://static.invisible-voice.com";
+var assetsURL = "https://invisible-voice.com";
+var siteUrl = "https://invisible-voice.com/db/";
 
 // Set browser to chrome if chromium based
 const chrRegex = /Chr/i;

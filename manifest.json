@@ -10,10 +10,12 @@
     "scripting",
     "webRequest",
     "nativeMessaging",
+    "nativeMessaging",
     "unlimitedStorage"
   ],
   "host_permissions": [
     "https://invisible-voice.com/*",
+    "https://static.invisible-voice.com/*",
     "https://test.reveb.la/*",
     "https://assets.reveb.la/*"
   ],
@@ -50,6 +52,7 @@
         "sitetohash.json",
         "hashtosite.json",
         "auth_helper.js",
+        "auth_helper.js",
         "blocked.html",
         "sitelistblock.html",
         "sitelistblock.js",
@@ -62,8 +65,9 @@
     }
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js""service_worker": "background.js"
   },
+  "incognito": "split",
   "incognito": "split",
   "content_scripts": [
     {
