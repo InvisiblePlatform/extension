@@ -290,9 +290,14 @@ class notificationDisplay {
       document.removeEventListener("touchmove", elementDrag);
       let location = Math.max(Math.min(pos4 / window.innerHeight, 1.0), 0.1);
       let side = currentLocation[0];
+      let lastLocation = browser.storage.local.get('expandButtonLocation');
       browser.storage.local.set({ 'expandButtonLocation': [side, location] });
       setTimeout(() => {
         notificationD.element.classList.remove("dragging");
+        if (lastLocation[0] === side && lastLocation[1] === location) {
+          resize("load");
+        }
+
       }, 100);
     }
 
@@ -546,6 +551,10 @@ function bgRequestNotificationData(domainKey) {
   sending.then(response => {
     if (response) {
       const { k: tags } = response.data;
+      if (!tags) {
+        console.debug("[ Invisible Voice ]: no tags found");
+        return;
+      }
       const matchedTags = notificationD.tags.split('').filter(tag => tags.includes(tag));
       notificationD.matchedTags = matchedTags;
       if (matchedTags.length > 0) {
