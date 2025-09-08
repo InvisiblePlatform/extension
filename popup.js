@@ -36,9 +36,9 @@ var query = {
 var addingId = '#';
 var isSet = false;
 
-let resize = function (x) {
-  return;
-};
+// let resize = function (x) {
+//   return;
+// };
 
 function callback(tabs) {
   if (sourceString === undefined) {

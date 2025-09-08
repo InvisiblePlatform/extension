@@ -10,7 +10,6 @@
     "scripting",
     "webRequest",
     "nativeMessaging",
-    "nativeMessaging",
     "unlimitedStorage"
   ],
   "host_permissions": [
@@ -65,9 +64,8 @@
     }
   ],
   "background": {
-    "service_worker": "background.js""service_worker": "background.js"
+    "service_worker": "background.js"
   },
-  "incognito": "split",
   "incognito": "split",
   "content_scripts": [
     {
